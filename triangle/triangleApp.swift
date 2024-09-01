@@ -11,11 +11,13 @@ import SwiftUI
 struct triangleApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+//            ContentView()
+            MorphingSphereMetalView()
         }.windowStyle(.volumetric)
 
         ImmersiveSpace(id: "ImmersiveSpace") {
             ImmersiveView()
+            MorphingSphereMetalView()
         }.immersionStyle(selection: .constant(.full), in: .full)
     }
 }

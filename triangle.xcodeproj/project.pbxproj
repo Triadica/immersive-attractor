@@ -3,10 +3,13 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 73;
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9A0B7DC52C84698E001245B3 /* RealityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A0B7DC42C84698E001245B3 /* RealityKit.framework */; };
+		9A0B7DC62C846C32001245B3 /* MorphingSphereMetalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AA6C2BE2C72697400EAD6DE /* MorphingSphereMetalView.swift */; };
+		9A0B7DC72C846C37001245B3 /* MorphSphere.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9AA6C2C02C7269A600EAD6DE /* MorphSphere.metal */; };
 		9A75D3E32C71D16900D27E97 /* RealityKitContent in Frameworks */ = {isa = PBXBuildFile; productRef = 9A75D3E22C71D16900D27E97 /* RealityKitContent */; };
 		9A75D3E52C71D16900D27E97 /* triangleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A75D3E42C71D16900D27E97 /* triangleApp.swift */; };
 		9A75D3E72C71D16900D27E97 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A75D3E62C71D16900D27E97 /* ContentView.swift */; };
@@ -28,6 +31,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		9A0B7DC42C84698E001245B3 /* RealityKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = RealityKit.framework; path = System/Library/Frameworks/RealityKit.framework; sourceTree = SDKROOT; };
 		9A75D3DD2C71D16900D27E97 /* triangle.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = triangle.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9A75D3E12C71D16900D27E97 /* RealityKitContent */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = RealityKitContent; sourceTree = "<group>"; };
 		9A75D3E42C71D16900D27E97 /* triangleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = triangleApp.swift; sourceTree = "<group>"; };
@@ -39,6 +43,8 @@
 		9A75D3F12C71D16B00D27E97 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		9A75D3F62C71D16B00D27E97 /* triangleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = triangleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9A75D3FA2C71D16B00D27E97 /* triangleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = triangleTests.swift; sourceTree = "<group>"; };
+		9AA6C2BE2C72697400EAD6DE /* MorphingSphereMetalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorphingSphereMetalView.swift; sourceTree = "<group>"; };
+		9AA6C2C02C7269A600EAD6DE /* MorphSphere.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = MorphSphere.metal; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -46,6 +52,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9A0B7DC52C84698E001245B3 /* RealityKit.framework in Frameworks */,
 				9A75D3E32C71D16900D27E97 /* RealityKitContent in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -60,12 +67,21 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		9A0B7DC32C84698E001245B3 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				9A0B7DC42C84698E001245B3 /* RealityKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		9A75D3D42C71D16900D27E97 = {
 			isa = PBXGroup;
 			children = (
 				9A75D3DF2C71D16900D27E97 /* triangle */,
 				9A75D3E02C71D16900D27E97 /* Packages */,
 				9A75D3F92C71D16B00D27E97 /* triangleTests */,
+				9A0B7DC32C84698E001245B3 /* Frameworks */,
 				9A75D3DE2C71D16900D27E97 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -89,6 +105,8 @@
 				9A75D3EC2C71D16B00D27E97 /* Assets.xcassets */,
 				9A75D3F12C71D16B00D27E97 /* Info.plist */,
 				9A75D3EE2C71D16B00D27E97 /* Preview Content */,
+				9AA6C2BE2C72697400EAD6DE /* MorphingSphereMetalView.swift */,
+				9AA6C2C02C7269A600EAD6DE /* MorphSphere.metal */,
 			);
 			path = triangle;
 			sourceTree = "<group>";
@@ -179,7 +197,6 @@
 				};
 			};
 			buildConfigurationList = 9A75D3D82C71D16900D27E97 /* Build configuration list for PBXProject "triangle" */;
-			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -187,6 +204,7 @@
 				Base,
 			);
 			mainGroup = 9A75D3D42C71D16900D27E97;
+			preferredProjectObjectVersion = 73;
 			productRefGroup = 9A75D3DE2C71D16900D27E97 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -222,6 +240,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9A0B7DC72C846C37001245B3 /* MorphSphere.metal in Sources */,
+				9A0B7DC62C846C32001245B3 /* MorphingSphereMetalView.swift in Sources */,
 				9A75D3E72C71D16900D27E97 /* ContentView.swift in Sources */,
 				9A75D3E52C71D16900D27E97 /* triangleApp.swift in Sources */,
 				9A75D3E92C71D16900D27E97 /* ImmersiveView.swift in Sources */,
@@ -306,7 +326,7 @@
 				SDKROOT = xros;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				XROS_DEPLOYMENT_TARGET = 1.2;
+				XROS_DEPLOYMENT_TARGET = 2.0;
 			};
 			name = Debug;
 		};
@@ -362,7 +382,7 @@
 				SDKROOT = xros;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
-				XROS_DEPLOYMENT_TARGET = 1.2;
+				XROS_DEPLOYMENT_TARGET = 2.0;
 			};
 			name = Release;
 		};
@@ -371,6 +391,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"triangle/Preview Content\"";
@@ -378,16 +399,18 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "$(TARGET_NAME)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = triangle;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.cirru.triangle;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jiyinyiyong.SpatialDynamicMesh;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "xros xrsimulator";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
 			};
 			name = Debug;
@@ -397,6 +420,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"triangle/Preview Content\"";
@@ -404,16 +428,18 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "$(TARGET_NAME)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = triangle;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.cirru.triangle;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jiyinyiyong.SpatialDynamicMesh;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "xros xrsimulator";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
 			};
 			name = Release;
@@ -468,7 +494,7 @@
 				9A75D3FD2C71D16B00D27E97 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		9A75D3FE2C71D16B00D27E97 /* Build configuration list for PBXNativeTarget "triangle" */ = {
 			isa = XCConfigurationList;
@@ -477,7 +503,7 @@
 				9A75D4002C71D16B00D27E97 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		9A75D4012C71D16B00D27E97 /* Build configuration list for PBXNativeTarget "triangleTests" */ = {
 			isa = XCConfigurationList;
@@ -486,7 +512,7 @@
 				9A75D4032C71D16B00D27E97 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
 
