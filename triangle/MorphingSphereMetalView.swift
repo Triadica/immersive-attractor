@@ -44,7 +44,7 @@ struct MorphingSphereMetalView: View {
                 let size = content.convert(proxy.frame(in: .local), from: .local, to: .scene).extents
                 let radius = Float(0.5 * size.x)
                 let mesh = try! createMesh()
-//                 let mesh = try! triangleMesh()
+                //                 let mesh = try! triangleMesh()
                 
                 let modelComponent = try! getModelComponent(mesh: mesh)
                 rootEntity.components.set(modelComponent)
@@ -52,8 +52,21 @@ struct MorphingSphereMetalView: View {
                 content.add(rootEntity)
                 self.radius = radius
                 self.mesh = mesh
+                
+                let pointLight = PointLight()
+                pointLight.light.intensity = 5000
+                pointLight.light.color = UIColor.yellow
+                pointLight.light.attenuationRadius = 2
+                pointLight.position = SIMD3<Float>(0, 0, 0.1)
+                
+                content.add(pointLight)
+
             }
-//            .onAppear { startTimer() }
+            .onAppear {
+              // startTimer()
+                
+
+            }
 //            .onDisappear { stopTimer() }
         }
     }
@@ -114,8 +127,8 @@ struct MorphingSphereMetalView: View {
 
         var material = PhysicallyBasedMaterial()
         material.baseColor.tint = .white //.init(white: 0.05, alpha: 1.0)
-        material.roughness.scale = 1.0
-        material.metallic.scale = 0.2
+        material.roughness.scale = 2.0
+        material.metallic.scale = 0.7
         material.blending = .transparent(opacity: 1.0)
         material.faceCulling = .none
 
@@ -166,14 +179,15 @@ struct MorphingSphereMetalView: View {
 //            vertices[1] = VertexData(position: [ 1, -1, 0], color: 0xFFFF0000)
 //            vertices[2] = VertexData(position: [ 0,  1, 0], color: 0xFF0000FF)
             var index = 0;
-            var base = SIMD3<Float>(0.2, 0.1, -0.2);
+            var base = SIMD3<Float>(0.4, 0.4, -0.2);
             
             for _ in 0..<latitudeBands {
                 for _ in 0..<longitudeBands {
-                    let p = lorenzIteration(p: base, dt: 0.003);
-//                     let p = fakeIteration(p: base, dt: 0.1);
+//                    let p = lorenzIteration(p: base, dt: 0.001)
+//                     let p = fakeIteration(p: base, dt: 0.1)
+                    let p = fourwingIteration(p: base, dt: 0.04)
                     
-                    vertices[index] = VertexData(position: p * 0.02 + SIMD3<Float>(0,-0,0), normal: SIMD3<Float>(0,1,1), uv: SIMD2<Float>.zero)
+                    vertices[index] = VertexData(position: p * 0.1 + SIMD3<Float>(0,-0,0), normal: SIMD3<Float>(0,1,1), uv: SIMD2<Float>.zero)
                     base = p;
                     index = index + 1;
                 }
@@ -304,18 +318,21 @@ func lorenzIteration(p: SIMD3<Float>, dt: Float) -> SIMD3<Float> {
     let d = SIMD3<Float>(dx, dy, dz) * dt
     return p + d
 }
-//fn lorenz(p: vec3f, dt: f32) -> LorenzResult {
-//  let beta = 8.0 / 3.0;
-//  let dx = tau * (p.y - p.x);
-//  let dy = p.x * (rou - p.z) - p.y;
-//  let dz = p.x * p.y - beta * p.z;
-//  let d = vec3<f32>(dx, dy, dz) * dt;
-//  return LorenzResult(
-//    p + d,
-//    vec3(dx, dy, dz),
-//    length(d) * 2.1
-//  );
-//}
+
+func fourwingIteration(p: SIMD3<Float>, dt: Float) -> SIMD3<Float> {
+  let a: Float = 0.2
+  let b: Float = 0.01
+  let c: Float = -0.4
+  let x = p.x
+  let y = p.y
+  let z = p.z
+  let dx = a * x + y * z
+  let dy = b * x + c * y - x * z
+  let dz = -z - x * y
+  let d = SIMD3<Float>(dx, dy, dz) * dt
+  return p + d
+}
+
 
 #Preview {
     MorphingSphereMetalView()
