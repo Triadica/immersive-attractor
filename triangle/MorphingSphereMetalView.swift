@@ -302,12 +302,12 @@ struct MorphingSphereMetalView: View {
     }
 }
 
-func fakeIteration(p: SIMD3<Float>, dt: Float) -> SIMD3<Float> {
+private func fakeIteration(p: SIMD3<Float>, dt: Float) -> SIMD3<Float> {
     let d = SIMD3<Float>(0.1, 0, 0) * dt
     return p + d
 }
 
-func lorenzIteration(p: SIMD3<Float>, dt: Float) -> SIMD3<Float> {
+private func lorenzIteration(p: SIMD3<Float>, dt: Float) -> SIMD3<Float> {
     let tau: Float = 10.0;
     let rou: Float = 28.0;
     let beta: Float = 8.0 / 3.0
@@ -319,7 +319,7 @@ func lorenzIteration(p: SIMD3<Float>, dt: Float) -> SIMD3<Float> {
     return p + d
 }
 
-func fourwingIteration(p: SIMD3<Float>, dt: Float) -> SIMD3<Float> {
+private func fourwingIteration(p: SIMD3<Float>, dt: Float) -> SIMD3<Float> {
   let a: Float = 0.2
   let b: Float = 0.01
   let c: Float = -0.4
@@ -331,9 +331,4 @@ func fourwingIteration(p: SIMD3<Float>, dt: Float) -> SIMD3<Float> {
   let dz = -z - x * y
   let d = SIMD3<Float>(dx, dy, dz) * dt
   return p + d
-}
-
-
-#Preview {
-    MorphingSphereMetalView()
 }
