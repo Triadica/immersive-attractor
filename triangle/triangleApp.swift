@@ -9,16 +9,16 @@ import SwiftUI
 
 @main
 struct triangleApp: App {
-    var body: some Scene {
-        WindowGroup {
-            // ContentView()
-            // MorphingSphereMetalView()
-            AttractorView()
-        }.windowStyle(.volumetric)
+  var body: some Scene {
+    WindowGroup {
+      // ContentView()
+      // MorphingSphereMetalView()
+      AttractorView()
+    }.windowStyle(.volumetric)
 
-        ImmersiveSpace(id: "ImmersiveSpace") {
-            ImmersiveView()
-            // MorphingSphereMetalView()
-        }.immersionStyle(selection: .constant(.full), in: .full)
-    }
+    ImmersiveSpace(id: "ImmersiveSpace") {
+      ImmersiveView()
+      // MorphingSphereMetalView()
+    }.immersionStyle(selection: .constant(.full), in: .full)
+  }
 }

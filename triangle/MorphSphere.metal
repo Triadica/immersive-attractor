@@ -33,7 +33,7 @@ kernel void updateMorphingSphere(device VertexData* vertices [[buffer(0)]],
 
     float3 basePosition = float3(x * .01, 0., y * .01);
     float3 up = float3(0., 1., 0.);
-//    
+//
 //    vertices[id].position = basePosition;
 //    vertices[id].normal = up;
 //    vertices[id].uv = float2(x, y);
