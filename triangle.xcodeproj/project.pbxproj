@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		9A0B7DC52C84698E001245B3 /* RealityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A0B7DC42C84698E001245B3 /* RealityKit.framework */; };
+		9A3CD41E2C8A1D9D00E8710C /* MovingLorenz.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A3CD41D2C8A1D9D00E8710C /* MovingLorenz.metal */; };
+		9A3CD4232C8A1E9300E8710C /* MovingLorenzView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A3CD4212C8A1DE300E8710C /* MovingLorenzView.swift */; };
 		9A7510B72C8784C600BB3FA1 /* AttractorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A7510B62C8784BE00BB3FA1 /* AttractorView.swift */; };
 		9A75D3E32C71D16900D27E97 /* RealityKitContent in Frameworks */ = {isa = PBXBuildFile; productRef = 9A75D3E22C71D16900D27E97 /* RealityKitContent */; };
 		9A75D3E52C71D16900D27E97 /* triangleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A75D3E42C71D16900D27E97 /* triangleApp.swift */; };
@@ -31,6 +33,8 @@
 
 /* Begin PBXFileReference section */
 		9A0B7DC42C84698E001245B3 /* RealityKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = RealityKit.framework; path = System/Library/Frameworks/RealityKit.framework; sourceTree = SDKROOT; };
+		9A3CD41D2C8A1D9D00E8710C /* MovingLorenz.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = MovingLorenz.metal; sourceTree = "<group>"; };
+		9A3CD4212C8A1DE300E8710C /* MovingLorenzView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovingLorenzView.swift; sourceTree = "<group>"; };
 		9A7510B62C8784BE00BB3FA1 /* AttractorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttractorView.swift; sourceTree = "<group>"; };
 		9A75D3DD2C71D16900D27E97 /* triangle.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = triangle.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9A75D3E12C71D16900D27E97 /* RealityKitContent */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = RealityKitContent; sourceTree = "<group>"; };
@@ -98,16 +102,18 @@
 		9A75D3DF2C71D16900D27E97 /* triangle */ = {
 			isa = PBXGroup;
 			children = (
-				9A7510B62C8784BE00BB3FA1 /* AttractorView.swift */,
-				9A75D3E42C71D16900D27E97 /* triangleApp.swift */,
-				9A75D3E62C71D16900D27E97 /* ContentView.swift */,
-				9A75D3E82C71D16900D27E97 /* ImmersiveView.swift */,
-				9A75D3EA2C71D16900D27E97 /* ImageBasedLighting.skybox */,
 				9A75D3EC2C71D16B00D27E97 /* Assets.xcassets */,
+				9A7510B62C8784BE00BB3FA1 /* AttractorView.swift */,
+				9A75D3E62C71D16900D27E97 /* ContentView.swift */,
+				9A75D3EA2C71D16900D27E97 /* ImageBasedLighting.skybox */,
+				9A75D3E82C71D16900D27E97 /* ImmersiveView.swift */,
 				9A75D3F12C71D16B00D27E97 /* Info.plist */,
-				9A75D3EE2C71D16B00D27E97 /* Preview Content */,
 				9AA6C2BE2C72697400EAD6DE /* MorphingSphereMetalView.swift */,
 				9AA6C2C02C7269A600EAD6DE /* MorphSphere.metal */,
+				9A3CD41D2C8A1D9D00E8710C /* MovingLorenz.metal */,
+				9A3CD4212C8A1DE300E8710C /* MovingLorenzView.swift */,
+				9A75D3EE2C71D16B00D27E97 /* Preview Content */,
+				9A75D3E42C71D16900D27E97 /* triangleApp.swift */,
 			);
 			path = triangle;
 			sourceTree = "<group>";
@@ -185,7 +191,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1540;
-				LastUpgradeCheck = 1540;
+				LastUpgradeCheck = 1610;
 				ORGANIZATIONNAME = "";
 				TargetAttributes = {
 					9A75D3DC2C71D16900D27E97 = {
@@ -241,7 +247,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9A3CD4232C8A1E9300E8710C /* MovingLorenzView.swift in Sources */,
 				9A75D3E72C71D16900D27E97 /* ContentView.swift in Sources */,
+				9A3CD41E2C8A1D9D00E8710C /* MovingLorenz.metal in Sources */,
 				9A7510B72C8784C600BB3FA1 /* AttractorView.swift in Sources */,
 				9A75D3E52C71D16900D27E97 /* triangleApp.swift in Sources */,
 				9A75D3E92C71D16900D27E97 /* ImmersiveView.swift in Sources */,
@@ -447,7 +455,6 @@
 		9A75D4022C71D16B00D27E97 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -467,7 +474,6 @@
 		9A75D4032C71D16B00D27E97 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;

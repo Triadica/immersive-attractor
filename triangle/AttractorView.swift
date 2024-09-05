@@ -46,7 +46,7 @@ struct AttractorView: View {
         let pointLight = PointLight()
         pointLight.light.intensity = 1000
         pointLight.light.color = UIColor.yellow
-        pointLight.light.attenuationRadius = 2
+        pointLight.light.attenuationRadius = 20
         pointLight.position = SIMD3<Float>(0, 1.0, 0)
 
         content.add(pointLight)
@@ -54,26 +54,25 @@ struct AttractorView: View {
       }
       .onAppear {
         // startTimer()
-
       }
-      //            .onDisappear { stopTimer() }
+      // .onDisappear { stopTimer() }
     }
   }
 
   func getModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
     let resource = try MeshResource(from: mesh)
 
-    //        var material = PhysicallyBasedMaterial()
-    //        material.baseColor.tint = .white //.init(white: 0.05, alpha: 1.0)
-    //        material.roughness.scale = 0.9
-    //        material.metallic.scale = 0.4
-    //        material.blending = .transparent(opacity: 1.0)
-    //        material.faceCulling = .none
-    let simpleMaterial = SimpleMaterial(
-      color: .yellow, isMetallic: false
-    )
+    var material = PhysicallyBasedMaterial()
+    material.baseColor.tint = .white  //.init(white: 0.05, alpha: 1.0)
+    material.roughness.scale = 2
+    material.metallic.scale = 0.4
+    material.blending = .transparent(opacity: 1.0)
+    material.faceCulling = .none
+    // let simpleMaterial = SimpleMaterial(
+    //   color: .yellow, isMetallic: false
+    // )
 
-    return ModelComponent(mesh: resource, materials: [simpleMaterial])
+    return ModelComponent(mesh: resource, materials: [material])
   }
 
   func createMesh() throws -> LowLevelMesh {
@@ -88,8 +87,8 @@ struct AttractorView: View {
 
       for idx in 0..<allSize {
         let p = lorenzIteration(p: base, dt: 0.002)
-        //                let p = fakeIteration(p: base, dt: 0.02)
-        //                let p = fourwingIteration(p: base, dt: 0.01)
+        // let p = fakeIteration(p: base, dt: 0.02)
+        // let p = fourwingIteration(p: base, dt: 0.01)
 
         let index = idx * 4
         let scale: Float = 0.009

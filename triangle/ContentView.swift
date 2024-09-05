@@ -1,6 +1,6 @@
 //
 //  ContentView.swift
-//  triangle
+//  trianglere
 //
 //  Created by chen on 2024/8/18.
 //

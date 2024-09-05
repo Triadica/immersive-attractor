@@ -13,7 +13,8 @@ struct triangleApp: App {
     WindowGroup {
       // ContentView()
       // MorphingSphereMetalView()
-      AttractorView()
+      // AttractorView()
+      MovingLorenzView()
     }.windowStyle(.volumetric)
 
     ImmersiveSpace(id: "ImmersiveSpace") {
