@@ -4,21 +4,18 @@ import SwiftUI
 
 struct MovingLorenzView: View {
   let rootEntity: Entity = Entity()
-  let latitudeBands: Int = 20
-  let longitudeBands: Int = 20
+  let latitudeBands: Int = 10
+  let longitudeBands: Int = 10
   /** 3 dimentions to control size */
-  let altitudeBands: Int = 20
+  let altitudeBands: Int = 10
   /** how many segments in each strip */
-  let stripSize: Int = 20
-  var mid: Int {
-    return stripSize / 2
-  }
+  let stripSize: Int = 8
 
   var vertexCapacity: Int {
-    return latitudeBands * longitudeBands * altitudeBands
+    return latitudeBands * longitudeBands * altitudeBands * stripSize * 4
   }
   var indexCount: Int {
-    return latitudeBands * longitudeBands * altitudeBands
+    return latitudeBands * longitudeBands * altitudeBands * stripSize * 6
   }
 
   @State var mesh: LowLevelMesh?
@@ -112,19 +109,44 @@ struct MovingLorenzView: View {
     let mesh = try LowLevelMesh(descriptor: desc)
     mesh.withUnsafeMutableBytes(bufferIndex: 0) { rawBytes in
       let vertices = rawBytes.bindMemory(to: VertexData.self)
-      var index = 0
-      var base = SIMD3<Float>(0.4, 0.4, -0.2)
 
-      for _ in 0..<latitudeBands {
-        for _ in 0..<longitudeBands {
-          for _ in 0..<altitudeBands {
-            let p = fourwingIteration(p: base, dt: 0.04)
+      for x in 0..<latitudeBands {
+        for y in 0..<longitudeBands {
+          for z in 0..<altitudeBands {
+            var base = SIMD3<Float>(0.2 * Float(x), 0.2 * Float(y), -0.2 * Float(z))
+            let gridBase = (x * latitudeBands + y) * longitudeBands + z
 
-            vertices[index] = VertexData(
-              position: p * 0.1 + SIMD3<Float>(0, -0, 0), normal: SIMD3<Float>(0, 1, 1),
-              uv: SIMD2<Float>.zero)
-            base = p
-            index = index + 1
+            // each strip has `stripSize` points, and each point has 4 vertices, and using 6 indices to draw a strip
+            for i in 0..<stripSize {
+              let vertexBase = (gridBase * stripSize + i) * 4
+              vertices[vertexBase] = VertexData(
+                position: base * 0.2 + SIMD3<Float>(0, 0, 0), normal: SIMD3<Float>(0, 1, 1),
+                uv: SIMD2<Float>.zero,
+                atSide: false
+              )
+              vertices[vertexBase + 1] = VertexData(
+                position: base * 0.2 + SIMD3<Float>(0.01, 0, 0), normal: SIMD3<Float>(0, 1, 1),
+                uv: SIMD2<Float>.zero,
+                atSide: true
+              )
+
+              let p = fourwingIteration(p: base, dt: 0.04)
+              // let p = fakeIteration(p: base, dt: 0.04)
+
+              vertices[vertexBase + 2] = VertexData(
+                position: p * 0.2 + SIMD3<Float>(0, 0, 0), normal: SIMD3<Float>(0, 1, 1),
+                uv: SIMD2<Float>.zero,
+                atSide: false
+              )
+              vertices[vertexBase + 3] = VertexData(
+                position: p * 0.2 + SIMD3<Float>(0.01, 0, 0), normal: SIMD3<Float>(0, 1, 1),
+                uv: SIMD2<Float>.zero,
+                atSide: true
+              )
+
+              base = p
+            }
+
           }
 
         }
@@ -134,35 +156,33 @@ struct MovingLorenzView: View {
 
     mesh.withUnsafeMutableIndices { rawIndices in
       let indices = rawIndices.bindMemory(to: UInt32.self)
-      var index = 0
 
-      for _ in 0..<latitudeBands {
-        for _ in 0..<longitudeBands {
-          for _ in 0..<altitudeBands {
-            indices[index] = UInt32(index)
-            index = index + 1
-            // let first = (latNumber * (longitudeBands + 1)) + longNumber
-            // let second = first + longitudeBands + 1
+      for x in 0..<latitudeBands {
+        for y in 0..<longitudeBands {
+          for z in 0..<altitudeBands {
+            let gridBase = (x * latitudeBands + y) * longitudeBands + z
 
-            // indices[index] = UInt32(first)
-            // indices[index + 1] = UInt32(second)
-            // indices[index + 2] = UInt32(first + 1)
-
-            // indices[index + 3] = UInt32(second)
-            // indices[index + 4] = UInt32(second + 1)
-            // indices[index + 5] = UInt32(first + 1)
-
-            // index += 6
+            for i in 0..<stripSize {
+              // each segment has 4 vertices, and 6 indices to draw a strip
+              let segmentBase = (gridBase * stripSize + i) * 6
+              let vertexBase = UInt32((gridBase * stripSize + i) * 4)
+              indices[segmentBase + 0] = vertexBase
+              indices[segmentBase + 1] = vertexBase + 1
+              indices[segmentBase + 2] = vertexBase + 2
+              indices[segmentBase + 3] = vertexBase + 2
+              indices[segmentBase + 4] = vertexBase + 1
+              indices[segmentBase + 5] = vertexBase + 3
+            }
           }
         }
       }
     }
 
-    let meshBounds = BoundingBox(min: [-10, -10, -10], max: [10, 10, 10])
+    let meshBounds = BoundingBox(min: [-100, -100, -100], max: [100, 100, 100])
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
-        indexCount: vertexCapacity,
-        topology: .lineStrip,
+        indexCount: indexCount,
+        topology: .triangle,
         bounds: meshBounds
       )
     ])
@@ -209,6 +229,7 @@ struct MovingLorenzView: View {
     var position: SIMD3<Float> = .zero
     var normal: SIMD3<Float> = .zero
     var uv: SIMD2<Float> = .zero
+    var atSide: Bool = false
 
     @MainActor static var vertexAttributes: [LowLevelMesh.Attribute] = [
       .init(
@@ -234,6 +255,11 @@ struct MovingLorenzView: View {
     var latitudeBands: Int32
     var longitudeBands: Int32
     var radius: Float
+  }
+
+  private func fakeIteration(p: SIMD3<Float>, dt: Float) -> SIMD3<Float> {
+    let d = SIMD3<Float>(0.1, 0.1, -0.1) * dt
+    return p + d
   }
 
   func lorenzIteration(p: SIMD3<Float>, dt: Float) -> SIMD3<Float> {
