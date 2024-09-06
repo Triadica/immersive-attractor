@@ -9,7 +9,11 @@ struct MovingLorenzView: View {
   /** 3 dimentions to control size */
   let altitudeBands: Int = 10
   /** how many segments in each strip */
-  let stripSize: Int = 8
+  let stripSize: Int = 4
+  let stripWidth: Float = 0.004
+  let stripScale: Float = 0.2
+  let iterateDt: Float = 0.0
+  let fps: Double = 40
 
   var vertexCapacity: Int {
     return latitudeBands * longitudeBands * altitudeBands * stripSize * 4
@@ -20,9 +24,6 @@ struct MovingLorenzView: View {
 
   @State var mesh: LowLevelMesh?
   @State var timer: Timer?
-  @MainActor @State var frameDuration: TimeInterval = 0.0
-  @State var lastUpdateTime = CACurrentMediaTime()
-  @State var time: Double = 0.0
   @State var radius: Float = 100
 
   let device: MTLDevice
@@ -41,42 +42,39 @@ struct MovingLorenzView: View {
   var body: some View {
     GeometryReader3D { proxy in
       RealityView { content in
-        let size = content.convert(proxy.frame(in: .local), from: .local, to: .scene).extents
-        let radius = Float(0.5 * size.x)
+        // let size = content.convert(proxy.frame(in: .local), from: .local, to: .scene).extents
+        // let radius = Float(0.5 * size.x)
         let mesh = try! createMesh()
 
         let modelComponent = try! getModelComponent(mesh: mesh)
         rootEntity.components.set(modelComponent)
         // rootEntity.scale *= scalePreviewFactor
         content.add(rootEntity)
-        self.radius = radius
+        // self.radius = radius
         self.mesh = mesh
 
         let pointLight = PointLight()
         pointLight.light.intensity = 5000
         pointLight.light.color = UIColor.yellow
-        pointLight.light.attenuationRadius = 2
+        pointLight.light.attenuationRadius = 20
         pointLight.position = SIMD3<Float>(0, 0, 0.1)
 
         content.add(pointLight)
 
       }
       .onAppear {
-        // startTimer()
+        startTimer()
       }
       .onDisappear {
-        // stopTimer()
+        stopTimer()
       }
     }
   }
 
   func startTimer() {
-    timer = Timer.scheduledTimer(withTimeInterval: 1 / 120.0, repeats: true) { _ in
-      let currentTime = CACurrentMediaTime()
+    timer = Timer.scheduledTimer(withTimeInterval: 1 / fps, repeats: true) { _ in
 
       DispatchQueue.main.async {
-        frameDuration = currentTime - lastUpdateTime
-        lastUpdateTime = currentTime
         self.updateMesh()
       }
 
@@ -120,12 +118,16 @@ struct MovingLorenzView: View {
             for i in 0..<stripSize {
               let vertexBase = (gridBase * stripSize + i) * 4
               vertices[vertexBase] = VertexData(
-                position: base * 0.2 + SIMD3<Float>(0, 0, 0), normal: SIMD3<Float>(0, 1, 1),
+                position: base * stripScale + SIMD3<Float>(0, 0, 0),
+                originalPosition: base,
+                normal: SIMD3<Float>(0, 1, 1),
                 uv: SIMD2<Float>.zero,
                 atSide: false
               )
               vertices[vertexBase + 1] = VertexData(
-                position: base * 0.2 + SIMD3<Float>(0.01, 0, 0), normal: SIMD3<Float>(0, 1, 1),
+                position: base * stripScale + SIMD3<Float>(stripWidth, 0, 0),
+                originalPosition: base,
+                normal: SIMD3<Float>(0, 1, 1),
                 uv: SIMD2<Float>.zero,
                 atSide: true
               )
@@ -134,12 +136,16 @@ struct MovingLorenzView: View {
               // let p = fakeIteration(p: base, dt: 0.04)
 
               vertices[vertexBase + 2] = VertexData(
-                position: p * 0.2 + SIMD3<Float>(0, 0, 0), normal: SIMD3<Float>(0, 1, 1),
+                position: p * stripScale + SIMD3<Float>(0, 0, 0),
+                originalPosition: p,
+                normal: SIMD3<Float>(0, 1, 1),
                 uv: SIMD2<Float>.zero,
                 atSide: false
               )
               vertices[vertexBase + 3] = VertexData(
-                position: p * 0.2 + SIMD3<Float>(0.01, 0, 0), normal: SIMD3<Float>(0, 1, 1),
+                position: p * stripScale + SIMD3<Float>(stripWidth, 0, 0),
+                originalPosition: p,
+                normal: SIMD3<Float>(0, 1, 1),
                 uv: SIMD2<Float>.zero,
                 atSide: true
               )
@@ -178,7 +184,7 @@ struct MovingLorenzView: View {
       }
     }
 
-    let meshBounds = BoundingBox(min: [-100, -100, -100], max: [100, 100, 100])
+    let meshBounds = BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
         indexCount: indexCount,
@@ -201,12 +207,8 @@ struct MovingLorenzView: View {
     computeEncoder.setComputePipelineState(computePipeline)
     computeEncoder.setBuffer(vertexBuffer, offset: 0, index: 0)
 
-    var params = MorphingSphereParams(
-      latitudeBands: Int32(latitudeBands),
-      longitudeBands: Int32(longitudeBands),
-      radius: radius
-    )
-    computeEncoder.setBytes(&params, length: MemoryLayout<MorphingSphereParams>.size, index: 1)
+    var params = MovingLorenzParams(width: stripWidth, stripScale: stripScale, dt: iterateDt)
+    computeEncoder.setBytes(&params, length: MemoryLayout<MovingLorenzParams>.size, index: 1)
 
     let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
     let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
@@ -216,17 +218,20 @@ struct MovingLorenzView: View {
     commandBuffer.commit()
 
     let meshBounds = BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
+
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
         indexCount: indexCount,
-        topology: .lineStrip,
+        topology: .triangle,
         bounds: meshBounds
       )
     ])
+
   }
 
   struct VertexData {
     var position: SIMD3<Float> = .zero
+    var originalPosition: SIMD3<Float> = .zero
     var normal: SIMD3<Float> = .zero
     var uv: SIMD2<Float> = .zero
     var atSide: Bool = false
@@ -251,10 +256,10 @@ struct MovingLorenzView: View {
     }
   }
 
-  struct MorphingSphereParams {
-    var latitudeBands: Int32
-    var longitudeBands: Int32
-    var radius: Float
+  struct MovingLorenzParams {
+    var width: Float
+    var stripScale: Float
+    var dt: Float
   }
 
   private func fakeIteration(p: SIMD3<Float>, dt: Float) -> SIMD3<Float> {
