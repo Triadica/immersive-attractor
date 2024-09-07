@@ -4,12 +4,12 @@ import SwiftUI
 
 struct MovingLorenzView: View {
   let rootEntity: Entity = Entity()
-  let latitudeBands: Int = 20
-  let longitudeBands: Int = 20
+  let latitudeBands: Int = 10
+  let longitudeBands: Int = 10
   /** 3 dimentions to control size */
-  let altitudeBands: Int = 20
+  let altitudeBands: Int = 10
   /** how many segments in each strip */
-  let stripSize: Int = 16
+  let stripSize: Int = 8
   let stripWidth: Float = 0.01
   let stripScale: Float = 0.06
   let iterateDt: Float = 0.002
@@ -31,6 +31,7 @@ struct MovingLorenzView: View {
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
   let computePipeline: MTLComputePipelineState
+  @State var pingPongBuffer: PingPongBuffer?
 
   init() {
     self.device = MTLCreateSystemDefaultDevice()!
@@ -46,6 +47,9 @@ struct MovingLorenzView: View {
       RealityView { content in
         // let size = content.convert(proxy.frame(in: .local), from: .local, to: .scene).extents
         // let radius = Float(0.5 * size.x)
+
+        self.pingPongBuffer = PingPongBuffer(
+          device: device, length: MemoryLayout<VertexData>.stride * vertexCapacity)
         let mesh = try! createMesh()
 
         let modelComponent = try! getModelComponent(mesh: mesh)
@@ -198,27 +202,31 @@ struct MovingLorenzView: View {
         bounds: meshBounds
       )
     ])
-
+    if let pingPongBuffer = pingPongBuffer {
+      mesh.withUnsafeMutableBytes(bufferIndex: 0) { rawBytes in
+        pingPongBuffer.currentBuffer.contents().copyMemory(
+          from: rawBytes.baseAddress!, byteCount: rawBytes.count)
+      }
+    }
     return mesh
   }
 
   func updateMesh() {
     guard let mesh = mesh,
+      let pingPongBuffer = pingPongBuffer,
       let commandBuffer = commandQueue.makeCommandBuffer(),
       let computeEncoder = commandBuffer.makeComputeCommandEncoder()
     else {
-      print("updateMesh: failed to get mesh or commandBuffer or computeEncoder")
+      print("updateMesh: failed to get mesh or pingPongBuffer or commandBuffer or computeEncoder")
       return
     }
 
-    //     let vertexBuffer = mesh.replace(bufferIndex: 0, using: commandBuffer)
-    let vertexBuffer = mesh.read(bufferIndex: 0, using: commandBuffer)
-
     computeEncoder.setComputePipelineState(computePipeline)
-    computeEncoder.setBuffer(vertexBuffer, offset: 0, index: 0)
+    computeEncoder.setBuffer(pingPongBuffer.currentBuffer, offset: 0, index: 0)
+    computeEncoder.setBuffer(pingPongBuffer.nextBuffer, offset: 0, index: 1)
 
     var params = MovingLorenzParams(width: stripWidth, stripScale: stripScale, dt: iterateDt)
-    computeEncoder.setBytes(&params, length: MemoryLayout<MovingLorenzParams>.size, index: 1)
+    computeEncoder.setBytes(&params, length: MemoryLayout<MovingLorenzParams>.size, index: 2)
 
     let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
     let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
@@ -226,8 +234,19 @@ struct MovingLorenzView: View {
     computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
 
     computeEncoder.endEncoding()
+
+    // 复制计算结果到网格的顶点缓冲区
+    let blitEncoder = commandBuffer.makeBlitCommandEncoder()!
+    blitEncoder.copy(
+      from: pingPongBuffer.nextBuffer, sourceOffset: 0,
+      to: mesh.replace(bufferIndex: 0, using: commandBuffer), destinationOffset: 0,
+      size: pingPongBuffer.nextBuffer.length)
+    blitEncoder.endEncoding()
+
     commandBuffer.commit()
-    // commandBuffer.waitUntilCompleted()
+
+    // 交换 ping-pong buffer
+    pingPongBuffer.swap()
 
     let meshBounds = BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
 
@@ -238,7 +257,6 @@ struct MovingLorenzView: View {
         bounds: meshBounds
       )
     ])
-
   }
 
   struct VertexData {
@@ -311,5 +329,23 @@ struct MovingLorenzView: View {
     let dz = -z - x * y
     let d = SIMD3<Float>(dx, dy, dz) * dt
     return p + d
+  }
+}
+
+class PingPongBuffer {
+  let bufferA: MTLBuffer
+  let bufferB: MTLBuffer
+  var currentBuffer: MTLBuffer
+  var nextBuffer: MTLBuffer
+
+  init(device: MTLDevice, length: Int) {
+    bufferA = device.makeBuffer(length: length, options: .storageModeShared)!
+    bufferB = device.makeBuffer(length: length, options: .storageModeShared)!
+    currentBuffer = bufferA
+    nextBuffer = bufferB
+  }
+
+  func swap() {
+    (currentBuffer, nextBuffer) = (nextBuffer, currentBuffer)
   }
 }

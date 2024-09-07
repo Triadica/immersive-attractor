@@ -48,7 +48,8 @@ float3 fourwingIteration(float3 p, float dt) {
 
 kernel void updateMovingLorenz(
   device VertexData* vertices [[buffer(0)]],
-  constant MovingLorenzParams& params [[buffer(1)]],
+  device VertexData *outputVertices [[buffer(1)]],
+  constant MovingLorenzParams& params [[buffer(2)]],
   uint id [[thread_position_in_grid]])
 {
   float3 basePosition = vertices[id].position;
@@ -57,9 +58,11 @@ kernel void updateMovingLorenz(
     basePosition = basePosition - float3(params.width, 0., 0.);
   }
   float3 nextPosition = fourwingIteration(basePosition, params.dt);
-  vertices[id].position = nextPosition;
+  outputVertices[id].position = nextPosition;
+  outputVertices[id].normal = vertices[id].normal;
+  outputVertices[id].uv = vertices[id].uv;
   if (atSide) {
-    vertices[id].position = nextPosition + float3(params.width, 0., 0.);
+    outputVertices[id].position = nextPosition + float3(params.width, 0., 0.);
   }
 
 }
