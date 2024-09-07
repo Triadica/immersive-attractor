@@ -4,17 +4,17 @@ import SwiftUI
 
 struct MovingLorenzView: View {
   let rootEntity: Entity = Entity()
-  let latitudeBands: Int = 10
-  let longitudeBands: Int = 10
+  let latitudeBands: Int = 20
+  let longitudeBands: Int = 20
   /** 3 dimentions to control size */
-  let altitudeBands: Int = 10
+  let altitudeBands: Int = 20
   /** how many segments in each strip */
-  let stripSize: Int = 4
-  let stripWidth: Float = 0.04
-  let stripScale: Float = 0.2
-  let iterateDt: Float = 0.04
-  let fps: Double = 20
-  let gridWidth: Float = 0.1
+  let stripSize: Int = 16
+  let stripWidth: Float = 0.01
+  let stripScale: Float = 0.06
+  let iterateDt: Float = 0.002
+  let fps: Double = 120
+  let gridWidth: Float = 0.2
 
   var vertexCapacity: Int {
     return latitudeBands * longitudeBands * altitudeBands * stripSize * 4
@@ -50,7 +50,7 @@ struct MovingLorenzView: View {
 
         let modelComponent = try! getModelComponent(mesh: mesh)
         rootEntity.components.set(modelComponent)
-        rootEntity.scale *= 0.4
+        rootEntity.scale *= 0.1
         content.add(rootEntity)
         // self.radius = radius
         self.mesh = mesh
@@ -64,20 +64,21 @@ struct MovingLorenzView: View {
         content.add(pointLight)
 
       }
-      // .onAppear {
-      //   startTimer()
-      // }
-      // .onDisappear {
-      //   stopTimer()
-      // }
+      .onAppear {
+        startTimer()
+      }
+      .onDisappear {
+        stopTimer()
+      }
     }
   }
 
   func startTimer() {
+    self.mesh = try! createMesh()  // recreate mesh when start timer
     timer = Timer.scheduledTimer(withTimeInterval: 1 / fps, repeats: true) { _ in
 
       DispatchQueue.main.async {
-        // self.updateMesh()
+        self.updateMesh()
       }
 
     }
@@ -210,7 +211,8 @@ struct MovingLorenzView: View {
       return
     }
 
-    let vertexBuffer = mesh.replace(bufferIndex: 0, using: commandBuffer)
+    //     let vertexBuffer = mesh.replace(bufferIndex: 0, using: commandBuffer)
+    let vertexBuffer = mesh.read(bufferIndex: 0, using: commandBuffer)
 
     computeEncoder.setComputePipelineState(computePipeline)
     computeEncoder.setBuffer(vertexBuffer, offset: 0, index: 0)
@@ -225,6 +227,7 @@ struct MovingLorenzView: View {
 
     computeEncoder.endEncoding()
     commandBuffer.commit()
+    // commandBuffer.waitUntilCompleted()
 
     let meshBounds = BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
 
