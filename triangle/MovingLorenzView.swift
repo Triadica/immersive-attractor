@@ -4,17 +4,17 @@ import SwiftUI
 
 struct MovingLorenzView: View {
   let rootEntity: Entity = Entity()
-  let latitudeBands: Int = 12
-  let longitudeBands: Int = 12
+  let latitudeBands: Int = 20
+  let longitudeBands: Int = 20
   /** 3 dimentions to control size */
-  let altitudeBands: Int = 12
+  let altitudeBands: Int = 20
   /** how many segments in each strip */
-  let stripSize: Int = 48
-  let stripWidth: Float = 0.01
+  let stripSize: Int = 8
+  let stripWidth: Float = 0.008
   let stripScale: Float = 0.2
-  let iterateDt: Float = 0.02
-  let fps: Double = 120
-  let gridWidth: Float = 0.4
+  let iterateDt: Float = 0.012
+  let fps: Double = 90
+  let gridWidth: Float = 0.1
 
   var vertexCapacity: Int {
     return latitudeBands * longitudeBands * altitudeBands * stripSize * 4
@@ -65,7 +65,7 @@ struct MovingLorenzView: View {
         pointLight.light.intensity = 5000
         pointLight.light.color = UIColor.yellow
         pointLight.light.attenuationRadius = 20
-        pointLight.position = SIMD3<Float>(0, 0, 0.1)
+        pointLight.position = SIMD3<Float>(0, 0.2, 0.5)
 
         content.add(pointLight)
 
@@ -123,18 +123,20 @@ struct MovingLorenzView: View {
           for z in 0..<altitudeBands {
 
             var base = SIMD3<Float>(
-              gridWidth * Float(x), gridWidth * Float(y), -gridWidth * Float(z))
+              gridWidth * Float(x - latitudeBands / 2),
+              gridWidth * Float(y - longitudeBands / 2),
+              -gridWidth * Float(z - altitudeBands / 2))
             let gridBase = (x * latitudeBands + y) * longitudeBands + z
 
             // each strip has `stripSize` points, and each point has 4 vertices, and using 6 indices to draw a strip
             for i in 0..<stripSize {
               let vertexBase = (gridBase * stripSize + i) * 4
 
-              let p = fourwingIteration(p: base, dt: 0.04)
+              // let p = fourwingIteration(p: base, dt: 0.04)
               // let p = fakeIteration(p: base, dt: 0.04)
 
               vertices[vertexBase] = VertexData(
-                position: p + SIMD3<Float>(0, 0, 0),
+                position: base + SIMD3<Float>(0, 0, 0),
                 normal: SIMD3<Float>(0, 1, 1),
                 uv: SIMD2<Float>.zero,
                 atSide: false,
@@ -143,7 +145,7 @@ struct MovingLorenzView: View {
                   // originalPosition: base,
               )
               vertices[vertexBase + 1] = VertexData(
-                position: p + SIMD3<Float>(stripWidth, 0, 0),
+                position: base + SIMD3<Float>(stripWidth, 0, 0),
                 normal: SIMD3<Float>(0, 1, 1),
                 uv: SIMD2<Float>.zero,
                 atSide: true,
@@ -172,7 +174,7 @@ struct MovingLorenzView: View {
 
               )
 
-              base = p
+              // base = p
             }
 
           }

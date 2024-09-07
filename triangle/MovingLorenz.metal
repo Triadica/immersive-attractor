@@ -30,7 +30,6 @@ float3 lorenzIteration(float3 p, float dt) {
   return p + d;
 }
 
-
 // a Metal function of fourwing
 float3 fourwingIteration(float3 p, float dt) {
   float a = 0.2;
@@ -46,6 +45,27 @@ float3 fourwingIteration(float3 p, float dt) {
   return p + d;
 }
 
+// a metal function of aizawa
+float3 aizawaIteration(float3 p, float dt) {
+  float a = 0.95;
+  float b = 0.7;
+  float c = 0.6;
+  float d0 = 3.5;
+  float e = 0.25;
+  float f = 0.1;
+
+  float x = p.x;
+  float y = p.y;
+  float z = p.z;
+
+  float dx = (z - b) * x - d0 * y;
+  float dy = d0 * x + (z - b) * y;
+  float dz = c + a * z - pow(z, 3.0) / 3.0 - (x * x + y * y) * (1. + e * z) + f * z * pow(x, 3.0);
+
+  float3 d = float3(dx, dy, dz) * dt * 0.8;
+  return p + d;
+}
+
 
 kernel void updateMovingLorenz(
   device VertexData* vertices [[buffer(0)]],
@@ -53,8 +73,6 @@ kernel void updateMovingLorenz(
   constant MovingLorenzParams& params [[buffer(2)]],
   uint id [[thread_position_in_grid]])
 {
-  int stripSize = 8;
-  // bool leading = ((id % (stripSize * 4)) / 4) % stripSize == 0;
   bool leading = vertices[id].leading;
   bool atSide = vertices[id].atSide;
   bool secondary = vertices[id].secondary;
@@ -72,12 +90,14 @@ kernel void updateMovingLorenz(
     }
     if (atSide) {
       float3 basePosition = vertices[id-1].position;
-      float3 nextPosition = fourwingIteration(basePosition, params.dt);
+      // float3 nextPosition = fourwingIteration(basePosition, params.dt);
+      float3 nextPosition = aizawaIteration(basePosition, params.dt);
       outputVertices[id].position = nextPosition;
       outputVertices[id].position = nextPosition + float3(params.width, 0., 0.);
     } else {
       float3 basePosition = vertices[id].position;
-      float3 nextPosition = fourwingIteration(basePosition, params.dt);
+      // float3 nextPosition = fourwingIteration(basePosition, params.dt);
+      float3 nextPosition = aizawaIteration(basePosition, params.dt);
       outputVertices[id].position = nextPosition;
     }
   } else {
