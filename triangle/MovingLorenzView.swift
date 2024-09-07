@@ -9,8 +9,8 @@ struct MovingLorenzView: View {
   /** 3 dimentions to control size */
   let altitudeBands: Int = 12
   /** how many segments in each strip */
-  let stripSize: Int = 32
-  let stripWidth: Float = 0.04
+  let stripSize: Int = 48
+  let stripWidth: Float = 0.01
   let stripScale: Float = 0.2
   let iterateDt: Float = 0.02
   let fps: Double = 120
@@ -25,6 +25,8 @@ struct MovingLorenzView: View {
 
   @State var mesh: LowLevelMesh?
   @State var timer: Timer?
+
+  @State private var updateTrigger = false
 
   let radius: Float = 100
 
@@ -83,6 +85,7 @@ struct MovingLorenzView: View {
 
       DispatchQueue.main.async {
         self.updateMesh()
+        self.updateTrigger.toggle()
       }
 
     }
@@ -245,7 +248,7 @@ struct MovingLorenzView: View {
 
     computeEncoder.endEncoding()
 
-    // 复制计算结果到网格的顶点缓冲区
+    // copy data from next buffer to mesh
     let blitEncoder = commandBuffer.makeBlitCommandEncoder()!
     blitEncoder.copy(
       from: pingPongBuffer.nextBuffer, sourceOffset: 0,
@@ -255,7 +258,7 @@ struct MovingLorenzView: View {
 
     commandBuffer.commit()
 
-    // 交换 ping-pong buffer
+    // swap buffers
     pingPongBuffer.swap()
 
     let meshBounds = BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
