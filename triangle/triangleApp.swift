@@ -12,13 +12,14 @@ struct triangleApp: App {
   var body: some Scene {
     WindowGroup {
       // ContentView()
-      // MorphingSphereMetalView()
+      MorphingSphereMetalView()
       // AttractorView()
       MovingLorenzView()
     }.windowStyle(.volumetric)
 
     ImmersiveSpace(id: "ImmersiveSpace") {
-      ImmersiveView()
+      // ImmersiveView()
+      // MovingLorenzView()
       // MorphingSphereMetalView()
     }.immersionStyle(selection: .constant(.full), in: .full)
   }

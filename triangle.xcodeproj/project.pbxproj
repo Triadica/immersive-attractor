@@ -10,6 +10,8 @@
 		9A0B7DC52C84698E001245B3 /* RealityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A0B7DC42C84698E001245B3 /* RealityKit.framework */; };
 		9A3CD41E2C8A1D9D00E8710C /* MovingLorenz.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A3CD41D2C8A1D9D00E8710C /* MovingLorenz.metal */; };
 		9A3CD4232C8A1E9300E8710C /* MovingLorenzView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A3CD4212C8A1DE300E8710C /* MovingLorenzView.swift */; };
+		9A3CD4242C8BF34600E8710C /* MorphingSphereMetalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AA6C2BE2C72697400EAD6DE /* MorphingSphereMetalView.swift */; };
+		9A3CD4252C8BF34A00E8710C /* MorphSphere.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9AA6C2C02C7269A600EAD6DE /* MorphSphere.metal */; };
 		9A7510B72C8784C600BB3FA1 /* AttractorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A7510B62C8784BE00BB3FA1 /* AttractorView.swift */; };
 		9A75D3E32C71D16900D27E97 /* RealityKitContent in Frameworks */ = {isa = PBXBuildFile; productRef = 9A75D3E22C71D16900D27E97 /* RealityKitContent */; };
 		9A75D3E52C71D16900D27E97 /* triangleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A75D3E42C71D16900D27E97 /* triangleApp.swift */; };
@@ -247,6 +249,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9A3CD4252C8BF34A00E8710C /* MorphSphere.metal in Sources */,
+				9A3CD4242C8BF34600E8710C /* MorphingSphereMetalView.swift in Sources */,
 				9A3CD4232C8A1E9300E8710C /* MovingLorenzView.swift in Sources */,
 				9A75D3E72C71D16900D27E97 /* ContentView.swift in Sources */,
 				9A3CD41E2C8A1D9D00E8710C /* MovingLorenz.metal in Sources */,

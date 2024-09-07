@@ -25,6 +25,7 @@ struct MovingLorenzView: View {
   @State var mesh: LowLevelMesh?
   @State var timer: Timer?
   @State var radius: Float = 100
+  @State var time: Float = 0
 
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
@@ -76,6 +77,7 @@ struct MovingLorenzView: View {
 
       DispatchQueue.main.async {
         self.updateMesh()
+        self.time += 1
       }
 
     }
@@ -212,6 +214,7 @@ struct MovingLorenzView: View {
 
     let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
     let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
+
     computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
 
     computeEncoder.endEncoding()
