@@ -10,10 +10,11 @@ struct MovingLorenzView: View {
   let altitudeBands: Int = 10
   /** how many segments in each strip */
   let stripSize: Int = 4
-  let stripWidth: Float = 0.004
+  let stripWidth: Float = 0.04
   let stripScale: Float = 0.2
-  let iterateDt: Float = 0.0
-  let fps: Double = 40
+  let iterateDt: Float = 0.04
+  let fps: Double = 20
+  let gridWidth: Float = 0.1
 
   var vertexCapacity: Int {
     return latitudeBands * longitudeBands * altitudeBands * stripSize * 4
@@ -24,8 +25,8 @@ struct MovingLorenzView: View {
 
   @State var mesh: LowLevelMesh?
   @State var timer: Timer?
-  @State var radius: Float = 100
-  @State var time: Float = 0
+
+  let radius: Float = 100
 
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
@@ -49,7 +50,7 @@ struct MovingLorenzView: View {
 
         let modelComponent = try! getModelComponent(mesh: mesh)
         rootEntity.components.set(modelComponent)
-        // rootEntity.scale *= scalePreviewFactor
+        rootEntity.scale *= 0.4
         content.add(rootEntity)
         // self.radius = radius
         self.mesh = mesh
@@ -63,12 +64,12 @@ struct MovingLorenzView: View {
         content.add(pointLight)
 
       }
-      .onAppear {
-        startTimer()
-      }
-      .onDisappear {
-        stopTimer()
-      }
+      // .onAppear {
+      //   startTimer()
+      // }
+      // .onDisappear {
+      //   stopTimer()
+      // }
     }
   }
 
@@ -76,8 +77,7 @@ struct MovingLorenzView: View {
     timer = Timer.scheduledTimer(withTimeInterval: 1 / fps, repeats: true) { _ in
 
       DispatchQueue.main.async {
-        self.updateMesh()
-        self.time += 1
+        // self.updateMesh()
       }
 
     }
@@ -113,43 +113,45 @@ struct MovingLorenzView: View {
       for x in 0..<latitudeBands {
         for y in 0..<longitudeBands {
           for z in 0..<altitudeBands {
-            var base = SIMD3<Float>(0.2 * Float(x), 0.2 * Float(y), -0.2 * Float(z))
+
+            var base = SIMD3<Float>(
+              gridWidth * Float(x), gridWidth * Float(y), -gridWidth * Float(z))
             let gridBase = (x * latitudeBands + y) * longitudeBands + z
 
             // each strip has `stripSize` points, and each point has 4 vertices, and using 6 indices to draw a strip
             for i in 0..<stripSize {
               let vertexBase = (gridBase * stripSize + i) * 4
               vertices[vertexBase] = VertexData(
-                position: base * stripScale + SIMD3<Float>(0, 0, 0),
-                originalPosition: base,
+                position: base + SIMD3<Float>(0, 0, 0),
                 normal: SIMD3<Float>(0, 1, 1),
-                uv: SIMD2<Float>.zero,
-                atSide: false
+                uv: SIMD2<Float>.zero
+                  // originalPosition: base,
+                  // atSide: 0
               )
               vertices[vertexBase + 1] = VertexData(
-                position: base * stripScale + SIMD3<Float>(stripWidth, 0, 0),
-                originalPosition: base,
+                position: base + SIMD3<Float>(stripWidth, 0, 0),
                 normal: SIMD3<Float>(0, 1, 1),
-                uv: SIMD2<Float>.zero,
-                atSide: true
+                uv: SIMD2<Float>.zero
+                  // originalPosition: base,
+                  // atSide: 1
               )
 
               let p = fourwingIteration(p: base, dt: 0.04)
               // let p = fakeIteration(p: base, dt: 0.04)
 
               vertices[vertexBase + 2] = VertexData(
-                position: p * stripScale + SIMD3<Float>(0, 0, 0),
-                originalPosition: p,
+                position: p + SIMD3<Float>(0, 0, 0),
                 normal: SIMD3<Float>(0, 1, 1),
-                uv: SIMD2<Float>.zero,
-                atSide: false
+                uv: SIMD2<Float>.zero
+                  // originalPosition: p,
+                  // atSide: 0
               )
               vertices[vertexBase + 3] = VertexData(
-                position: p * stripScale + SIMD3<Float>(stripWidth, 0, 0),
-                originalPosition: p,
+                position: p + SIMD3<Float>(stripWidth, 0, 0),
                 normal: SIMD3<Float>(0, 1, 1),
-                uv: SIMD2<Float>.zero,
-                atSide: true
+                uv: SIMD2<Float>.zero
+                  // originalPosition: p,
+                  // atSide: 1
               )
 
               base = p
@@ -187,6 +189,7 @@ struct MovingLorenzView: View {
     }
 
     let meshBounds = BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
+
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
         indexCount: indexCount,
@@ -202,7 +205,10 @@ struct MovingLorenzView: View {
     guard let mesh = mesh,
       let commandBuffer = commandQueue.makeCommandBuffer(),
       let computeEncoder = commandBuffer.makeComputeCommandEncoder()
-    else { return }
+    else {
+      print("updateMesh: failed to get mesh or commandBuffer or computeEncoder")
+      return
+    }
 
     let vertexBuffer = mesh.replace(bufferIndex: 0, using: commandBuffer)
 
@@ -234,16 +240,24 @@ struct MovingLorenzView: View {
 
   struct VertexData {
     var position: SIMD3<Float> = .zero
-    var originalPosition: SIMD3<Float> = .zero
     var normal: SIMD3<Float> = .zero
     var uv: SIMD2<Float> = .zero
-    var atSide: Bool = false
+    // var originalPosition: SIMD3<Float> = .zero
+    // var atSide: Float = .zero
 
     @MainActor static var vertexAttributes: [LowLevelMesh.Attribute] = [
       .init(
         semantic: .position, format: .float3, offset: MemoryLayout<Self>.offset(of: \.position)!),
       .init(semantic: .normal, format: .float3, offset: MemoryLayout<Self>.offset(of: \.normal)!),
       .init(semantic: .uv0, format: .float2, offset: MemoryLayout<Self>.offset(of: \.uv)!),
+      // .init(
+      //   semantic: .unspecified, format: .float3,
+      //   offset: MemoryLayout<Self>
+      //     .offset(of: \.originalPosition)!),
+      // .init(
+      //   semantic: .unspecified, format: .float,
+      //   offset: MemoryLayout<Self>.offset(of: \.atSide)!
+      // ),
     ]
 
     @MainActor static var vertexLayouts: [LowLevelMesh.Layout] = [

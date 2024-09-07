@@ -12,7 +12,7 @@ struct triangleApp: App {
   var body: some Scene {
     WindowGroup {
       // ContentView()
-      MorphingSphereMetalView()
+      // MorphingSphereMetalView()
       // AttractorView()
       MovingLorenzView()
     }.windowStyle(.volumetric)

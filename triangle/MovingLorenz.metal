@@ -4,10 +4,10 @@ using namespace metal;
 
 struct VertexData {
   float3 position;
-  float3 originalPosition;
   float3 normal;
   float2 uv;
-  bool atSide;
+//  float3 originalPosition;
+//  float atSide;
 };
 
 struct MovingLorenzParams {
@@ -51,13 +51,15 @@ kernel void updateMovingLorenz(
   constant MovingLorenzParams& params [[buffer(1)]],
   uint id [[thread_position_in_grid]])
 {
-  float3 basePosition = vertices[id].originalPosition;
+  float3 basePosition = vertices[id].position;
+  bool atSide = id % 2 == 1;
+  if (atSide) {
+    basePosition = basePosition - float3(params.width, 0., 0.);
+  }
   float3 nextPosition = fourwingIteration(basePosition, params.dt);
-  vertices[id].originalPosition = nextPosition;
-  if (vertices[id].atSide) {
-    vertices[id].position = nextPosition * params.stripScale + float3(params.width, 0., 0.);
-  } else {
-    vertices[id].position = nextPosition * params.stripScale;
+  vertices[id].position = nextPosition;
+  if (atSide) {
+    vertices[id].position = nextPosition + float3(params.width, 0., 0.);
   }
 
 }
