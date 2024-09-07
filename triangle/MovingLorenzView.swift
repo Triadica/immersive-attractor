@@ -4,17 +4,17 @@ import SwiftUI
 
 struct MovingLorenzView: View {
   let rootEntity: Entity = Entity()
-  let latitudeBands: Int = 10
-  let longitudeBands: Int = 10
+  let latitudeBands: Int = 12
+  let longitudeBands: Int = 12
   /** 3 dimentions to control size */
-  let altitudeBands: Int = 10
+  let altitudeBands: Int = 12
   /** how many segments in each strip */
-  let stripSize: Int = 8
-  let stripWidth: Float = 0.01
-  let stripScale: Float = 0.06
-  let iterateDt: Float = 0.002
+  let stripSize: Int = 32
+  let stripWidth: Float = 0.04
+  let stripScale: Float = 0.2
+  let iterateDt: Float = 0.02
   let fps: Double = 120
-  let gridWidth: Float = 0.2
+  let gridWidth: Float = 0.4
 
   var vertexCapacity: Int {
     return latitudeBands * longitudeBands * altitudeBands * stripSize * 4
@@ -54,7 +54,7 @@ struct MovingLorenzView: View {
 
         let modelComponent = try! getModelComponent(mesh: mesh)
         rootEntity.components.set(modelComponent)
-        rootEntity.scale *= 0.1
+        rootEntity.scale *= stripScale
         content.add(rootEntity)
         // self.radius = radius
         self.mesh = mesh
@@ -126,37 +126,47 @@ struct MovingLorenzView: View {
             // each strip has `stripSize` points, and each point has 4 vertices, and using 6 indices to draw a strip
             for i in 0..<stripSize {
               let vertexBase = (gridBase * stripSize + i) * 4
-              vertices[vertexBase] = VertexData(
-                position: base + SIMD3<Float>(0, 0, 0),
-                normal: SIMD3<Float>(0, 1, 1),
-                uv: SIMD2<Float>.zero
-                  // originalPosition: base,
-                  // atSide: 0
-              )
-              vertices[vertexBase + 1] = VertexData(
-                position: base + SIMD3<Float>(stripWidth, 0, 0),
-                normal: SIMD3<Float>(0, 1, 1),
-                uv: SIMD2<Float>.zero
-                  // originalPosition: base,
-                  // atSide: 1
-              )
 
               let p = fourwingIteration(p: base, dt: 0.04)
               // let p = fakeIteration(p: base, dt: 0.04)
 
-              vertices[vertexBase + 2] = VertexData(
+              vertices[vertexBase] = VertexData(
                 position: p + SIMD3<Float>(0, 0, 0),
                 normal: SIMD3<Float>(0, 1, 1),
-                uv: SIMD2<Float>.zero
-                  // originalPosition: p,
-                  // atSide: 0
+                uv: SIMD2<Float>.zero,
+                atSide: false,
+                leading: i == 0,
+                secondary: false
+                  // originalPosition: base,
               )
-              vertices[vertexBase + 3] = VertexData(
+              vertices[vertexBase + 1] = VertexData(
                 position: p + SIMD3<Float>(stripWidth, 0, 0),
                 normal: SIMD3<Float>(0, 1, 1),
-                uv: SIMD2<Float>.zero
+                uv: SIMD2<Float>.zero,
+                atSide: true,
+                leading: i == 0,
+                secondary: false
+                  // originalPosition: base,
+              )
+
+              vertices[vertexBase + 2] = VertexData(
+                position: base + SIMD3<Float>(0, 0, 0),
+                normal: SIMD3<Float>(0, 1, 1),
+                uv: SIMD2<Float>.zero,
+                atSide: false,
+                leading: i == 0,
+                secondary: true
                   // originalPosition: p,
-                  // atSide: 1
+              )
+              vertices[vertexBase + 3] = VertexData(
+                position: base + SIMD3<Float>(stripWidth, 0, 0),
+                normal: SIMD3<Float>(0, 1, 1),
+                uv: SIMD2<Float>.zero,
+                atSide: true,
+                leading: i == 0,
+                secondary: true
+                  // originalPosition: p,
+
               )
 
               base = p
@@ -225,7 +235,7 @@ struct MovingLorenzView: View {
     computeEncoder.setBuffer(pingPongBuffer.currentBuffer, offset: 0, index: 0)
     computeEncoder.setBuffer(pingPongBuffer.nextBuffer, offset: 0, index: 1)
 
-    var params = MovingLorenzParams(width: stripWidth, stripScale: stripScale, dt: iterateDt)
+    var params = MovingLorenzParams(width: stripWidth, dt: iterateDt)
     computeEncoder.setBytes(&params, length: MemoryLayout<MovingLorenzParams>.size, index: 2)
 
     let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
@@ -263,8 +273,10 @@ struct MovingLorenzView: View {
     var position: SIMD3<Float> = .zero
     var normal: SIMD3<Float> = .zero
     var uv: SIMD2<Float> = .zero
+    var atSide: Bool = false
+    var leading: Bool = false
+    var secondary: Bool = false
     // var originalPosition: SIMD3<Float> = .zero
-    // var atSide: Float = .zero
 
     @MainActor static var vertexAttributes: [LowLevelMesh.Attribute] = [
       .init(
@@ -296,7 +308,6 @@ struct MovingLorenzView: View {
 
   struct MovingLorenzParams {
     var width: Float
-    var stripScale: Float
     var dt: Float
   }
 

@@ -6,13 +6,14 @@ struct VertexData {
   float3 position;
   float3 normal;
   float2 uv;
-//  float3 originalPosition;
-//  float atSide;
+  bool atSide;
+  bool leading;
+  bool secondary;
+  // float3 originalPosition;
 };
 
 struct MovingLorenzParams {
   float width;
-  float stripScale;
   float dt;
 };
 
@@ -52,17 +53,36 @@ kernel void updateMovingLorenz(
   constant MovingLorenzParams& params [[buffer(2)]],
   uint id [[thread_position_in_grid]])
 {
-  float3 basePosition = vertices[id].position;
-  bool atSide = id % 2 == 1;
-  if (atSide) {
-    basePosition = basePosition - float3(params.width, 0., 0.);
-  }
-  float3 nextPosition = fourwingIteration(basePosition, params.dt);
-  outputVertices[id].position = nextPosition;
+  int stripSize = 8;
+  // bool leading = ((id % (stripSize * 4)) / 4) % stripSize == 0;
+  bool leading = vertices[id].leading;
+  bool atSide = vertices[id].atSide;
+  bool secondary = vertices[id].secondary;
+
   outputVertices[id].normal = vertices[id].normal;
   outputVertices[id].uv = vertices[id].uv;
-  if (atSide) {
-    outputVertices[id].position = nextPosition + float3(params.width, 0., 0.);
+  outputVertices[id].atSide = atSide;
+  outputVertices[id].leading = leading;
+  outputVertices[id].secondary = secondary;
+
+  if (leading) {
+    if (secondary) {
+      outputVertices[id].position = vertices[id-2].position;
+      return;
+    }
+    if (atSide) {
+      float3 basePosition = vertices[id-1].position;
+      float3 nextPosition = fourwingIteration(basePosition, params.dt);
+      outputVertices[id].position = nextPosition;
+      outputVertices[id].position = nextPosition + float3(params.width, 0., 0.);
+    } else {
+      float3 basePosition = vertices[id].position;
+      float3 nextPosition = fourwingIteration(basePosition, params.dt);
+      outputVertices[id].position = nextPosition;
+    }
+  } else {
+    outputVertices[id].position = vertices[id - 4].position;
+    return;
   }
 
 }
