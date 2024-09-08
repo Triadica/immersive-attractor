@@ -66,6 +66,29 @@ float3 aizawaIteration(float3 p, float dt) {
   return p + d;
 }
 
+// a Metal function of dequan_li
+float3 dequanLiIteration(float3 p, float dt) {
+  float a = 40.0;
+  float c = 11. / 6.;
+  float d = 0.16;
+  float e = 0.65;
+  float k = 55.;
+  float f = 20.;
+
+  float x = p.x;
+  float y = p.y;
+  float z = p.z;
+
+  float dx = a * (y - x) + d * x * z;
+  x += dx * dt; // modification order is influential
+  float dy = k * x + f * y - x * z;
+  y += dy * dt;
+  float dz = c * z + x * y - e * x * x;
+  z += dz * dt;
+  float3 dp = float3(dx, dy, dz) * dt;
+  return p + dp;
+}
+
 
 kernel void updateMovingLorenz(
   device VertexData* vertices [[buffer(0)]],
@@ -91,13 +114,13 @@ kernel void updateMovingLorenz(
     if (atSide) {
       float3 basePosition = vertices[id-1].position;
       // float3 nextPosition = fourwingIteration(basePosition, params.dt);
-      float3 nextPosition = aizawaIteration(basePosition, params.dt);
+      float3 nextPosition = dequanLiIteration(basePosition, params.dt);
       outputVertices[id].position = nextPosition;
       outputVertices[id].position = nextPosition + float3(params.width, 0., 0.);
     } else {
       float3 basePosition = vertices[id].position;
       // float3 nextPosition = fourwingIteration(basePosition, params.dt);
-      float3 nextPosition = aizawaIteration(basePosition, params.dt);
+      float3 nextPosition = dequanLiIteration(basePosition, params.dt);
       outputVertices[id].position = nextPosition;
     }
   } else {

@@ -4,17 +4,17 @@ import SwiftUI
 
 struct MovingLorenzView: View {
   let rootEntity: Entity = Entity()
-  let latitudeBands: Int = 20
-  let longitudeBands: Int = 20
+  let latitudeBands: Int = 32
+  let longitudeBands: Int = 32
   /** 3 dimentions to control size */
-  let altitudeBands: Int = 20
+  let altitudeBands: Int = 32
   /** how many segments in each strip */
   let stripSize: Int = 8
-  let stripWidth: Float = 0.008
-  let stripScale: Float = 0.2
-  let iterateDt: Float = 0.012
+  let stripWidth: Float = 0.2
+  let stripScale: Float = 0.002
+  let iterateDt: Float = 0.0001
   let fps: Double = 90
-  let gridWidth: Float = 0.1
+  let gridWidth: Float = 4
 
   var vertexCapacity: Int {
     return latitudeBands * longitudeBands * altitudeBands * stripSize * 4
@@ -65,7 +65,13 @@ struct MovingLorenzView: View {
         pointLight.light.intensity = 5000
         pointLight.light.color = UIColor.yellow
         pointLight.light.attenuationRadius = 20
-        pointLight.position = SIMD3<Float>(0, 0.2, 0.5)
+        pointLight.position = SIMD3<Float>(0.5, 0.2, 0.4)
+
+        let pointLight2 = PointLight()
+        pointLight2.light.intensity = 5000
+        pointLight2.light.color = UIColor.yellow
+        pointLight2.light.attenuationRadius = 20
+        pointLight2.position = SIMD3<Float>(-0.5, 0.2, 0.4)
 
         content.add(pointLight)
 
@@ -101,9 +107,10 @@ struct MovingLorenzView: View {
 
     var material = PhysicallyBasedMaterial()
     material.baseColor.tint = .white  //.init(white: 0.05, alpha: 1.0)
-    material.roughness.scale = 2.0
-    material.metallic.scale = 0.7
-    material.blending = .transparent(opacity: 1.0)
+    material.roughness.scale = 0.9
+    material.metallic.scale = 0.1
+    // material.blending = .transparent(opacity: 1.0)
+    material.blending = .opaque
     material.faceCulling = .none
 
     return ModelComponent(mesh: resource, materials: [material])
@@ -137,7 +144,7 @@ struct MovingLorenzView: View {
 
               vertices[vertexBase] = VertexData(
                 position: base + SIMD3<Float>(0, 0, 0),
-                normal: SIMD3<Float>(0, 1, 1),
+                normal: SIMD3<Float>(0, 0.7, 0.7),
                 uv: SIMD2<Float>.zero,
                 atSide: false,
                 leading: i == 0,
@@ -146,7 +153,7 @@ struct MovingLorenzView: View {
               )
               vertices[vertexBase + 1] = VertexData(
                 position: base + SIMD3<Float>(stripWidth, 0, 0),
-                normal: SIMD3<Float>(0, 1, 1),
+                normal: SIMD3<Float>(0, 0.7, 0.7),
                 uv: SIMD2<Float>.zero,
                 atSide: true,
                 leading: i == 0,
@@ -156,7 +163,7 @@ struct MovingLorenzView: View {
 
               vertices[vertexBase + 2] = VertexData(
                 position: base + SIMD3<Float>(0, 0, 0),
-                normal: SIMD3<Float>(0, 1, 1),
+                normal: SIMD3<Float>(0, 0.7, 0.7),
                 uv: SIMD2<Float>.zero,
                 atSide: false,
                 leading: i == 0,
@@ -165,7 +172,7 @@ struct MovingLorenzView: View {
               )
               vertices[vertexBase + 3] = VertexData(
                 position: base + SIMD3<Float>(stripWidth, 0, 0),
-                normal: SIMD3<Float>(0, 1, 1),
+                normal: SIMD3<Float>(0, 0.7, 0.7),
                 uv: SIMD2<Float>.zero,
                 atSide: true,
                 leading: i == 0,
