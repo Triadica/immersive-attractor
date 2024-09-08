@@ -11,9 +11,9 @@ struct MovingLorenzView: View {
   /** how many segments in each strip */
   let stripSize: Int = 8
   let stripWidth: Float = 0.2
-  let stripScale: Float = 0.002
-  let iterateDt: Float = 0.0001
-  let fps: Double = 90
+  let stripScale: Float = 0.006
+  let iterateDt: Float = 0.00012
+  let fps: Double = 120
   let gridWidth: Float = 4
 
   var vertexCapacity: Int {
@@ -105,15 +105,16 @@ struct MovingLorenzView: View {
   func getModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
     let resource = try MeshResource(from: mesh)
 
-    var material = PhysicallyBasedMaterial()
-    material.baseColor.tint = .white  //.init(white: 0.05, alpha: 1.0)
-    material.roughness.scale = 0.9
-    material.metallic.scale = 0.1
-    // material.blending = .transparent(opacity: 1.0)
-    material.blending = .opaque
-    material.faceCulling = .none
+    // var material = PhysicallyBasedMaterial()
+    // material.baseColor.tint = .white  //.init(white: 0.05, alpha: 1.0)
+    // material.roughness.scale = 0.9
+    // material.metallic.scale = 0.1
+    // material.blending = .opaque
+    // material.faceCulling = .none
+    var unlitMaterial = UnlitMaterial(color: .yellow)
+    unlitMaterial.faceCulling = .none
 
-    return ModelComponent(mesh: resource, materials: [material])
+    return ModelComponent(mesh: resource, materials: [unlitMaterial])
   }
 
   func createMesh() throws -> LowLevelMesh {
