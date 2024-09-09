@@ -4,17 +4,33 @@ import SwiftUI
 
 struct MovingLorenzView: View {
   let rootEntity: Entity = Entity()
-  let latitudeBands: Int = 32
-  let longitudeBands: Int = 32
+  let latitudeBands: Int = 28
+  let longitudeBands: Int = 28
   /** 3 dimentions to control size */
-  let altitudeBands: Int = 32
-  /** how many segments in each strip */
-  let stripSize: Int = 8
-  let stripWidth: Float = 0.2
-  let stripScale: Float = 0.006
-  let iterateDt: Float = 0.00012
+  let altitudeBands: Int = 28
+
   let fps: Double = 120
-  let gridWidth: Float = 4
+
+  // dequan li params
+  // let stripSize: Int = 8
+  // let stripWidth: Float = 0.2
+  // let stripScale: Float = 0.006
+  // let iterateDt: Float = 0.00012
+  // let gridWidth: Float = 4
+
+  // aizawa params
+  let stripSize: Int = 8
+  let stripWidth: Float = 0.003
+  let stripScale: Float = 0.46
+  let iterateDt: Float = 0.012
+  let gridWidth: Float = 0.1
+
+  // lorenz parans
+  // let stripSize: Int = 24
+  // let stripWidth: Float = 0.04
+  // let stripScale: Float = 0.02
+  // let iterateDt: Float = 0.001
+  // let gridWidth: Float = 1
 
   var vertexCapacity: Int {
     return latitudeBands * longitudeBands * altitudeBands * stripSize * 4
@@ -61,19 +77,19 @@ struct MovingLorenzView: View {
         // self.radius = radius
         self.mesh = mesh
 
-        let pointLight = PointLight()
-        pointLight.light.intensity = 5000
-        pointLight.light.color = UIColor.yellow
-        pointLight.light.attenuationRadius = 20
-        pointLight.position = SIMD3<Float>(0.5, 0.2, 0.4)
+        // let pointLight = PointLight()
+        // pointLight.light.intensity = 5000
+        // pointLight.light.color = UIColor.yellow
+        // pointLight.light.attenuationRadius = 20
+        // pointLight.position = SIMD3<Float>(0.5, 0.2, 0.4)
 
-        let pointLight2 = PointLight()
-        pointLight2.light.intensity = 5000
-        pointLight2.light.color = UIColor.yellow
-        pointLight2.light.attenuationRadius = 20
-        pointLight2.position = SIMD3<Float>(-0.5, 0.2, 0.4)
+        // let pointLight2 = PointLight()
+        // pointLight2.light.intensity = 5000
+        // pointLight2.light.color = UIColor.yellow
+        // pointLight2.light.attenuationRadius = 20
+        // pointLight2.position = SIMD3<Float>(-0.5, 0.2, 0.4)
 
-        content.add(pointLight)
+        // content.add(pointLight)
 
       }
       .onAppear {
