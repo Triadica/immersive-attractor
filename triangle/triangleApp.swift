@@ -15,7 +15,8 @@ struct triangleApp: App {
       // MorphingSphereMetalView()
       // AttractorView()
       MovingLorenzView()
-    }.windowStyle(.volumetric)
+
+    }.windowStyle(.volumetric).defaultSize(width: 2, height: 2, depth: 2, in: .meters)
 
     ImmersiveSpace(id: "ImmersiveSpace") {
       // ImmersiveView()
