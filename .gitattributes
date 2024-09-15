@@ -1,0 +1,10 @@
+
+calcit.cirru -diff linguist-generated
+yarn.lock -diff linguist-generated
+Cargo.lock -diff linguist-generated
+lib -diff linguist-generated
+
+triangle.xcodeproj -diff linguist-generated
+triangle.xcodeproj/** -diff linguist-generated
+
+.vscode/** -diff linguist-generated

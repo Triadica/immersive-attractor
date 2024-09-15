@@ -1,0 +1,14 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "swift",
+      "label": "Swift Build All - Release",
+      "detail": "swift build --build-tests",
+      "args": ["build", "--build-tests", "-c", "release"],
+      "env": {},
+      "cwd": "${workspaceFolder}",
+      "group": "build"
+    }
+  ]
+}
