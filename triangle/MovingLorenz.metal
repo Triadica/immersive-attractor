@@ -113,16 +113,19 @@ kernel void updateMovingLorenz(
     }
     if (atSide) {
       float3 basePosition = vertices[id-1].position;
-      // float3 nextPosition = fourwingIteration(basePosition, params.dt);
+      float3 nextPosition = fourwingIteration(basePosition, params.dt);
       // float3 nextPosition = lorenzIteration(basePosition, params.dt);
-      float3 nextPosition = aizawaIteration(basePosition, params.dt);
+      // float3 nextPosition = aizawaIteration(basePosition, params.dt);
+      // float3 nextPosition = dequanLiIteration(basePosition, params.dt);
       outputVertices[id].position = nextPosition;
       outputVertices[id].position = nextPosition + float3(params.width, 0., 0.);
     } else {
       float3 basePosition = vertices[id].position;
-      // float3 nextPosition = fourwingIteration(basePosition, params.dt);
+      float3 nextPosition = fourwingIteration(basePosition, params.dt);
       // float3 nextPosition = lorenzIteration(basePosition, params.dt);
-      float3 nextPosition = aizawaIteration(basePosition, params.dt);
+      // float3 nextPosition = aizawaIteration(basePosition, params.dt);
+      // float3 nextPosition = dequanLiIteration(basePosition, params.dt);
+
       outputVertices[id].position = nextPosition;
     }
   } else {

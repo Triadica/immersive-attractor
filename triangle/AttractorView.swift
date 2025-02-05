@@ -86,12 +86,12 @@ struct AttractorView: View {
       var base = SIMD3<Float>(0.4, 0.4, -0.2)
 
       for idx in 0..<allSize {
-        let p = lorenzIteration(p: base, dt: 0.002)
+        // let p = lorenzIteration(p: base, dt: 0.002)
         // let p = fakeIteration(p: base, dt: 0.02)
-        // let p = fourwingIteration(p: base, dt: 0.01)
+        let p = fourwingIteration(p: base, dt: 0.01)
 
         let index = idx * 4
-        let scale: Float = 0.009
+        let scale: Float = 0.04
 
         vertices[index] = VertexData(
           position: base * scale + SIMD3<Float>(0, -0, 0), normal: SIMD3<Float>(0, 1, 1),

@@ -4,33 +4,40 @@ import SwiftUI
 
 struct MovingLorenzView: View {
   let rootEntity: Entity = Entity()
-  let latitudeBands: Int = 28
-  let longitudeBands: Int = 28
+  let latitudeBands: Int = 20
+  let longitudeBands: Int = 20
   /** 3 dimentions to control size */
-  let altitudeBands: Int = 28
+  let altitudeBands: Int = 20
 
   let fps: Double = 120
 
   // dequan li params
-  // let stripSize: Int = 8
+  // let stripSize: Int = 12
   // let stripWidth: Float = 0.2
   // let stripScale: Float = 0.006
-  // let iterateDt: Float = 0.00012
+  // let iterateDt: Float = 0.0006
   // let gridWidth: Float = 4
 
   // aizawa params
-  let stripSize: Int = 8
-  let stripWidth: Float = 0.003
-  let stripScale: Float = 0.46
-  let iterateDt: Float = 0.012
-  let gridWidth: Float = 0.1
+  // let stripSize: Int = 8
+  // let stripWidth: Float = 0.003
+  // let stripScale: Float = 0.46
+  // let iterateDt: Float = 0.012
+  // let gridWidth: Float = 0.1
 
   // lorenz parans
-  // let stripSize: Int = 24
+  // let stripSize: Int = 20
   // let stripWidth: Float = 0.04
-  // let stripScale: Float = 0.02
+  // let stripScale: Float = 0.016
   // let iterateDt: Float = 0.001
   // let gridWidth: Float = 1
+
+  // fourwing params
+  let stripSize: Int = 8
+  let stripWidth: Float = 0.003
+  let stripScale: Float = 1.2
+  let iterateDt: Float = 0.02
+  let gridWidth: Float = 0.1
 
   var vertexCapacity: Int {
     return latitudeBands * longitudeBands * altitudeBands * stripSize * 4
@@ -44,7 +51,7 @@ struct MovingLorenzView: View {
 
   @State private var updateTrigger = false
 
-  let radius: Float = 100
+  let radius: Float = 200
 
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
@@ -72,7 +79,10 @@ struct MovingLorenzView: View {
 
         let modelComponent = try! getModelComponent(mesh: mesh)
         rootEntity.components.set(modelComponent)
-        rootEntity.scale *= stripScale
+        rootEntity.scale = SIMD3(repeating: stripScale)
+        rootEntity.position.y = 1
+        // rootEntity.position.x = 1.6
+        rootEntity.position.z = -1
         content.add(rootEntity)
         // self.radius = radius
         self.mesh = mesh
@@ -82,12 +92,6 @@ struct MovingLorenzView: View {
         // pointLight.light.color = UIColor.yellow
         // pointLight.light.attenuationRadius = 20
         // pointLight.position = SIMD3<Float>(0.5, 0.2, 0.4)
-
-        // let pointLight2 = PointLight()
-        // pointLight2.light.intensity = 5000
-        // pointLight2.light.color = UIColor.yellow
-        // pointLight2.light.attenuationRadius = 20
-        // pointLight2.position = SIMD3<Float>(-0.5, 0.2, 0.4)
 
         // content.add(pointLight)
 

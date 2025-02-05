@@ -9,18 +9,34 @@ import SwiftUI
 
 @main
 struct triangleApp: App {
+  @Environment(\.openImmersiveSpace) private var openImmersiveSpace
+  @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
+
   var body: some Scene {
     WindowGroup {
       // ContentView()
       // MorphingSphereMetalView()
       // AttractorView()
-      MovingLorenzView()
+      // MovingLorenzView()
+      Button("Show Space") {
+        Task {
+          let result = await openImmersiveSpace(id: "ImmersiveSpace")
+          if case .error = result {
+            print("An error occurred")
+          }
+        }
+      }
+      Button("Dismiss") {
+        Task {
+          await dismissImmersiveSpace()
+        }
+      }
 
-    }.windowStyle(.volumetric).defaultSize(width: 2, height: 2, depth: 2, in: .meters)
+    }.windowStyle(.volumetric).defaultSize(width: 10, height: 10, depth: 10, in: .meters)
 
     ImmersiveSpace(id: "ImmersiveSpace") {
       // ImmersiveView()
-      // MovingLorenzView()
+      MovingLorenzView()
       // MorphingSphereMetalView()
     }.immersionStyle(selection: .constant(.full), in: .full)
   }
