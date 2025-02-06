@@ -9,7 +9,7 @@ import Metal
 import RealityKit
 import SwiftUI
 
-private struct MovingLorenzParams {
+private struct MovingCubesParams {
   var width: Float
   var dt: Float
 }
@@ -21,17 +21,12 @@ private struct VertexData {
   var atSide: Bool = false
   var leading: Bool = false
   var secondary: Bool = false
-  // var originalPosition: SIMD3<Float> = .zero
 
   @MainActor static var vertexAttributes: [LowLevelMesh.Attribute] = [
     .init(
       semantic: .position, format: .float3, offset: MemoryLayout<Self>.offset(of: \.position)!),
     .init(semantic: .normal, format: .float3, offset: MemoryLayout<Self>.offset(of: \.normal)!),
     .init(semantic: .uv0, format: .float2, offset: MemoryLayout<Self>.offset(of: \.uv)!),
-    // .init(
-    //   semantic: .unspecified, format: .float3,
-    //   offset: MemoryLayout<Self>
-    //     .offset(of: \.originalPosition)!),
     // .init(
     //   semantic: .unspecified, format: .float,
     //   offset: MemoryLayout<Self>.offset(of: \.atSide)!
@@ -53,33 +48,18 @@ private struct VertexData {
 
 struct CubesMovingView: View {
   let rootEntity: Entity = Entity()
-  let latitudeBands: Int = 20
-  let longitudeBands: Int = 20
-  /** 3 dimentions to control size */
-  let altitudeBands: Int = 20
 
   let fps: Double = 120
 
   // fourwing params
-  let stripSize: Int = 8
   let stripWidth: Float = 0.003
   let stripScale: Float = 1.2
   let iterateDt: Float = 0.02
-  let gridWidth: Float = 0.1
-
-  var vertexCapacity: Int {
-    return latitudeBands * longitudeBands * altitudeBands * stripSize * 4
-  }
-  var indexCount: Int {
-    return latitudeBands * longitudeBands * altitudeBands * stripSize * 6
-  }
 
   @State var mesh: LowLevelMesh?
   @State var timer: Timer?
 
   @State private var updateTrigger = false
-
-  let radius: Float = 200
 
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
@@ -112,7 +92,6 @@ struct CubesMovingView: View {
         // rootEntity.position.x = 1.6
         rootEntity.position.z = -1
         content.add(rootEntity)
-        // self.radius = radius
         self.mesh = mesh
 
       }
@@ -150,107 +129,115 @@ struct CubesMovingView: View {
     return ModelComponent(mesh: resource, materials: [unlitMaterial])
   }
 
+  /// Create a bounding box for the mesh
+  func getBounds() -> BoundingBox {
+    let radius: Float = 2
+    return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
+  }
+
+  func getCubePoints() -> [SIMD3<Float>] {
+    var positions: [SIMD3<Float>] = []
+    positions.append(SIMD3<Float>(-1, -1, 1))
+    positions.append(SIMD3<Float>(1, -1, 1))
+    positions.append(SIMD3<Float>(1, -1, -1))
+    positions.append(SIMD3<Float>(-1, -1, -1))
+    positions.append(SIMD3<Float>(-1, 1, 1))
+    positions.append(SIMD3<Float>(1, 1, 1))
+    positions.append(SIMD3<Float>(1, 1, -1))
+    positions.append(SIMD3<Float>(-1, 1, -1))
+
+    return positions
+  }
+
+  var vertexCapacity: Int {
+    return 8
+  }
+  var indexCount: Int {
+    return 36
+  }
+
   func createMesh() throws -> LowLevelMesh {
     var desc = VertexData.descriptor
     desc.vertexCapacity = vertexCapacity
     desc.indexCapacity = indexCount
 
+    let cubePoints = getCubePoints()
+
     let mesh = try LowLevelMesh(descriptor: desc)
     mesh.withUnsafeMutableBytes(bufferIndex: 0) { rawBytes in
       let vertices = rawBytes.bindMemory(to: VertexData.self)
 
-      for x in 0..<latitudeBands {
-        for y in 0..<longitudeBands {
-          for z in 0..<altitudeBands {
+      let defaultNormal = SIMD3<Float>(0.7, 0.7, 0.7)
 
-            var base = SIMD3<Float>(
-              gridWidth * Float(x - latitudeBands / 2),
-              gridWidth * Float(y - longitudeBands / 2),
-              -gridWidth * Float(z - altitudeBands / 2))
-            let gridBase = (x * latitudeBands + y) * longitudeBands + z
-
-            // each strip has `stripSize` points, and each point has 4 vertices, and using 6 indices to draw a strip
-            for i in 0..<stripSize {
-              let vertexBase = (gridBase * stripSize + i) * 4
-
-              vertices[vertexBase] = VertexData(
-                position: base + SIMD3<Float>(0, 0, 0),
-                normal: SIMD3<Float>(0, 0.7, 0.7),
-                uv: SIMD2<Float>.zero,
-                atSide: false,
-                leading: i == 0,
-                secondary: false
-                  // originalPosition: base,
-              )
-              vertices[vertexBase + 1] = VertexData(
-                position: base + SIMD3<Float>(stripWidth, 0, 0),
-                normal: SIMD3<Float>(0, 0.7, 0.7),
-                uv: SIMD2<Float>.zero,
-                atSide: true,
-                leading: i == 0,
-                secondary: false
-                  // originalPosition: base,
-              )
-
-              vertices[vertexBase + 2] = VertexData(
-                position: base + SIMD3<Float>(0, 0, 0),
-                normal: SIMD3<Float>(0, 0.7, 0.7),
-                uv: SIMD2<Float>.zero,
-                atSide: false,
-                leading: i == 0,
-                secondary: true
-                  // originalPosition: p,
-              )
-              vertices[vertexBase + 3] = VertexData(
-                position: base + SIMD3<Float>(stripWidth, 0, 0),
-                normal: SIMD3<Float>(0, 0.7, 0.7),
-                uv: SIMD2<Float>.zero,
-                atSide: true,
-                leading: i == 0,
-                secondary: true
-                  // originalPosition: p,
-
-              )
-            }
-          }
-        }
+      for (idx, point) in cubePoints.enumerated() {
+        vertices[idx] = VertexData(
+          position: point * 0.2,
+          normal: defaultNormal,
+          uv: SIMD2<Float>.zero,
+          atSide: false,
+          leading: false,
+          secondary: false
+        )
       }
+
     }
 
     mesh.withUnsafeMutableIndices { rawIndices in
       let indices = rawIndices.bindMemory(to: UInt32.self)
 
-      for x in 0..<latitudeBands {
-        for y in 0..<longitudeBands {
-          for z in 0..<altitudeBands {
-            let gridBase = (x * latitudeBands + y) * longitudeBands + z
-
-            for i in 0..<stripSize {
-              // each segment has 4 vertices, and 6 indices to draw a strip
-              let segmentBase = (gridBase * stripSize + i) * 6
-              let vertexBase = UInt32((gridBase * stripSize + i) * 4)
-              indices[segmentBase + 0] = vertexBase
-              indices[segmentBase + 1] = vertexBase + 1
-              indices[segmentBase + 2] = vertexBase + 2
-              indices[segmentBase + 3] = vertexBase + 2
-              indices[segmentBase + 4] = vertexBase + 1
-              indices[segmentBase + 5] = vertexBase + 3
-            }
-          }
-        }
-      }
+      // bottom triangles
+      indices[0] = 0
+      indices[1] = 1
+      indices[2] = 2
+      indices[3] = 0
+      indices[4] = 2
+      indices[5] = 3
+      // top triangles
+      indices[6] = 4
+      indices[7] = 5
+      indices[8] = 6
+      indices[9] = 4
+      indices[10] = 6
+      indices[11] = 7
+      // near triangles
+      indices[12] = 0
+      indices[13] = 1
+      indices[14] = 5
+      indices[15] = 0
+      indices[16] = 5
+      indices[17] = 4
+      // far triangles
+      indices[18] = 2
+      indices[19] = 3
+      indices[20] = 7
+      indices[21] = 2
+      indices[22] = 7
+      indices[23] = 6
+      // left triangles
+      indices[24] = 0
+      indices[25] = 3
+      indices[26] = 7
+      indices[27] = 0
+      indices[28] = 7
+      indices[29] = 4
+      // right triangles
+      indices[30] = 1
+      indices[31] = 2
+      indices[32] = 6
+      indices[33] = 1
+      indices[34] = 6
+      indices[35] = 5
     }
-
-    let meshBounds = BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
 
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
         indexCount: indexCount,
         topology: .triangle,
-        bounds: meshBounds
+        bounds: getBounds()
       )
     ])
     if let pingPongBuffer = pingPongBuffer {
+      // copy data from mesh to current buffer
       mesh.withUnsafeMutableBytes(bufferIndex: 0) { rawBytes in
         pingPongBuffer.currentBuffer.contents().copyMemory(
           from: rawBytes.baseAddress!, byteCount: rawBytes.count)
@@ -260,50 +247,48 @@ struct CubesMovingView: View {
   }
 
   func updateMesh() {
-    guard let mesh = mesh,
-      let pingPongBuffer = pingPongBuffer,
-      let commandBuffer = commandQueue.makeCommandBuffer(),
-      let computeEncoder = commandBuffer.makeComputeCommandEncoder()
-    else {
-      print("updateMesh: failed to get mesh or pingPongBuffer or commandBuffer or computeEncoder")
-      return
-    }
+    // guard let mesh = mesh,
+    //   let pingPongBuffer = pingPongBuffer,
+    //   let commandBuffer = commandQueue.makeCommandBuffer(),
+    //   let computeEncoder = commandBuffer.makeComputeCommandEncoder()
+    // else {
+    //   print("updateMesh: failed to get mesh or pingPongBuffer or commandBuffer or computeEncoder")
+    //   return
+    // }
 
-    computeEncoder.setComputePipelineState(computePipeline)
-    computeEncoder.setBuffer(pingPongBuffer.currentBuffer, offset: 0, index: 0)
-    computeEncoder.setBuffer(pingPongBuffer.nextBuffer, offset: 0, index: 1)
+    // computeEncoder.setComputePipelineState(computePipeline)
+    // computeEncoder.setBuffer(pingPongBuffer.currentBuffer, offset: 0, index: 0)
+    // computeEncoder.setBuffer(pingPongBuffer.nextBuffer, offset: 0, index: 1)
 
-    var params = MovingLorenzParams(width: stripWidth, dt: iterateDt)
-    computeEncoder.setBytes(&params, length: MemoryLayout<MovingLorenzParams>.size, index: 2)
+    // var params = MovingCubesParams(width: stripWidth, dt: iterateDt)
+    // computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 2)
 
-    let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
-    let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
+    // let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
+    // let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
 
-    computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
+    // computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
 
-    computeEncoder.endEncoding()
+    // computeEncoder.endEncoding()
 
-    // copy data from next buffer to mesh
-    let blitEncoder = commandBuffer.makeBlitCommandEncoder()!
-    blitEncoder.copy(
-      from: pingPongBuffer.nextBuffer, sourceOffset: 0,
-      to: mesh.replace(bufferIndex: 0, using: commandBuffer), destinationOffset: 0,
-      size: pingPongBuffer.nextBuffer.length)
-    blitEncoder.endEncoding()
+    // // copy data from next buffer to mesh
+    // let blitEncoder = commandBuffer.makeBlitCommandEncoder()!
+    // blitEncoder.copy(
+    //   from: pingPongBuffer.nextBuffer, sourceOffset: 0,
+    //   to: mesh.replace(bufferIndex: 0, using: commandBuffer), destinationOffset: 0,
+    //   size: pingPongBuffer.nextBuffer.length)
+    // blitEncoder.endEncoding()
 
-    commandBuffer.commit()
+    // commandBuffer.commit()
 
-    // swap buffers
-    pingPongBuffer.swap()
+    // // swap buffers
+    // pingPongBuffer.swap()
 
-    let meshBounds = BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
-
-    mesh.parts.replaceAll([
-      LowLevelMesh.Part(
-        indexCount: indexCount,
-        topology: .triangle,
-        bounds: meshBounds
-      )
-    ])
+    // mesh.parts.replaceAll([
+    //   LowLevelMesh.Part(
+    //     indexCount: indexCount,
+    //     topology: .triangle,
+    //     bounds: getBounds()
+    //   )
+    // ])
   }
 }
