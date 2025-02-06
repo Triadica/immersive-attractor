@@ -53,6 +53,11 @@ private struct CubeBase {
   var rotate: Float
 }
 
+private struct CubeBaseUniform {
+  var data: UnsafeMutableRawPointer?
+  var length: UInt32
+}
+
 struct CubesMovingView: View {
   let rootEntity: Entity = Entity()
 
@@ -70,8 +75,11 @@ struct CubesMovingView: View {
 
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
-  let computePipeline: MTLComputePipelineState
+  let vertexPipeline: MTLComputePipelineState
   @State var pingPongBuffer: PingPongBuffer?
+
+  /// The vertex buffer for the mesh
+  @State var vertexBuffer: MTLBuffer?
 
   init() {
     self.device = MTLCreateSystemDefaultDevice()!
@@ -79,7 +87,10 @@ struct CubesMovingView: View {
 
     let library = device.makeDefaultLibrary()!
     let updateFunction = library.makeFunction(name: "updateMovingCubes")!
-    self.computePipeline = try! device.makeComputePipelineState(function: updateFunction)
+    self.vertexPipeline = try! device.makeComputePipelineState(function: updateFunction)
+
+    self.vertexBuffer = device.makeBuffer(
+      length: MemoryLayout<VertexData>.stride * vertexCapacity, options: .storageModeShared)
   }
 
   var body: some View {
@@ -245,7 +256,7 @@ struct CubesMovingView: View {
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
         indexCount: indexCount,
-        topology: .triangle,
+        topology: .lineStrip,
         bounds: getBounds()
       )
     ])
@@ -254,48 +265,64 @@ struct CubesMovingView: View {
   }
 
   func updateMesh() {
-    // guard let mesh = mesh,
-    //   let pingPongBuffer = pingPongBuffer,
-    //   let commandBuffer = commandQueue.makeCommandBuffer(),
-    //   let computeEncoder = commandBuffer.makeComputeCommandEncoder()
-    // else {
-    //   print("updateMesh: failed to get mesh or pingPongBuffer or commandBuffer or computeEncoder")
-    //   return
-    // }
+    guard let mesh = mesh,
+      let pingPongBuffer = pingPongBuffer,
+      let commandBuffer = commandQueue.makeCommandBuffer(),
+      let computeEncoder = commandBuffer.makeComputeCommandEncoder()
+    else {
+      print("updateMesh: failed to get mesh or pingPongBuffer or commandBuffer or computeEncoder")
+      return
+    }
 
-    // computeEncoder.setComputePipelineState(computePipeline)
+    if let vertexBuffer = self.vertexBuffer {
+      mesh.withUnsafeMutableBytes(bufferIndex: 0) { rawBytes in
+        vertexBuffer.contents().copyMemory(
+          from: rawBytes.baseAddress!, byteCount: rawBytes.count)
+      }
+    } else {
+      print("[ERR] no vertex Buffer")
+    }
+
+    computeEncoder.setComputePipelineState(vertexPipeline)
     // computeEncoder.setBuffer(pingPongBuffer.currentBuffer, offset: 0, index: 0)
-    // computeEncoder.setBuffer(pingPongBuffer.nextBuffer, offset: 0, index: 1)
 
-    // var params = MovingCubesParams(width: stripWidth, dt: iterateDt)
-    // computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 2)
+    var codeBaseUniform = CubeBaseUniform(
+      data: pingPongBuffer.nextBuffer.contents(),
+      length: UInt32(MemoryLayout<CubeBase>.stride * cubeCount)
+    )
+    computeEncoder.setBytes(&codeBaseUniform, length: MemoryLayout<CubeBaseUniform>.stride, index: 0)
 
-    // let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
-    // let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
+    computeEncoder.setBuffer(vertexBuffer!, offset: 0, index: 1)
 
-    // computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
+    var params = MovingCubesParams(width: stripWidth, dt: iterateDt)
+    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 2)
 
-    // computeEncoder.endEncoding()
+    let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
+    let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
 
-    // // copy data from next buffer to mesh
-    // let blitEncoder = commandBuffer.makeBlitCommandEncoder()!
-    // blitEncoder.copy(
-    //   from: pingPongBuffer.nextBuffer, sourceOffset: 0,
-    //   to: mesh.replace(bufferIndex: 0, using: commandBuffer), destinationOffset: 0,
-    //   size: pingPongBuffer.nextBuffer.length)
-    // blitEncoder.endEncoding()
+    computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
 
-    // commandBuffer.commit()
+    computeEncoder.endEncoding()
 
-    // // swap buffers
-    // pingPongBuffer.swap()
+    // copy data from next buffer to mesh
+    let blitEncoder = commandBuffer.makeBlitCommandEncoder()!
+    blitEncoder.copy(
+      from: vertexBuffer!, sourceOffset: 0,
+      to: mesh.replace(bufferIndex: 0, using: commandBuffer), destinationOffset: 0,
+      size: vertexBuffer!.length)
+    blitEncoder.endEncoding()
 
-    // mesh.parts.replaceAll([
-    //   LowLevelMesh.Part(
-    //     indexCount: indexCount,
-    //     topology: .triangle,
-    //     bounds: getBounds()
-    //   )
-    // ])
+    commandBuffer.commit()
+
+    // swap buffers
+    pingPongBuffer.swap()
+
+    mesh.parts.replaceAll([
+      LowLevelMesh.Part(
+        indexCount: indexCount,
+        topology: .triangle,
+        bounds: getBounds()
+      )
+    ])
   }
 }

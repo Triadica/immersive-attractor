@@ -16,7 +16,6 @@ struct VertexData {
   bool atSide;
   bool leading;
   bool secondary;
-  // float3 originalPosition;
 };
 
 struct MovingCubesParams {
@@ -24,8 +23,18 @@ struct MovingCubesParams {
   float dt;
 };
 
+struct CubeBase {
+  float3 position;
+  float size;
+  float rotate;
+};
 
-  // a Metal function of fourwing
+struct CubeBaseUniform {
+  constant float *data;
+  uint length;
+};
+
+// a Metal function of fourwing
 float3 fourwingIterationOld(float3 p, float dt) {
   float a = 0.2;
   float b = 0.01;
@@ -41,41 +50,41 @@ float3 fourwingIterationOld(float3 p, float dt) {
 }
 
 kernel void updateMovingCubes(
-                               device VertexData* vertices [[buffer(0)]],
-                               device VertexData *outputVertices [[buffer(1)]],
-                               constant MovingCubesParams& params [[buffer(2)]],
+                               constant CubeBaseUniform *codeBaseUniform [[buffer(0)]],
+                               device CubeBase *outputVertices [[buffer(1)]],
+                               constant MovingCubesParams &params [[buffer(2)]],
                                uint id [[thread_position_in_grid]])
 {
-  bool leading = vertices[id].leading;
-  bool atSide = vertices[id].atSide;
-  bool secondary = vertices[id].secondary;
+  // bool leading = vertices[id].leading;
+  // bool atSide = vertices[id].atSide;
+  // bool secondary = vertices[id].secondary;
 
-  outputVertices[id].normal = vertices[id].normal;
-  outputVertices[id].uv = vertices[id].uv;
-  outputVertices[id].atSide = atSide;
-  outputVertices[id].leading = leading;
-  outputVertices[id].secondary = secondary;
+  // outputVertices[id].normal = vertices[id].normal;
+  // outputVertices[id].uv = vertices[id].uv;
+  // outputVertices[id].atSide = atSide;
+  // outputVertices[id].leading = leading;
+  // outputVertices[id].secondary = secondary;
 
-  if (leading) {
-    if (secondary) {
-      outputVertices[id].position = vertices[id-2].position;
-      return;
-    }
-    if (atSide) {
-      float3 basePosition = vertices[id-1].position;
-      float3 nextPosition = fourwingIterationOld(basePosition, params.dt);
-      outputVertices[id].position = nextPosition;
-      outputVertices[id].position = nextPosition + float3(params.width, 0., 0.);
-    } else {
-      float3 basePosition = vertices[id].position;
-      float3 nextPosition = fourwingIterationOld(basePosition, params.dt);
+  // if (leading) {
+  //   if (secondary) {
+  //     outputVertices[id].position = vertices[id-2].position;
+  //     return;
+  //   }
+  //   if (atSide) {
+  //     float3 basePosition = vertices[id-1].position;
+  //     float3 nextPosition = fourwingIterationOld(basePosition, params.dt);
+  //     outputVertices[id].position = nextPosition;
+  //     outputVertices[id].position = nextPosition + float3(params.width, 0., 0.);
+  //   } else {
+  //     float3 basePosition = vertices[id].position;
+  //     float3 nextPosition = fourwingIterationOld(basePosition, params.dt);
 
-      outputVertices[id].position = nextPosition;
-    }
-  } else {
-    outputVertices[id].position = vertices[id - 4].position;
-    return;
-  }
+  //     outputVertices[id].position = nextPosition;
+  //   }
+  // } else {
+  //   outputVertices[id].position = vertices[id - 4].position;
+  //   return;
+  // }
 
 }
 
