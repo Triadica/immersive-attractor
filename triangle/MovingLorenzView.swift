@@ -2,6 +2,48 @@ import Metal
 import RealityKit
 import SwiftUI
 
+private struct MovingLorenzParams {
+  var width: Float
+  var dt: Float
+}
+
+private struct VertexData {
+  var position: SIMD3<Float> = .zero
+  var normal: SIMD3<Float> = .zero
+  var uv: SIMD2<Float> = .zero
+  var atSide: Bool = false
+  var leading: Bool = false
+  var secondary: Bool = false
+  // var originalPosition: SIMD3<Float> = .zero
+
+  @MainActor static var vertexAttributes: [LowLevelMesh.Attribute] = [
+    .init(
+      semantic: .position, format: .float3, offset: MemoryLayout<Self>.offset(of: \.position)!),
+    .init(semantic: .normal, format: .float3, offset: MemoryLayout<Self>.offset(of: \.normal)!),
+    .init(semantic: .uv0, format: .float2, offset: MemoryLayout<Self>.offset(of: \.uv)!),
+    // .init(
+    //   semantic: .unspecified, format: .float3,
+    //   offset: MemoryLayout<Self>
+    //     .offset(of: \.originalPosition)!),
+    // .init(
+    //   semantic: .unspecified, format: .float,
+    //   offset: MemoryLayout<Self>.offset(of: \.atSide)!
+    // ),
+  ]
+
+  @MainActor static var vertexLayouts: [LowLevelMesh.Layout] = [
+    .init(bufferIndex: 0, bufferStride: MemoryLayout<Self>.stride)
+  ]
+
+  @MainActor static var descriptor: LowLevelMesh.Descriptor {
+    var desc = LowLevelMesh.Descriptor()
+    desc.vertexAttributes = VertexData.vertexAttributes
+    desc.vertexLayouts = VertexData.vertexLayouts
+    desc.indexType = .uint32
+    return desc
+  }
+}
+
 struct MovingLorenzView: View {
   let rootEntity: Entity = Entity()
   let latitudeBands: Int = 20
@@ -87,14 +129,6 @@ struct MovingLorenzView: View {
         // self.radius = radius
         self.mesh = mesh
 
-        // let pointLight = PointLight()
-        // pointLight.light.intensity = 5000
-        // pointLight.light.color = UIColor.yellow
-        // pointLight.light.attenuationRadius = 20
-        // pointLight.position = SIMD3<Float>(0.5, 0.2, 0.4)
-
-        // content.add(pointLight)
-
       }
       .onAppear {
         startTimer()
@@ -113,7 +147,6 @@ struct MovingLorenzView: View {
         self.updateMesh()
         self.updateTrigger.toggle()
       }
-
     }
   }
 
@@ -125,12 +158,6 @@ struct MovingLorenzView: View {
   func getModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
     let resource = try MeshResource(from: mesh)
 
-    // var material = PhysicallyBasedMaterial()
-    // material.baseColor.tint = .white  //.init(white: 0.05, alpha: 1.0)
-    // material.roughness.scale = 0.9
-    // material.metallic.scale = 0.1
-    // material.blending = .opaque
-    // material.faceCulling = .none
     var unlitMaterial = UnlitMaterial(color: .yellow)
     unlitMaterial.faceCulling = .none
 
@@ -159,9 +186,6 @@ struct MovingLorenzView: View {
             // each strip has `stripSize` points, and each point has 4 vertices, and using 6 indices to draw a strip
             for i in 0..<stripSize {
               let vertexBase = (gridBase * stripSize + i) * 4
-
-              // let p = fourwingIteration(p: base, dt: 0.04)
-              // let p = fakeIteration(p: base, dt: 0.04)
 
               vertices[vertexBase] = VertexData(
                 position: base + SIMD3<Float>(0, 0, 0),
@@ -201,15 +225,10 @@ struct MovingLorenzView: View {
                   // originalPosition: p,
 
               )
-
-              // base = p
             }
-
           }
-
         }
       }
-
     }
 
     mesh.withUnsafeMutableIndices { rawIndices in
@@ -300,96 +319,5 @@ struct MovingLorenzView: View {
         bounds: meshBounds
       )
     ])
-  }
-
-  struct VertexData {
-    var position: SIMD3<Float> = .zero
-    var normal: SIMD3<Float> = .zero
-    var uv: SIMD2<Float> = .zero
-    var atSide: Bool = false
-    var leading: Bool = false
-    var secondary: Bool = false
-    // var originalPosition: SIMD3<Float> = .zero
-
-    @MainActor static var vertexAttributes: [LowLevelMesh.Attribute] = [
-      .init(
-        semantic: .position, format: .float3, offset: MemoryLayout<Self>.offset(of: \.position)!),
-      .init(semantic: .normal, format: .float3, offset: MemoryLayout<Self>.offset(of: \.normal)!),
-      .init(semantic: .uv0, format: .float2, offset: MemoryLayout<Self>.offset(of: \.uv)!),
-      // .init(
-      //   semantic: .unspecified, format: .float3,
-      //   offset: MemoryLayout<Self>
-      //     .offset(of: \.originalPosition)!),
-      // .init(
-      //   semantic: .unspecified, format: .float,
-      //   offset: MemoryLayout<Self>.offset(of: \.atSide)!
-      // ),
-    ]
-
-    @MainActor static var vertexLayouts: [LowLevelMesh.Layout] = [
-      .init(bufferIndex: 0, bufferStride: MemoryLayout<Self>.stride)
-    ]
-
-    @MainActor static var descriptor: LowLevelMesh.Descriptor {
-      var desc = LowLevelMesh.Descriptor()
-      desc.vertexAttributes = VertexData.vertexAttributes
-      desc.vertexLayouts = VertexData.vertexLayouts
-      desc.indexType = .uint32
-      return desc
-    }
-  }
-
-  struct MovingLorenzParams {
-    var width: Float
-    var dt: Float
-  }
-
-  private func fakeIteration(p: SIMD3<Float>, dt: Float) -> SIMD3<Float> {
-    let d = SIMD3<Float>(0.1, 0.1, -0.1) * dt
-    return p + d
-  }
-
-  func lorenzIteration(p: SIMD3<Float>, dt: Float) -> SIMD3<Float> {
-    let tau: Float = 10.0
-    let rou: Float = 28.0
-    let beta: Float = 8.0 / 3.0
-
-    let dx = tau * (p.y - p.x)
-    let dy = p.x * (rou - p.z) - p.y
-    let dz = p.x * p.y - beta * p.z
-    let d = SIMD3<Float>(dx, dy, dz) * dt
-    return p + d
-  }
-
-  func fourwingIteration(p: SIMD3<Float>, dt: Float) -> SIMD3<Float> {
-    let a: Float = 0.2
-    let b: Float = 0.01
-    let c: Float = -0.4
-    let x = p.x
-    let y = p.y
-    let z = p.z
-    let dx = a * x + y * z
-    let dy = b * x + c * y - x * z
-    let dz = -z - x * y
-    let d = SIMD3<Float>(dx, dy, dz) * dt
-    return p + d
-  }
-}
-
-class PingPongBuffer {
-  let bufferA: MTLBuffer
-  let bufferB: MTLBuffer
-  var currentBuffer: MTLBuffer
-  var nextBuffer: MTLBuffer
-
-  init(device: MTLDevice, length: Int) {
-    bufferA = device.makeBuffer(length: length, options: .storageModeShared)!
-    bufferB = device.makeBuffer(length: length, options: .storageModeShared)!
-    currentBuffer = bufferA
-    nextBuffer = bufferB
-  }
-
-  func swap() {
-    (currentBuffer, nextBuffer) = (nextBuffer, currentBuffer)
   }
 }

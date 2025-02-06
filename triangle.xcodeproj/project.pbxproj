@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		9A0B7DC52C84698E001245B3 /* RealityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A0B7DC42C84698E001245B3 /* RealityKit.framework */; };
+		9A1A94E82D54C0D500315602 /* PingPong.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1A94E72D54C0CB00315602 /* PingPong.swift */; };
+		9A1A94EA2D54C1A400315602 /* Iterate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1A94E92D54C19600315602 /* Iterate.swift */; };
 		9A3CD41E2C8A1D9D00E8710C /* MovingLorenz.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A3CD41D2C8A1D9D00E8710C /* MovingLorenz.metal */; };
 		9A3CD4232C8A1E9300E8710C /* MovingLorenzView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A3CD4212C8A1DE300E8710C /* MovingLorenzView.swift */; };
 		9A75D3E32C71D16900D27E97 /* RealityKitContent in Frameworks */ = {isa = PBXBuildFile; productRef = 9A75D3E22C71D16900D27E97 /* RealityKitContent */; };
@@ -31,6 +33,8 @@
 
 /* Begin PBXFileReference section */
 		9A0B7DC42C84698E001245B3 /* RealityKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = RealityKit.framework; path = System/Library/Frameworks/RealityKit.framework; sourceTree = SDKROOT; };
+		9A1A94E72D54C0CB00315602 /* PingPong.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingPong.swift; sourceTree = "<group>"; };
+		9A1A94E92D54C19600315602 /* Iterate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Iterate.swift; sourceTree = "<group>"; };
 		9A3CD41D2C8A1D9D00E8710C /* MovingLorenz.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = MovingLorenz.metal; sourceTree = "<group>"; };
 		9A3CD4212C8A1DE300E8710C /* MovingLorenzView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovingLorenzView.swift; sourceTree = "<group>"; };
 		9A75D3DD2C71D16900D27E97 /* triangle.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = triangle.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -96,6 +100,8 @@
 		9A75D3DF2C71D16900D27E97 /* triangle */ = {
 			isa = PBXGroup;
 			children = (
+				9A1A94E92D54C19600315602 /* Iterate.swift */,
+				9A1A94E72D54C0CB00315602 /* PingPong.swift */,
 				9A75D3EC2C71D16B00D27E97 /* Assets.xcassets */,
 				9A75D3E62C71D16900D27E97 /* ContentView.swift */,
 				9A75D3EA2C71D16900D27E97 /* ImageBasedLighting.skybox */,
@@ -240,6 +246,8 @@
 				9A3CD4232C8A1E9300E8710C /* MovingLorenzView.swift in Sources */,
 				9A75D3E72C71D16900D27E97 /* ContentView.swift in Sources */,
 				9A3CD41E2C8A1D9D00E8710C /* MovingLorenz.metal in Sources */,
+				9A1A94E82D54C0D500315602 /* PingPong.swift in Sources */,
+				9A1A94EA2D54C1A400315602 /* Iterate.swift in Sources */,
 				9A75D3E52C71D16900D27E97 /* triangleApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
