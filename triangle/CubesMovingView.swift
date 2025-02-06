@@ -46,6 +46,13 @@ private struct VertexData {
   }
 }
 
+/// placement of a cube
+private struct CubeBase {
+  var position: SIMD3<Float>
+  var size: Float
+  var rotate: Float
+}
+
 struct CubesMovingView: View {
   let rootEntity: Entity = Entity()
 
@@ -106,6 +113,7 @@ struct CubesMovingView: View {
 
   func startTimer() {
     self.mesh = try! createMesh()  // recreate mesh when start timer
+    self.pingPongBuffer = createPingPongBuffer()
     timer = Timer.scheduledTimer(withTimeInterval: 1 / fps, repeats: true) { _ in
 
       DispatchQueue.main.async {
@@ -149,11 +157,52 @@ struct CubesMovingView: View {
     return positions
   }
 
+  let cubeCount: Int = 1
+
   var vertexCapacity: Int {
-    return 8
+    return cubeCount * 8
   }
   var indexCount: Int {
-    return 36
+    return cubeCount * 36
+  }
+
+  /// Triangle indices for a cube
+  var cubeTriangles: [Int] = [
+    0, 1, 2, 0, 2, 3,
+    4, 5, 6, 4, 6, 7,
+    0, 1, 5, 0, 5, 4,
+    2, 3, 7, 2, 7, 6,
+    0, 3, 7, 0, 7, 4,
+    1, 2, 6, 1, 6, 5,
+  ]
+
+  func randomPosition(r: Float) -> SIMD3<Float> {
+    let x = Float.random(in: -r...r)
+    let y = Float.random(in: -r...r)
+    let z = Float.random(in: -r...r)
+    return SIMD3<Float>(x, y, z)
+  }
+
+  func createPingPongBuffer() -> PingPongBuffer {
+    let buffer = PingPongBuffer(
+      device: device, length: MemoryLayout<CubeBase>.stride * cubeCount)
+
+    let pointer = buffer.currentBuffer.contents()
+    pointer.withMemoryRebound(to: CubeBase.self, capacity: cubeCount) { cubes in
+      for i in 0..<cubeCount {
+        cubes[i] = CubeBase(
+          position: randomPosition(r: 1),
+          size: Float.random(in: 0.2..<0.8),
+          rotate: 0
+        )
+      }
+    }
+
+    // copy data from current buffer to next buffer
+    buffer.nextBuffer.contents().copyMemory(
+      from: buffer.currentBuffer.contents(), byteCount: buffer.currentBuffer.length)
+
+    return buffer
   }
 
   func createMesh() throws -> LowLevelMesh {
@@ -185,48 +234,12 @@ struct CubesMovingView: View {
     mesh.withUnsafeMutableIndices { rawIndices in
       let indices = rawIndices.bindMemory(to: UInt32.self)
 
-      // bottom triangles
-      indices[0] = 0
-      indices[1] = 1
-      indices[2] = 2
-      indices[3] = 0
-      indices[4] = 2
-      indices[5] = 3
-      // top triangles
-      indices[6] = 4
-      indices[7] = 5
-      indices[8] = 6
-      indices[9] = 4
-      indices[10] = 6
-      indices[11] = 7
-      // near triangles
-      indices[12] = 0
-      indices[13] = 1
-      indices[14] = 5
-      indices[15] = 0
-      indices[16] = 5
-      indices[17] = 4
-      // far triangles
-      indices[18] = 2
-      indices[19] = 3
-      indices[20] = 7
-      indices[21] = 2
-      indices[22] = 7
-      indices[23] = 6
-      // left triangles
-      indices[24] = 0
-      indices[25] = 3
-      indices[26] = 7
-      indices[27] = 0
-      indices[28] = 7
-      indices[29] = 4
-      // right triangles
-      indices[30] = 1
-      indices[31] = 2
-      indices[32] = 6
-      indices[33] = 1
-      indices[34] = 6
-      indices[35] = 5
+      for i in 0..<cubeCount {
+        for j in 0..<36 {
+          indices[i * 36 + j] = UInt32(cubeTriangles[j]) + UInt32(i * 8)
+        }
+      }
+
     }
 
     mesh.parts.replaceAll([
@@ -236,13 +249,7 @@ struct CubesMovingView: View {
         bounds: getBounds()
       )
     ])
-    if let pingPongBuffer = pingPongBuffer {
-      // copy data from mesh to current buffer
-      mesh.withUnsafeMutableBytes(bufferIndex: 0) { rawBytes in
-        pingPongBuffer.currentBuffer.contents().copyMemory(
-          from: rawBytes.baseAddress!, byteCount: rawBytes.count)
-      }
-    }
+
     return mesh
   }
 
