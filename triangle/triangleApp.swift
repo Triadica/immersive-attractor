@@ -15,9 +15,6 @@ struct triangleApp: App {
   var body: some Scene {
     WindowGroup {
       // ContentView()
-      // MorphingSphereMetalView()
-      // AttractorView()
-      // MovingLorenzView()
       Button("Show Space") {
         Task {
           let result = await openImmersiveSpace(id: "ImmersiveSpace")
@@ -25,7 +22,7 @@ struct triangleApp: App {
             print("An error occurred")
           }
         }
-      }
+      }.padding(.bottom, 32)
       Button("Dismiss") {
         Task {
           await dismissImmersiveSpace()
@@ -35,9 +32,7 @@ struct triangleApp: App {
     }.windowStyle(.volumetric).defaultSize(width: 10, height: 10, depth: 10, in: .meters)
 
     ImmersiveSpace(id: "ImmersiveSpace") {
-      // ImmersiveView()
       MovingLorenzView()
-      // MorphingSphereMetalView()
     }.immersionStyle(selection: .constant(.full), in: .full)
   }
 }
