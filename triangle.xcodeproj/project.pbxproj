@@ -10,11 +10,12 @@
 		9A0B7DC52C84698E001245B3 /* RealityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A0B7DC42C84698E001245B3 /* RealityKit.framework */; };
 		9A1A94E82D54C0D500315602 /* PingPong.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1A94E72D54C0CB00315602 /* PingPong.swift */; };
 		9A1A94EA2D54C1A400315602 /* Iterate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1A94E92D54C19600315602 /* Iterate.swift */; };
+		9A1A94EC2D54C5C400315602 /* CubesMovingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1A94EB2D54C5BF00315602 /* CubesMovingView.swift */; };
+		9A1A94EE2D54C5DC00315602 /* CubesMoving.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A1A94ED2D54C5D000315602 /* CubesMoving.metal */; };
 		9A3CD41E2C8A1D9D00E8710C /* MovingLorenz.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A3CD41D2C8A1D9D00E8710C /* MovingLorenz.metal */; };
 		9A3CD4232C8A1E9300E8710C /* MovingLorenzView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A3CD4212C8A1DE300E8710C /* MovingLorenzView.swift */; };
 		9A75D3E32C71D16900D27E97 /* RealityKitContent in Frameworks */ = {isa = PBXBuildFile; productRef = 9A75D3E22C71D16900D27E97 /* RealityKitContent */; };
-		9A75D3E52C71D16900D27E97 /* triangleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A75D3E42C71D16900D27E97 /* triangleApp.swift */; };
-		9A75D3E72C71D16900D27E97 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A75D3E62C71D16900D27E97 /* ContentView.swift */; };
+		9A75D3E52C71D16900D27E97 /* attractorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A75D3E42C71D16900D27E97 /* attractorApp.swift */; };
 		9A75D3EB2C71D16900D27E97 /* ImageBasedLighting.skybox in Resources */ = {isa = PBXBuildFile; fileRef = 9A75D3EA2C71D16900D27E97 /* ImageBasedLighting.skybox */; };
 		9A75D3ED2C71D16B00D27E97 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9A75D3EC2C71D16B00D27E97 /* Assets.xcassets */; };
 		9A75D3F02C71D16B00D27E97 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9A75D3EF2C71D16B00D27E97 /* Preview Assets.xcassets */; };
@@ -35,12 +36,13 @@
 		9A0B7DC42C84698E001245B3 /* RealityKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = RealityKit.framework; path = System/Library/Frameworks/RealityKit.framework; sourceTree = SDKROOT; };
 		9A1A94E72D54C0CB00315602 /* PingPong.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingPong.swift; sourceTree = "<group>"; };
 		9A1A94E92D54C19600315602 /* Iterate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Iterate.swift; sourceTree = "<group>"; };
+		9A1A94EB2D54C5BF00315602 /* CubesMovingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CubesMovingView.swift; sourceTree = "<group>"; };
+		9A1A94ED2D54C5D000315602 /* CubesMoving.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = CubesMoving.metal; sourceTree = "<group>"; };
 		9A3CD41D2C8A1D9D00E8710C /* MovingLorenz.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = MovingLorenz.metal; sourceTree = "<group>"; };
 		9A3CD4212C8A1DE300E8710C /* MovingLorenzView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovingLorenzView.swift; sourceTree = "<group>"; };
 		9A75D3DD2C71D16900D27E97 /* triangle.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = triangle.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9A75D3E12C71D16900D27E97 /* RealityKitContent */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = RealityKitContent; sourceTree = "<group>"; };
-		9A75D3E42C71D16900D27E97 /* triangleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = triangleApp.swift; sourceTree = "<group>"; };
-		9A75D3E62C71D16900D27E97 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		9A75D3E42C71D16900D27E97 /* attractorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = attractorApp.swift; sourceTree = "<group>"; };
 		9A75D3EA2C71D16900D27E97 /* ImageBasedLighting.skybox */ = {isa = PBXFileReference; lastKnownFileType = file.skybox; path = ImageBasedLighting.skybox; sourceTree = "<group>"; };
 		9A75D3EC2C71D16B00D27E97 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9A75D3EF2C71D16B00D27E97 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
@@ -100,16 +102,17 @@
 		9A75D3DF2C71D16900D27E97 /* triangle */ = {
 			isa = PBXGroup;
 			children = (
+				9A1A94ED2D54C5D000315602 /* CubesMoving.metal */,
+				9A1A94EB2D54C5BF00315602 /* CubesMovingView.swift */,
 				9A1A94E92D54C19600315602 /* Iterate.swift */,
 				9A1A94E72D54C0CB00315602 /* PingPong.swift */,
 				9A75D3EC2C71D16B00D27E97 /* Assets.xcassets */,
-				9A75D3E62C71D16900D27E97 /* ContentView.swift */,
 				9A75D3EA2C71D16900D27E97 /* ImageBasedLighting.skybox */,
 				9A75D3F12C71D16B00D27E97 /* Info.plist */,
 				9A3CD41D2C8A1D9D00E8710C /* MovingLorenz.metal */,
 				9A3CD4212C8A1DE300E8710C /* MovingLorenzView.swift */,
 				9A75D3EE2C71D16B00D27E97 /* Preview Content */,
-				9A75D3E42C71D16900D27E97 /* triangleApp.swift */,
+				9A75D3E42C71D16900D27E97 /* attractorApp.swift */,
 			);
 			path = triangle;
 			sourceTree = "<group>";
@@ -243,12 +246,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9A1A94EE2D54C5DC00315602 /* CubesMoving.metal in Sources */,
 				9A3CD4232C8A1E9300E8710C /* MovingLorenzView.swift in Sources */,
-				9A75D3E72C71D16900D27E97 /* ContentView.swift in Sources */,
+				9A1A94EC2D54C5C400315602 /* CubesMovingView.swift in Sources */,
 				9A3CD41E2C8A1D9D00E8710C /* MovingLorenz.metal in Sources */,
 				9A1A94E82D54C0D500315602 /* PingPong.swift in Sources */,
 				9A1A94EA2D54C1A400315602 /* Iterate.swift in Sources */,
-				9A75D3E52C71D16900D27E97 /* triangleApp.swift in Sources */,
+				9A75D3E52C71D16900D27E97 /* attractorApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -1,3 +1,10 @@
+//
+//  CubesView.swift
+//  triangle
+//
+//  Created by chen on 2025/2/6.
+//
+
 import Metal
 import RealityKit
 import SwiftUI
@@ -44,7 +51,7 @@ private struct VertexData {
   }
 }
 
-struct MovingLorenzView: View {
+struct CubesMovingView: View {
   let rootEntity: Entity = Entity()
   let latitudeBands: Int = 20
   let longitudeBands: Int = 20
@@ -84,7 +91,7 @@ struct MovingLorenzView: View {
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
-    let updateFunction = library.makeFunction(name: "updateMovingLorenz")!
+    let updateFunction = library.makeFunction(name: "updateMovingCubes")!
     self.computePipeline = try! device.makeComputePipelineState(function: updateFunction)
   }
 

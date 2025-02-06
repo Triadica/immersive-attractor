@@ -14,7 +14,6 @@ struct triangleApp: App {
 
   var body: some Scene {
     WindowGroup {
-      // ContentView()
       Button("Show Space") {
         Task {
           let result = await openImmersiveSpace(id: "ImmersiveSpace")
@@ -32,7 +31,7 @@ struct triangleApp: App {
     }.windowStyle(.volumetric).defaultSize(width: 10, height: 10, depth: 10, in: .meters)
 
     ImmersiveSpace(id: "ImmersiveSpace") {
-      MovingLorenzView()
+      CubesMovingView()
     }.immersionStyle(selection: .constant(.full), in: .full)
   }
 }
