@@ -63,6 +63,7 @@ struct CubesMovingView: View {
 
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
+  let cubePipeline: MTLComputePipelineState
   let vertexPipeline: MTLComputePipelineState
   @State var pingPongBuffer: PingPongBuffer?
 
@@ -74,9 +75,11 @@ struct CubesMovingView: View {
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
-    let updateFunction = library.makeFunction(name: "updateMovingCubes")!
-    self.vertexPipeline = try! device.makeComputePipelineState(function: updateFunction)
+    let updateCubeBase = library.makeFunction(name: "updateCubeBase")!
+    self.cubePipeline = try! device.makeComputePipelineState(function: updateCubeBase)
 
+    let updateCubeVertexes = library.makeFunction(name: "updateCubeVertexes")!
+    self.vertexPipeline = try! device.makeComputePipelineState(function: updateCubeVertexes)
   }
 
   var body: some View {
@@ -114,6 +117,7 @@ struct CubesMovingView: View {
 
       DispatchQueue.main.async {
         if let vertexBuffer = self.vertexBuffer {
+          self.updateCubeBase()
           self.updateMesh(vertexBuffer: vertexBuffer)
         } else {
           print("[ERR] vertex buffer is not initialized")
@@ -257,6 +261,40 @@ struct CubesMovingView: View {
     return mesh
   }
 
+  func updateCubeBase() {
+    guard let pingPongBuffer = pingPongBuffer,
+      let commandBuffer = commandQueue.makeCommandBuffer(),
+      let computeEncoder = commandBuffer.makeComputeCommandEncoder()
+    else {
+      print("updateMesh: failed to get mesh or pingPongBuffer or commandBuffer or computeEncoder")
+      return
+    }
+
+    computeEncoder.setComputePipelineState(cubePipeline)
+
+    // idx 0: pingPongBuffer
+    computeEncoder.setBuffer(
+      pingPongBuffer.currentBuffer, offset: 0, index: 0)
+
+    // idx 1: vertexBuffer
+    computeEncoder.setBuffer(pingPongBuffer.nextBuffer, offset: 0, index: 1)
+
+    var params = MovingCubesParams(width: stripWidth, dt: iterateDt)
+    // idx 2: params buffer
+    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 2)
+
+    let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
+    let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
+    computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
+
+    computeEncoder.endEncoding()
+
+    commandBuffer.commit()
+
+    // swap buffers
+    pingPongBuffer.swap()
+  }
+
   func updateMesh(vertexBuffer: MTLBuffer) {
     guard let mesh = mesh,
       let pingPongBuffer = pingPongBuffer,
@@ -301,9 +339,6 @@ struct CubesMovingView: View {
     blitEncoder.endEncoding()
 
     commandBuffer.commit()
-
-    // swap buffers
-    pingPongBuffer.swap()
 
     // apply entity with mesh data
     mesh.parts.replaceAll([
