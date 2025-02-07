@@ -156,7 +156,7 @@ struct MovingLorenzView: View {
         for y in 0..<longitudeBands {
           for z in 0..<altitudeBands {
 
-            var base = SIMD3<Float>(
+            let base = SIMD3<Float>(
               gridWidth * Float(x - latitudeBands / 2),
               gridWidth * Float(y - longitudeBands / 2),
               -gridWidth * Float(z - altitudeBands / 2))

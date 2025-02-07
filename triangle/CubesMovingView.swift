@@ -1,10 +1,3 @@
-//
-//  CubesView.swift
-//  triangle
-//
-//  Created by chen on 2025/2/6.
-//
-
 import Metal
 import RealityKit
 import SwiftUI
@@ -53,11 +46,6 @@ private struct CubeBase {
   var rotate: Float
 }
 
-private struct CubeBaseUniform {
-  var data: UnsafeMutableRawPointer?
-  var length: UInt32
-}
-
 struct CubesMovingView: View {
   let rootEntity: Entity = Entity()
 
@@ -94,9 +82,6 @@ struct CubesMovingView: View {
   var body: some View {
     GeometryReader3D { proxy in
       RealityView { content in
-        // let size = content.convert(proxy.frame(in: .local), from: .local, to: .scene).extents
-        // let radius = Float(0.5 * size.x)
-
         self.pingPongBuffer = PingPongBuffer(
           device: device, length: MemoryLayout<VertexData>.stride * vertexCapacity)
         let mesh = try! createMesh()
@@ -211,7 +196,8 @@ struct CubesMovingView: View {
     pointer.withMemoryRebound(to: CubeBase.self, capacity: cubeCount) { cubes in
       for i in 0..<cubeCount {
         cubes[i] = CubeBase(
-          position: randomPosition(r: 1),
+          // position: randomPosition(r: 1),
+          position: SIMD3<Float>(1, 10, -1),
           size: Float.random(in: 0.2..<0.8),
           rotate: 0
         )
@@ -221,6 +207,8 @@ struct CubesMovingView: View {
     // copy data from current buffer to next buffer
     buffer.nextBuffer.contents().copyMemory(
       from: buffer.currentBuffer.contents(), byteCount: buffer.currentBuffer.length)
+
+    print(buffer.currentBuffer)
 
     return buffer
   }
@@ -240,7 +228,7 @@ struct CubesMovingView: View {
 
       for (idx, point) in cubePoints.enumerated() {
         vertices[idx] = VertexData(
-          position: point * 0.2,
+          position: point * 0.1,
           normal: defaultNormal,
           uv: SIMD2<Float>.zero,
           atSide: false,
@@ -283,34 +271,32 @@ struct CubesMovingView: View {
       return
     }
 
+    // copy data from mesh to vertexBuffer
     mesh.withUnsafeMutableBytes(bufferIndex: 0) { rawBytes in
       vertexBuffer.contents().copyMemory(
         from: rawBytes.baseAddress!, byteCount: rawBytes.count)
     }
 
     computeEncoder.setComputePipelineState(vertexPipeline)
-    // computeEncoder.setBuffer(pingPongBuffer.currentBuffer, offset: 0, index: 0)
 
-    var codeBaseUniform = CubeBaseUniform(
-      data: pingPongBuffer.nextBuffer.contents(),
-      length: UInt32(MemoryLayout<CubeBase>.stride * cubeCount)
-    )
-    computeEncoder.setBytes(
-      &codeBaseUniform, length: MemoryLayout<CubeBaseUniform>.stride, index: 0)
+    // idx 0: pingPongBuffer
+    computeEncoder.setBuffer(
+      pingPongBuffer.currentBuffer, offset: 0, index: 0)
 
+    // idx 1: vertexBuffer
     computeEncoder.setBuffer(vertexBuffer, offset: 0, index: 1)
 
     var params = MovingCubesParams(width: stripWidth, dt: iterateDt)
+    // idx 2: params buffer
     computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 2)
 
     let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
     let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
-
     computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
 
     computeEncoder.endEncoding()
 
-    // copy data from next buffer to mesh
+    // copy data from vertexBuffer to mesh
     let blitEncoder = commandBuffer.makeBlitCommandEncoder()!
     blitEncoder.copy(
       from: vertexBuffer, sourceOffset: 0,
@@ -323,6 +309,7 @@ struct CubesMovingView: View {
     // swap buffers
     pingPongBuffer.swap()
 
+    // apply entity with mesh data
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
         indexCount: indexCount,

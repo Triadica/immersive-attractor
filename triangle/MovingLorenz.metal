@@ -91,7 +91,7 @@ float3 dequanLiIteration(float3 p, float dt) {
 
 
 kernel void updateMovingLorenz(
-  device VertexData* vertices [[buffer(0)]],
+  device VertexData *vertices [[buffer(0)]],
   device VertexData *outputVertices [[buffer(1)]],
   constant MovingLorenzParams& params [[buffer(2)]],
   uint id [[thread_position_in_grid]])
