@@ -82,8 +82,6 @@ struct CubesMovingView: View {
   var body: some View {
     GeometryReader3D { proxy in
       RealityView { content in
-        self.pingPongBuffer = PingPongBuffer(
-          device: device, length: MemoryLayout<VertexData>.stride * vertexCapacity)
         let mesh = try! createMesh()
 
         let modelComponent = try! getModelComponent(mesh: mesh)
@@ -189,26 +187,24 @@ struct CubesMovingView: View {
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
-    let buffer = PingPongBuffer(
-      device: device, length: MemoryLayout<CubeBase>.stride * cubeCount)
+    let bufferSize = MemoryLayout<CubeBase>.stride * cubeCount
+    let buffer = PingPongBuffer(device: device, length: bufferSize)
 
-    let pointer = buffer.currentBuffer.contents()
-    pointer.withMemoryRebound(to: CubeBase.self, capacity: cubeCount) { cubes in
-      for i in 0..<cubeCount {
-        cubes[i] = CubeBase(
-          // position: randomPosition(r: 1),
-          position: SIMD3<Float>(1, 10, -1),
-          size: Float.random(in: 0.2..<0.8),
-          rotate: 0
-        )
-      }
+    // 使用 contents() 前检查 buffer 是否有效
+    let contents = buffer.currentBuffer.contents()
+
+    let cubes = contents.bindMemory(to: CubeBase.self, capacity: cubeCount)
+    for i in 0..<cubeCount {
+      cubes[i] = CubeBase(
+        position: randomPosition(r: 1),
+        size: Float.random(in: 0.2..<0.8),
+        rotate: 0
+      )
     }
 
     // copy data from current buffer to next buffer
     buffer.nextBuffer.contents().copyMemory(
       from: buffer.currentBuffer.contents(), byteCount: buffer.currentBuffer.length)
-
-    print(buffer.currentBuffer)
 
     return buffer
   }
