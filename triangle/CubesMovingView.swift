@@ -89,8 +89,6 @@ struct CubesMovingView: View {
     let updateFunction = library.makeFunction(name: "updateMovingCubes")!
     self.vertexPipeline = try! device.makeComputePipelineState(function: updateFunction)
 
-    self.vertexBuffer = device.makeBuffer(
-      length: MemoryLayout<VertexData>.stride * vertexCapacity, options: .storageModeShared)
   }
 
   var body: some View {
@@ -125,10 +123,18 @@ struct CubesMovingView: View {
   func startTimer() {
     self.mesh = try! createMesh()  // recreate mesh when start timer
     self.pingPongBuffer = createPingPongBuffer()
+
+    self.vertexBuffer = device.makeBuffer(
+      length: MemoryLayout<VertexData>.stride * vertexCapacity, options: .storageModeShared)
+
     timer = Timer.scheduledTimer(withTimeInterval: 1 / fps, repeats: true) { _ in
 
       DispatchQueue.main.async {
-        self.updateMesh()
+        if let vertexBuffer = self.vertexBuffer {
+          self.updateMesh(vertexBuffer: vertexBuffer)
+        } else {
+          print("[ERR] vertex buffer is not initialized")
+        }
         self.updateTrigger.toggle()
       }
     }
@@ -137,6 +143,9 @@ struct CubesMovingView: View {
   func stopTimer() {
     timer?.invalidate()
     timer = nil
+    pingPongBuffer = nil
+    mesh = nil
+    self.vertexBuffer = nil
   }
 
   func getModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
@@ -264,7 +273,7 @@ struct CubesMovingView: View {
     return mesh
   }
 
-  func updateMesh() {
+  func updateMesh(vertexBuffer: MTLBuffer) {
     guard let mesh = mesh,
       let pingPongBuffer = pingPongBuffer,
       let commandBuffer = commandQueue.makeCommandBuffer(),
@@ -274,13 +283,9 @@ struct CubesMovingView: View {
       return
     }
 
-    if let vertexBuffer = self.vertexBuffer {
-      mesh.withUnsafeMutableBytes(bufferIndex: 0) { rawBytes in
-        vertexBuffer.contents().copyMemory(
-          from: rawBytes.baseAddress!, byteCount: rawBytes.count)
-      }
-    } else {
-      print("[ERR] no vertex Buffer")
+    mesh.withUnsafeMutableBytes(bufferIndex: 0) { rawBytes in
+      vertexBuffer.contents().copyMemory(
+        from: rawBytes.baseAddress!, byteCount: rawBytes.count)
     }
 
     computeEncoder.setComputePipelineState(vertexPipeline)
@@ -290,9 +295,10 @@ struct CubesMovingView: View {
       data: pingPongBuffer.nextBuffer.contents(),
       length: UInt32(MemoryLayout<CubeBase>.stride * cubeCount)
     )
-    computeEncoder.setBytes(&codeBaseUniform, length: MemoryLayout<CubeBaseUniform>.stride, index: 0)
+    computeEncoder.setBytes(
+      &codeBaseUniform, length: MemoryLayout<CubeBaseUniform>.stride, index: 0)
 
-    computeEncoder.setBuffer(vertexBuffer!, offset: 0, index: 1)
+    computeEncoder.setBuffer(vertexBuffer, offset: 0, index: 1)
 
     var params = MovingCubesParams(width: stripWidth, dt: iterateDt)
     computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 2)
@@ -307,9 +313,9 @@ struct CubesMovingView: View {
     // copy data from next buffer to mesh
     let blitEncoder = commandBuffer.makeBlitCommandEncoder()!
     blitEncoder.copy(
-      from: vertexBuffer!, sourceOffset: 0,
+      from: vertexBuffer, sourceOffset: 0,
       to: mesh.replace(bufferIndex: 0, using: commandBuffer), destinationOffset: 0,
-      size: vertexBuffer!.length)
+      size: vertexBuffer.length)
     blitEncoder.endEncoding()
 
     commandBuffer.commit()
@@ -320,7 +326,7 @@ struct CubesMovingView: View {
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
         indexCount: indexCount,
-        topology: .triangle,
+        topology: .lineStrip,
         bounds: getBounds()
       )
     ])
