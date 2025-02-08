@@ -4,11 +4,8 @@ using namespace metal;
 
 struct VertexData {
   float3 position;
-  float3 normal;
-  float2 uv;
-  bool atSide;
-  bool leading;
-  bool secondary;
+  // float3 normal;
+  // float2 uv;
 };
 
 struct MovingCubesParams {
@@ -41,7 +38,12 @@ kernel void updateCubeBase(
 {
   CubeBase base = codeBaseList[id];
 
-  outputCodeBaseList[id].position.y = base.position.y + 0.001;
+  if (base.position.y < -20.0) {
+    outputCodeBaseList[id].position.y = 20.0;
+  } else {
+    outputCodeBaseList[id].position.y = base.position.y - 0.002 * base.size;
+  }
+
 }
 
 
@@ -51,12 +53,13 @@ kernel void updateCubeVertexes(
                                constant MovingCubesParams &params [[buffer(2)]],
                                uint id [[thread_position_in_grid]])
 {
-  CubeBase base = codeBaseList[0];
+  uint cubeIdx = id / 8;
+  CubeBase base = codeBaseList[cubeIdx];
   // vertice
   uint verticeIdx = id % 8;
   float3 vertice = cubeVertices[verticeIdx];
 
-  float3 position = base.position + vertice * 0.2;
+  float3 position = base.position + vertice * 0.1 * base.size;
 
   outputVertices[id].position = position;
 }

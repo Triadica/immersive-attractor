@@ -9,21 +9,14 @@ private struct MovingCubesParams {
 
 private struct VertexData {
   var position: SIMD3<Float> = .zero
-  var normal: SIMD3<Float> = .zero
-  var uv: SIMD2<Float> = .zero
-  var atSide: Bool = false
-  var leading: Bool = false
-  var secondary: Bool = false
+  // var normal: SIMD3<Float> = .zero
+  // var uv: SIMD2<Float> = .zero
 
   @MainActor static var vertexAttributes: [LowLevelMesh.Attribute] = [
     .init(
-      semantic: .position, format: .float3, offset: MemoryLayout<Self>.offset(of: \.position)!),
-    .init(semantic: .normal, format: .float3, offset: MemoryLayout<Self>.offset(of: \.normal)!),
-    .init(semantic: .uv0, format: .float2, offset: MemoryLayout<Self>.offset(of: \.uv)!),
-    // .init(
-    //   semantic: .unspecified, format: .float,
-    //   offset: MemoryLayout<Self>.offset(of: \.atSide)!
-    // ),
+      semantic: .position, format: .float3, offset: MemoryLayout<Self>.offset(of: \.position)!)
+    // .init(semantic: .normal, format: .float3, offset: MemoryLayout<Self>.offset(of: \.normal)!),
+    // .init(semantic: .uv0, format: .float2, offset: MemoryLayout<Self>.offset(of: \.uv)!),
   ]
 
   @MainActor static var vertexLayouts: [LowLevelMesh.Layout] = [
@@ -48,25 +41,19 @@ private struct CubeBase {
 
 struct CubesMovingView: View {
   let rootEntity: Entity = Entity()
+  @State var mesh: LowLevelMesh?
 
   let fps: Double = 120
 
-  // fourwing params
-  let stripWidth: Float = 0.003
-  let stripScale: Float = 1.2
-  let iterateDt: Float = 0.02
-
-  @State var mesh: LowLevelMesh?
   @State var timer: Timer?
-
   @State private var updateTrigger = false
 
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
   let cubePipeline: MTLComputePipelineState
   let vertexPipeline: MTLComputePipelineState
-  @State var pingPongBuffer: PingPongBuffer?
 
+  @State var pingPongBuffer: PingPongBuffer?
   /// The vertex buffer for the mesh
   @State var vertexBuffer: MTLBuffer?
 
@@ -89,7 +76,7 @@ struct CubesMovingView: View {
 
         let modelComponent = try! getModelComponent(mesh: mesh)
         rootEntity.components.set(modelComponent)
-        rootEntity.scale = SIMD3(repeating: stripScale)
+        // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = 1
         // rootEntity.position.x = 1.6
         rootEntity.position.z = -1
@@ -119,6 +106,9 @@ struct CubesMovingView: View {
         if let vertexBuffer = self.vertexBuffer {
           self.updateCubeBase()
           self.updateMesh(vertexBuffer: vertexBuffer)
+
+          // swap buffers
+          self.pingPongBuffer!.swap()
         } else {
           print("[ERR] vertex buffer is not initialized")
         }
@@ -164,13 +154,10 @@ struct CubesMovingView: View {
     return positions
   }
 
-  let cubeCount: Int = 1
+  let cubeCount: Int = 12000
 
   var vertexCapacity: Int {
     return cubeCount * 8
-  }
-  var indexCount: Int {
-    return cubeCount * 36
   }
 
   /// Triangle indices for a cube
@@ -183,11 +170,18 @@ struct CubesMovingView: View {
     1, 2, 6, 1, 6, 5,
   ]
 
-  func randomPosition(r: Float) -> SIMD3<Float> {
-    let x = Float.random(in: -r...r)
-    let y = Float.random(in: -r...r)
-    let z = Float.random(in: -r...r)
-    return SIMD3<Float>(x, y, z)
+  var cubeFrame: [Int] = [
+    0, 1, 1, 2, 2, 3, 3, 0,
+    4, 5, 5, 6, 6, 7, 7, 4,
+    0, 4, 1, 5, 2, 6, 3, 7,
+  ]
+
+  var shapeIndiceCount: Int {
+    return cubeFrame.count
+  }
+
+  var indexCount: Int {
+    return cubeCount * shapeIndiceCount
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
@@ -200,8 +194,8 @@ struct CubesMovingView: View {
     let cubes = contents.bindMemory(to: CubeBase.self, capacity: cubeCount)
     for i in 0..<cubeCount {
       cubes[i] = CubeBase(
-        position: randomPosition(r: 1),
-        size: Float.random(in: 0.2..<0.8),
+        position: randomPosition(r: 16),
+        size: Float.random(in: 0.1..<1.4),
         rotate: 0
       )
     }
@@ -221,30 +215,15 @@ struct CubesMovingView: View {
     let cubePoints = getCubePoints()
 
     let mesh = try LowLevelMesh(descriptor: desc)
-    mesh.withUnsafeMutableBytes(bufferIndex: 0) { rawBytes in
-      let vertices = rawBytes.bindMemory(to: VertexData.self)
 
-      let defaultNormal = SIMD3<Float>(0.7, 0.7, 0.7)
-
-      for (idx, point) in cubePoints.enumerated() {
-        vertices[idx] = VertexData(
-          position: point * 0.1,
-          normal: defaultNormal,
-          uv: SIMD2<Float>.zero,
-          atSide: false,
-          leading: false,
-          secondary: false
-        )
-      }
-
-    }
+    // vertexes are set from compute shader
 
     mesh.withUnsafeMutableIndices { rawIndices in
       let indices = rawIndices.bindMemory(to: UInt32.self)
 
       for i in 0..<cubeCount {
-        for j in 0..<36 {
-          indices[i * 36 + j] = UInt32(cubeTriangles[j]) + UInt32(i * 8)
+        for j in 0..<shapeIndiceCount {
+          indices[i * shapeIndiceCount + j] = UInt32(cubeFrame[j]) + UInt32(i * 8)
         }
       }
 
@@ -259,6 +238,10 @@ struct CubesMovingView: View {
     ])
 
     return mesh
+  }
+
+  private func getMovingParams() -> MovingCubesParams {
+    return MovingCubesParams(width: 0.003, dt: 0.02)
   }
 
   func updateCubeBase() {
@@ -279,20 +262,17 @@ struct CubesMovingView: View {
     // idx 1: vertexBuffer
     computeEncoder.setBuffer(pingPongBuffer.nextBuffer, offset: 0, index: 1)
 
-    var params = MovingCubesParams(width: stripWidth, dt: iterateDt)
+    var params = getMovingParams()
     // idx 2: params buffer
     computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 2)
 
-    let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
-    let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
+    let threadsPerGrid = MTLSize(width: cubeCount, height: 1, depth: 1)
+    let threadsPerThreadgroup = MTLSize(width: 16, height: 1, depth: 1)
     computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
 
     computeEncoder.endEncoding()
 
     commandBuffer.commit()
-
-    // swap buffers
-    pingPongBuffer.swap()
   }
 
   func updateMesh(vertexBuffer: MTLBuffer) {
@@ -320,7 +300,7 @@ struct CubesMovingView: View {
     // idx 1: vertexBuffer
     computeEncoder.setBuffer(vertexBuffer, offset: 0, index: 1)
 
-    var params = MovingCubesParams(width: stripWidth, dt: iterateDt)
+    var params = getMovingParams()
     // idx 2: params buffer
     computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 2)
 
@@ -344,7 +324,7 @@ struct CubesMovingView: View {
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
         indexCount: indexCount,
-        topology: .lineStrip,
+        topology: .line,
         bounds: getBounds()
       )
     ])
