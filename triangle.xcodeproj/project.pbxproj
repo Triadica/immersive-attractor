@@ -20,6 +20,8 @@
 		9A75D3ED2C71D16B00D27E97 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9A75D3EC2C71D16B00D27E97 /* Assets.xcassets */; };
 		9A75D3F02C71D16B00D27E97 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9A75D3EF2C71D16B00D27E97 /* Preview Assets.xcassets */; };
 		9A75D3FB2C71D16B00D27E97 /* triangleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A75D3FA2C71D16B00D27E97 /* triangleTests.swift */; };
+		9AD4CB772D588FDA00E55977 /* AttractorLineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AD4CB762D588FCF00E55977 /* AttractorLineView.swift */; };
+		9AD4CB792D588FE600E55977 /* AttractorLine.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9AD4CB782D588FDE00E55977 /* AttractorLine.metal */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -49,6 +51,8 @@
 		9A75D3F12C71D16B00D27E97 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		9A75D3F62C71D16B00D27E97 /* triangleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = triangleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9A75D3FA2C71D16B00D27E97 /* triangleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = triangleTests.swift; sourceTree = "<group>"; };
+		9AD4CB762D588FCF00E55977 /* AttractorLineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttractorLineView.swift; sourceTree = "<group>"; };
+		9AD4CB782D588FDE00E55977 /* AttractorLine.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = AttractorLine.metal; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -102,6 +106,8 @@
 		9A75D3DF2C71D16900D27E97 /* triangle */ = {
 			isa = PBXGroup;
 			children = (
+				9AD4CB782D588FDE00E55977 /* AttractorLine.metal */,
+				9AD4CB762D588FCF00E55977 /* AttractorLineView.swift */,
 				9A1A94ED2D54C5D000315602 /* CubesMoving.metal */,
 				9A1A94EB2D54C5BF00315602 /* CubesMovingView.swift */,
 				9A1A94E92D54C19600315602 /* Iterate.swift */,
@@ -246,7 +252,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9AD4CB792D588FE600E55977 /* AttractorLine.metal in Sources */,
 				9A1A94EE2D54C5DC00315602 /* CubesMoving.metal in Sources */,
+				9AD4CB772D588FDA00E55977 /* AttractorLineView.swift in Sources */,
 				9A3CD4232C8A1E9300E8710C /* MovingLorenzView.swift in Sources */,
 				9A1A94EC2D54C5C400315602 /* CubesMovingView.swift in Sources */,
 				9A3CD41E2C8A1D9D00E8710C /* MovingLorenz.metal in Sources */,

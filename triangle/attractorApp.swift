@@ -31,7 +31,8 @@ struct triangleApp: App {
     }.windowStyle(.volumetric).defaultSize(width: 10, height: 10, depth: 10, in: .meters)
 
     ImmersiveSpace(id: "ImmersiveSpace") {
-      CubesMovingView()
+      // CubesMovingView()
+      AttractorLineView()
     }.immersionStyle(selection: .constant(.full), in: .full)
   }
 }
