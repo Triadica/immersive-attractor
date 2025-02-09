@@ -67,13 +67,13 @@ kernel void updateAttractorLineVertexes(
                                constant MovingAttractorLineParams &params [[buffer(3)]],
                                uint id [[thread_position_in_grid]])
 {
-  uint vertexPerCell = 41;
+  uint vertexPerCell = params.vertexPerCell;
   uint cellIdx = id / vertexPerCell;
   uint cellInnerIdx = id % vertexPerCell;
 
   if (cellInnerIdx == 0) {
     CubeBase base = codeBaseList[cellIdx];
-    outputVertices[id].position = float3(base.position.x, base.position.y, base.position.z-2.) * 0.2;
+    outputVertices[id].position = float3(base.position.x, base.position.y, base.position.z-4.) * 0.2;
   } else {
     outputVertices[id].position = previousVertices[id-1].position;
   }

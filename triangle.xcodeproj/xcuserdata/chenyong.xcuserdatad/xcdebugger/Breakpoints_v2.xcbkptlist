@@ -48,7 +48,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "109"
             endingLineNumber = "109"
-            landmarkName = "updateMovingLorenz( device VertexData* vertices [[buffer(0)]], device VertexData *outputVertices [[buffer(1)]], constant MovingLorenzParams&amp; params [[buffer(2)]], uint id [[thread_position_in_grid]])"
+            landmarkName = "updateMovingLorenz( device VertexData *vertices [[buffer(0)]], device VertexData *outputVertices [[buffer(1)]], constant MovingLorenzParams&amp; params [[buffer(2)]], uint id [[thread_position_in_grid]])"
             landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>

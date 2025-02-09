@@ -3,7 +3,7 @@ import RealityKit
 import SwiftUI
 
 private struct MovingCubesParams {
-  var width: Float
+  var vertexPerCell: Int32
   var dt: Float
 }
 
@@ -144,8 +144,8 @@ struct AttractorLineView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let cellCount: Int = 2000
-  let cellSegment: Int = 40
+  let cellCount: Int = 50000
+  let cellSegment: Int = 8
 
   var vertexPerCell: Int {
     return cellSegment + 1
@@ -171,7 +171,7 @@ struct AttractorLineView: View {
     let cubes = contents.bindMemory(to: CubeBase.self, capacity: cellCount)
     for i in 0..<cellCount {
       cubes[i] = CubeBase(
-        position: randomPosition(r: 4),
+        position: randomPosition(r: 1),
         size: Float.random(in: 0.1..<1.4),
         rotate: 0
       )
@@ -222,7 +222,7 @@ struct AttractorLineView: View {
   }
 
   private func getMovingParams() -> MovingCubesParams {
-    return MovingCubesParams(width: 0.003, dt: 0.004)
+    return MovingCubesParams(vertexPerCell: Int32(vertexPerCell), dt: 0.008)
   }
 
   func updateCubeBase() {
