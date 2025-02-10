@@ -33,9 +33,10 @@ private struct VertexData {
 }
 
 /// placement of a cube
-private struct CubeBase {
+private struct CellBase {
   var position: SIMD3<Float>
   var size: Float
+  var velocity: SIMD3<Float> = .zero
   var rotate: Float
 }
 
@@ -64,10 +65,10 @@ struct RadicalLineView: View {
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
-    let updateAttractorBase = library.makeFunction(name: "updateAttractorLineBase")!
+    let updateAttractorBase = library.makeFunction(name: "updateRadicalLineBase")!
     self.attractorPipeline = try! device.makeComputePipelineState(function: updateAttractorBase)
 
-    let updatelinesVertexes = library.makeFunction(name: "updateAttractorLineVertexes")!
+    let updatelinesVertexes = library.makeFunction(name: "updateRadicalLineVertexes")!
     self.vertexPipeline = try! device.makeComputePipelineState(function: updatelinesVertexes)
   }
 
@@ -108,7 +109,7 @@ struct RadicalLineView: View {
 
       DispatchQueue.main.async {
         if let vertexBuffer = self.vertexBuffer {
-          self.updateCubeBase()
+          self.updateCellBase()
           self.updateMesh(vertexBuffer: vertexBuffer, prevBuffer: self.vertexPrevBuffer!)
 
           // swap buffers
@@ -144,14 +145,13 @@ struct RadicalLineView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let cellCount: Int = 50000
-  let cellSegment: Int = 8
+  let cellCount: Int = 4000
 
   var vertexPerCell: Int {
-    return cellSegment + 1
+    return 1
   }
   var indicePerCell: Int {
-    return cellSegment * 2
+    return 2
   }
 
   var vertexCapacity: Int {
@@ -162,17 +162,18 @@ struct RadicalLineView: View {
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
-    let bufferSize = MemoryLayout<CubeBase>.stride * cellCount
+    let bufferSize = MemoryLayout<CellBase>.stride * cellCount
     let buffer = PingPongBuffer(device: device, length: bufferSize)
 
     // 使用 contents() 前检查 buffer 是否有效
     let contents = buffer.currentBuffer.contents()
 
-    let cubes = contents.bindMemory(to: CubeBase.self, capacity: cellCount)
+    let cubes = contents.bindMemory(to: CellBase.self, capacity: cellCount)
     for i in 0..<cellCount {
-      cubes[i] = CubeBase(
+      cubes[i] = CellBase(
         position: randomPosition(r: 1),
         size: Float.random(in: 0.1..<1.4),
+        velocity: randomPosition(r: 2),
         rotate: 0
       )
     }
@@ -198,12 +199,13 @@ struct RadicalLineView: View {
 
       for i in 0..<cellCount {
         for j in 0..<indicePerCell {
-          let is_even = j % 2 == 0
-          let half = j / 2
+          let idx = i * indicePerCell + j
+          let is_even = idx % 2 == 0
           if is_even {
-            indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half)
+            let half = idx / 2
+            indices[idx] = UInt32(half)
           } else {
-            indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half + 1)
+            indices[idx] = 0  // special value of origin point
           }
         }
       }
@@ -222,10 +224,10 @@ struct RadicalLineView: View {
   }
 
   private func getMovingParams() -> MovingCubesParams {
-    return MovingCubesParams(vertexPerCell: Int32(vertexPerCell), dt: 0.008)
+    return MovingCubesParams(vertexPerCell: Int32(vertexPerCell), dt: 0.001)
   }
 
-  func updateCubeBase() {
+  func updateCellBase() {
     guard let pingPongBuffer = pingPongBuffer,
       let commandBuffer = commandQueue.makeCommandBuffer(),
       let computeEncoder = commandBuffer.makeComputeCommandEncoder()
@@ -248,7 +250,7 @@ struct RadicalLineView: View {
     computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 2)
 
     let threadsPerGrid = MTLSize(width: cellCount, height: 1, depth: 1)
-    let threadsPerThreadgroup = MTLSize(width: 16, height: 1, depth: 1)
+    let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
     computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
 
     computeEncoder.endEncoding()
