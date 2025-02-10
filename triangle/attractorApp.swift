@@ -34,7 +34,8 @@ struct triangleApp: App {
       // CubesMovingView()
       // AttractorLineView()
       // MovingLorenzView()
-      RadicalLineView()
+      // RadicalLineView()
+      SphereBouncingView()
     }.immersionStyle(selection: .constant(.full), in: .full)
   }
 }
