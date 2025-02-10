@@ -36,6 +36,7 @@ private struct VertexData {
 private struct CubeBase {
   var position: SIMD3<Float>
   var size: Float
+  var velocity: SIMD3<Float> = .zero
   var rotate: Float
 }
 
@@ -145,7 +146,7 @@ struct SphereBouncingView: View {
   }
 
   let cellCount: Int = 50000
-  let cellSegment: Int = 8
+  let cellSegment: Int = 16
 
   var vertexPerCell: Int {
     return cellSegment + 1
@@ -171,8 +172,9 @@ struct SphereBouncingView: View {
     let cubes = contents.bindMemory(to: CubeBase.self, capacity: cellCount)
     for i in 0..<cellCount {
       cubes[i] = CubeBase(
-        position: randomPosition(r: 1),
+        position: randomPosition(r: 0.0) + SIMD3<Float>(0, 0, 0.6),
         size: Float.random(in: 0.1..<1.4),
+        velocity: normalize(randomPosition(r: 1)) * 0.2 + SIMD3<Float>(1, 0, 0),
         rotate: 0
       )
     }
@@ -222,7 +224,7 @@ struct SphereBouncingView: View {
   }
 
   private func getMovingParams() -> MovingCubesParams {
-    return MovingCubesParams(vertexPerCell: Int32(vertexPerCell), dt: 0.008)
+    return MovingCubesParams(vertexPerCell: Int32(vertexPerCell), dt: 0.006)
   }
 
   func updateCubeBase() {

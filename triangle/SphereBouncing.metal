@@ -16,24 +16,9 @@ struct MovingAttractorLineParams {
 struct CubeBase {
   float3 position;
   float size;
+  float3 velocity;
   float rotate;
 };
-
-
-  // a Metal function of fourwing
-float3 bouncingfourwingLineIteration(float3 p, float dt) {
-  float a = 0.2;
-  float b = 0.01;
-  float c = -0.4;
-  float x = p.x;
-  float y = p.y;
-  float z = p.z;
-  float dx = a * x + y * z;
-  float dy = b * x + c * y - x * z;
-  float dz = -z - x * y;
-  float3 d = float3(dx, dy, dz) * dt;
-  return p + d;
-}
 
 kernel void updateSphereBouncingBase(
                                     device CubeBase *codeBaseList [[buffer(0)]],
@@ -42,7 +27,25 @@ kernel void updateSphereBouncingBase(
                                     uint id [[thread_position_in_grid]])
 {
   CubeBase base = codeBaseList[id];
-  outputCodeBaseList[id].position = bouncingfourwingLineIteration(base.position, params.dt);
+  float3 position = base.position;
+  float3 velocity = base.velocity;
+  float3 accerlation = float3(0., -0.2, 0.);
+  float3 positionNext = position + velocity * params.dt;
+  float3 velocityNext = velocity + accerlation * params.dt;
+
+  float3 areaCenter = float3(0., 0.5, 0.);
+  float d = distance(positionNext, areaCenter);
+  if (d < 1.2) {
+    outputCodeBaseList[id].velocity = velocityNext;
+    outputCodeBaseList[id].position = positionNext;
+  } else {
+    // reverse the velocity in the direction of the areaCenter
+    float3 unit = normalize(areaCenter - positionNext);
+    float3 vToCenter = dot(velocity, unit) * unit;
+    float3 vPerp = velocity - vToCenter;
+    float3 vVerticalReversed = vPerp - vToCenter * 0.98;
+    outputCodeBaseList[id].velocity = vVerticalReversed + accerlation * params.dt;
+  }
 }
 
 
