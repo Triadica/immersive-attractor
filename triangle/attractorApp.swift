@@ -32,7 +32,9 @@ struct triangleApp: App {
 
     ImmersiveSpace(id: "ImmersiveSpace") {
       // CubesMovingView()
-      AttractorLineView()
+      // AttractorLineView()
+      // MovingLorenzView()
+      RadicalLineView()
     }.immersionStyle(selection: .constant(.full), in: .full)
   }
 }
