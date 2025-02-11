@@ -35,7 +35,8 @@ struct AttractorApp: App {
       // AttractorLineView()
       // MovingLorenzView()
       // RadicalLineView()
-      SphereBouncingView()
+      // SphereBouncingView()
+      CornerBouncingView()
     }.immersionStyle(selection: .constant(.full), in: .full)
   }
 }
