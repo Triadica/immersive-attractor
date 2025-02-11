@@ -45,9 +45,9 @@ kernel void updateRadicalLineBase(
     return;
   }
   CellBase base = codeBaseList[id];
-  float3 accerlation = -base.position * 20 / pow(length(base.position), 2);
+  float3 acceleration = -base.position * 20 / pow(length(base.position), 2);
   float3 v = base.velocity;
-  float3 vNext = v + accerlation * params.dt;
+  float3 vNext = v + acceleration * params.dt;
   outputCodeBaseList[id].position = base.position + v * params.dt;
   outputCodeBaseList[id].velocity = vNext;
 }

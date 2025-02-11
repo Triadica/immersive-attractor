@@ -6,16 +6,17 @@ import Metal
 /// similar to how a ping-pong ball bounces between players.
 ///
 class PingPongBuffer {
-  let bufferA: MTLBuffer
-  let bufferB: MTLBuffer
   var currentBuffer: MTLBuffer
   var nextBuffer: MTLBuffer
 
   init(device: MTLDevice, length: Int) {
-    bufferA = device.makeBuffer(length: length, options: .storageModeShared)!
-    bufferB = device.makeBuffer(length: length, options: .storageModeShared)!
-    currentBuffer = bufferA
-    nextBuffer = bufferB
+    guard let safeBuffer = device.makeBuffer(length: length, options: .storageModeShared),
+      let safeBufferB = device.makeBuffer(length: length, options: .storageModeShared)
+    else {
+      fatalError("Failed to create ping-pong buffer")
+    }
+    currentBuffer = safeBuffer
+    nextBuffer = safeBufferB
   }
 
   func swap() {

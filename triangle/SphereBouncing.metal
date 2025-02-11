@@ -29,9 +29,9 @@ kernel void updateSphereBouncingBase(
   CubeBase base = codeBaseList[id];
   float3 position = base.position;
   float3 velocity = base.velocity;
-  float3 accerlation = float3(0., -0.2, 0.);
+  float3 acceleration = float3(0., -0.2, 0.);
   float3 positionNext = position + velocity * params.dt;
-  float3 velocityNext = velocity + accerlation * params.dt;
+  float3 velocityNext = velocity + acceleration * params.dt;
 
   float3 areaCenter = float3(0., 0.5, 0.);
   float d = distance(positionNext, areaCenter);
@@ -44,7 +44,7 @@ kernel void updateSphereBouncingBase(
     float3 vToCenter = dot(velocity, unit) * unit;
     float3 vPerp = velocity - vToCenter;
     float3 vVerticalReversed = vPerp - vToCenter * 0.98;
-    outputCodeBaseList[id].velocity = vVerticalReversed + accerlation * params.dt;
+    outputCodeBaseList[id].velocity = vVerticalReversed + acceleration * params.dt;
   }
 }
 

@@ -8,7 +8,7 @@
 import SwiftUI
 
 @main
-struct triangleApp: App {
+struct AttractorApp: App {
   @Environment(\.openImmersiveSpace) private var openImmersiveSpace
   @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
 
