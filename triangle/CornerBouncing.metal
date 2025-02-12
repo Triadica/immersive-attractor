@@ -15,9 +15,7 @@ struct MovingAttractorLineParams {
 
 struct CubeBase {
   float3 position;
-  float size;
   float3 velocity;
-  float rotate;
 };
 
 kernel void updateCornerBouncingBase(
@@ -34,7 +32,7 @@ kernel void updateCornerBouncingBase(
   float3 velocityNext = velocity + acceleration * params.dt;
 
   // first plane, perpendicular to line from original point and (1, -1, 1)
-  float3 normal1 = normalize(float3(1., -1.1, 0.));
+  float3 normal1 = normalize(float3(1., -1.04, 0.));
   float shadow1 = dot(positionNext, normal1);
   if (shadow1 > 0) {
     float3 vParallel = dot(velocityNext, normal1) * normal1;
@@ -44,7 +42,7 @@ kernel void updateCornerBouncingBase(
     return;
   }
 
-  float3 normal2 = normalize(float3(-0.5, -1.1, 0.86602540378));
+  float3 normal2 = normalize(float3(-0.5, -1.04, 0.86602540378));
   float shadow2 = dot(positionNext, normal2);
   if (shadow2 >= 0) {
     float3 vParallel = dot(velocityNext, normal2) * normal2;
@@ -54,7 +52,7 @@ kernel void updateCornerBouncingBase(
     return;
   }
 
-  float3 normal3 = normalize(float3(-0.5, -1.1, -0.86602540378));
+  float3 normal3 = normalize(float3(-0.5, -1.04, -0.86602540378));
   float shadow3 = dot(positionNext, normal3);
   if (shadow3 >= 0) {
     float3 vParallel = dot(velocityNext, normal3) * normal3;
@@ -82,7 +80,7 @@ kernel void updateCornerBouncingVertexes(
 
   if (cellInnerIdx == 0) {
     CubeBase base = codeBaseList[cellIdx];
-    outputVertices[id].position = float3(base.position.x, base.position.y, base.position.z-0.2) * 0.4 - float3(0., 1., 0.);
+    outputVertices[id].position = float3(base.position.x, base.position.y, base.position.z-0.2) * 0.32 - float3(0., 1., 0.);
   } else {
     outputVertices[id].position = previousVertices[id-1].position;
   }
