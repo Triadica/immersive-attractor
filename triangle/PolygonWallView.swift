@@ -167,11 +167,15 @@ struct PolygonWallView: View {
     let contents = buffer.currentBuffer.contents()
 
     let cubes = contents.bindMemory(to: CellBase.self, capacity: cellCount)
+    var acc = 0.1
+    var acc2 = -0.1
     for i in 0..<cellCount {
+      acc += 0.02
+      acc2 += 0.002
       cubes[i] = CellBase(
         position: SIMD3(0, 0, 0),
-        size: Float.random(in: 0.2..<2),
-        rotate: Float.random(in: 0.1..<2)
+        size: Float(acc),
+        rotate: Float(acc2)
       )
     }
 
@@ -217,7 +221,6 @@ struct PolygonWallView: View {
 
   private func getMovingParams() -> MovingCellParams {
     let delta = -Float(viewStartTime.timeIntervalSinceNow)
-    print("delta: \(delta)")
     return MovingCellParams(
       width: 0.003, dt: 0.02, timestamp: delta)
   }
