@@ -70,6 +70,26 @@ struct HyperbolicHelicoidView: View {
       RealityView { content in
         let mesh = try! createMesh()
 
+        // let pointLight = PointLight()
+        // pointLight.position.z = 2.0
+        // pointLight.light.color = .white
+        // pointLight.light.intensity = 1000
+
+        let spotLight = SpotLight()
+        spotLight.light.color = .white
+        spotLight.light.intensity = 221000
+        spotLight.light.innerAngleInDegrees = 40
+        spotLight.light.outerAngleInDegrees = 80
+        spotLight.light.attenuationRadius = 10
+        spotLight.position = [1, 1, 1]
+        spotLight
+          .look(
+            at: [0, 0, 0],
+            from: [1, 1, 1],
+            upVector: [0, 4, 0],
+            relativeTo: nil
+          )
+
         let modelComponent = try! getModelComponent(mesh: mesh)
         rootEntity.components.set(modelComponent)
         // rootEntity.scale = SIMD3(repeating: 1.)
@@ -77,6 +97,7 @@ struct HyperbolicHelicoidView: View {
         // rootEntity.position.x = 1.6
         rootEntity.position.z = -1
         content.add(rootEntity)
+        content.add(spotLight)
         self.mesh = mesh
 
       }
@@ -127,7 +148,7 @@ struct HyperbolicHelicoidView: View {
     // unlitMaterial.faceCulling = .none
 
     var material = PhysicallyBasedMaterial()
-    material.baseColor.tint = .orange
+    material.baseColor.tint = .yellow
     material.roughness = PhysicallyBasedMaterial.Roughness(
       floatLiteral: 0.7
     )
@@ -151,7 +172,7 @@ struct HyperbolicHelicoidView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let gridSize: Int = 400
+  let gridSize: Int = 800
 
   var cellCount: Int {
     return gridSize * gridSize
