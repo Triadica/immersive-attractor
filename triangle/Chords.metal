@@ -11,56 +11,62 @@ struct VertexData {
 struct MovingCubesParams {
   float width;
   float dt;
+  float timestamp;
 };
 
-struct CubeBase {
+struct CellBase {
   float3 position;
-  float size;
-  float rotate;
-};
-
-constant float3 cubeVertices[] = {
-  float3(-1.0, -1.0,  1.0),
-  float3( 1.0, -1.0,  1.0),
-  float3( 1.0, -1.0, -1.0),
-  float3(-1.0, -1.0, -1.0),
-  float3(-1.0,  1.0,  1.0),
-  float3( 1.0,  1.0,  1.0),
-  float3( 1.0,  1.0, -1.0),
-  float3(-1.0,  1.0, -1.0),
+  float3 center;
+  float radius;
+  float angle;
 };
 
 kernel void updateChordsBase(
-                            device CubeBase *codeBaseList [[buffer(0)]],
-                            device CubeBase *outputCodeBaseList [[buffer(1)]],
+                            device CellBase *cellBaseList [[buffer(0)]],
+                            device CellBase *outputCellBaseList [[buffer(1)]],
                             constant MovingCubesParams &params [[buffer(2)]],
                             uint id [[thread_position_in_grid]])
 {
-  CubeBase base = codeBaseList[id];
+  CellBase base = cellBaseList[id];
+  float3 p0 = float3(0.0, 0.5, 0.0);
+  float r0 = length(p0 - base.position);
+  float3 p1 = p0 + float3(0.0, 0.0, -r0)*sin(params.timestamp * 0.2);
 
-  if (base.position.y < -20.0) {
-    outputCodeBaseList[id].position.y = 20.0;
-  } else {
-    outputCodeBaseList[id].position.y = base.position.y - 0.002 * base.size;
-  }
+  float3 v_base_1 = p1 - base.position;
+  float3 v_base_0 = p0 - base.position;
+  float3 v_base_1_unit = normalize(v_base_1);
+  float footOfPerpCoefficient = dot(v_base_0, v_base_1_unit);
+  float3 footOfPerp = base.position + footOfPerpCoefficient * v_base_1_unit;
+  float verticalDistance = length(footOfPerp - p0);
+  float centersDistance = r0*r0/verticalDistance;
+  float3 nextCenter = p0 + normalize(footOfPerp - p0) * centersDistance;
+  float nextRadius = length(nextCenter - base.position);
 
+  outputCellBaseList[id].center = nextCenter;
+  outputCellBaseList[id].radius = nextRadius;
+  outputCellBaseList[id].angle = atan2(r0, nextRadius);
 }
 
 
 kernel void updateChordsVertexes(
-                               device CubeBase *codeBaseList [[buffer(0)]],
+                               device CellBase *cellBaseList [[buffer(0)]],
                                device VertexData *outputVertices [[buffer(1)]],
                                constant MovingCubesParams &params [[buffer(2)]],
                                uint id [[thread_position_in_grid]])
 {
-  uint cubeIdx = id / 8;
-  CubeBase base = codeBaseList[cubeIdx];
-  // vertice
-  uint verticeIdx = id % 8;
-  float3 vertice = cubeVertices[verticeIdx];
+  uint count = 21;
+  float3 p0 = float3(0.0, 0.5, 0.0);
 
-  float3 position = base.position + vertice * 0.1 * base.size;
+  uint cellIdx = id / count;
+  uint groupIdx = id % count;
+  CellBase base = cellBaseList[cellIdx];
+  float arcAngle = 2.0 * base.angle;
+  float radius = base.radius;
 
-  outputVertices[id].position = position;
+  float angle = arcAngle / float(count - 1) * float(groupIdx);
+  float3 xAxis = normalize(base.position - base.center) * radius;
+  float3 yAxis = normalize(p0 - base.position) * radius;
+  float3 p = base.center + xAxis * cos(angle) + yAxis * sin(angle);
+
+  outputVertices[id].position = p;
 }
-

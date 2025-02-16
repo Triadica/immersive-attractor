@@ -5,6 +5,7 @@ import SwiftUI
 private struct MovingCubesParams {
   var width: Float
   var dt: Float
+  var timestamp: Float = 0
 }
 
 private struct VertexData {
@@ -33,10 +34,11 @@ private struct VertexData {
 }
 
 /// placement of a cube
-private struct CubeBase {
+private struct CellBase {
   var position: SIMD3<Float>
-  var size: Float
-  var rotate: Float
+  var center: SIMD3<Float>
+  var radius: Float
+  var angle: Float
 }
 
 struct ChordsView: View {
@@ -62,8 +64,8 @@ struct ChordsView: View {
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
-    let updateCubeBase = library.makeFunction(name: "updateChordsBase")!
-    self.cubePipeline = try! device.makeComputePipelineState(function: updateCubeBase)
+    let updateCellBase = library.makeFunction(name: "updateChordsBase")!
+    self.cubePipeline = try! device.makeComputePipelineState(function: updateCellBase)
 
     let updateCubeVertexes = library.makeFunction(name: "updateChordsVertexes")!
     self.vertexPipeline = try! device.makeComputePipelineState(function: updateCubeVertexes)
@@ -104,7 +106,7 @@ struct ChordsView: View {
 
       DispatchQueue.main.async {
         if let vertexBuffer = self.vertexBuffer {
-          self.updateCubeBase()
+          self.updateCellBase()
           self.updateMesh(vertexBuffer: vertexBuffer)
 
           // swap buffers
@@ -140,49 +142,50 @@ struct ChordsView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let cubeCount: Int = 12000
+  let cellCount: Int = 600
+
+  let segmentCount: Int = 20
 
   var vertexCapacity: Int {
-    return cubeCount * 8
+    return (segmentCount + 1) * cellCount
   }
 
-  /// Triangle indices for a cube
-  var cubeTriangles: [Int] = [
-    0, 1, 2, 0, 2, 3,
-    4, 5, 6, 4, 6, 7,
-    0, 1, 5, 0, 5, 4,
-    2, 3, 7, 2, 7, 6,
-    0, 3, 7, 0, 7, 4,
-    1, 2, 6, 1, 6, 5,
-  ]
-
-  var cubeFrame: [Int] = [
-    0, 1, 1, 2, 2, 3, 3, 0,
-    4, 5, 5, 6, 6, 7, 7, 4,
-    0, 4, 1, 5, 2, 6, 3, 7,
-  ]
-
   var shapeIndiceCount: Int {
-    return cubeFrame.count
+    return segmentCount * 2
   }
 
   var indexCount: Int {
-    return cubeCount * shapeIndiceCount
+    return shapeIndiceCount * cellCount
+  }
+
+  let PHI: Float = 1.618033988749895
+  let PI: Float = 3.141592653589793
+
+  func fiboGridN(n: Float, total: Float) -> SIMD3<Float> {
+    let z = (2 * n - 1) / total - 1
+    let t = sqrt(1 - z * z)
+    let t2 = 2 * PI * PHI * n
+    let x = t * cos(t2)
+    let y = t * sin(t2)
+    return [x, y, z]
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
-    let bufferSize = MemoryLayout<CubeBase>.stride * cubeCount
+    let bufferSize = MemoryLayout<CellBase>.stride * cellCount
     let buffer = PingPongBuffer(device: device, length: bufferSize)
 
     // 使用 contents() 前检查 buffer 是否有效
     let contents = buffer.currentBuffer.contents()
+    let p0 = SIMD3<Float>(x: 0, y: 0.5, z: 0)
 
-    let cubes = contents.bindMemory(to: CubeBase.self, capacity: cubeCount)
-    for i in 0..<cubeCount {
-      cubes[i] = CubeBase(
-        position: randomPosition(r: 16),
-        size: Float.random(in: 0.1..<1.4),
-        rotate: 0
+    let cells = contents.bindMemory(to: CellBase.self, capacity: cellCount)
+    for i in 0..<cellCount {
+      let point = fiboGridN(n: Float(i), total: Float(cellCount))
+      cells[i] = CellBase(
+        position: [point.x, point.z, point.y] * 0.5 + p0,
+        center: point,
+        radius: 0.1,
+        angle: 0.0
       )
     }
 
@@ -205,9 +208,15 @@ struct ChordsView: View {
     mesh.withUnsafeMutableIndices { rawIndices in
       let indices = rawIndices.bindMemory(to: UInt32.self)
 
-      for i in 0..<cubeCount {
+      for i in 0..<cellCount {
         for j in 0..<shapeIndiceCount {
-          indices[i * shapeIndiceCount + j] = UInt32(cubeFrame[j]) + UInt32(i * 8)
+          let isEven = j % 2 == 0
+          let idx = i * shapeIndiceCount + j
+          indices[idx] = UInt32(i * (segmentCount + 1)) + UInt32(j / 2)
+          if isEven {
+          } else {
+            indices[idx] += 1
+          }
         }
       }
 
@@ -224,11 +233,14 @@ struct ChordsView: View {
     return mesh
   }
 
+  @State private var viewStartTime: Date = Date()
+
   private func getMovingParams() -> MovingCubesParams {
-    return MovingCubesParams(width: 0.003, dt: 0.02)
+    let delta = -Float(viewStartTime.timeIntervalSinceNow)
+    return MovingCubesParams(width: 0.003, dt: 0.02, timestamp: delta)
   }
 
-  func updateCubeBase() {
+  func updateCellBase() {
     guard let pingPongBuffer = pingPongBuffer,
       let commandBuffer = commandQueue.makeCommandBuffer(),
       let computeEncoder = commandBuffer.makeComputeCommandEncoder()
@@ -250,7 +262,7 @@ struct ChordsView: View {
     // idx 2: params buffer
     computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 2)
 
-    let threadsPerGrid = MTLSize(width: cubeCount, height: 1, depth: 1)
+    let threadsPerGrid = MTLSize(width: cellCount, height: 1, depth: 1)
     let threadsPerThreadgroup = MTLSize(width: 16, height: 1, depth: 1)
     computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
 
