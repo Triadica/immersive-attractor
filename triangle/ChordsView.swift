@@ -2,10 +2,9 @@ import Metal
 import RealityKit
 import SwiftUI
 
-private struct MovingCellParams {
+private struct MovingCubesParams {
   var width: Float
   var dt: Float
-  var timestamp: Float = 0
 }
 
 private struct VertexData {
@@ -34,11 +33,13 @@ private struct VertexData {
 }
 
 /// placement of a cube
-private struct CellBase {
-  var xy: SIMD2<Float>
+private struct CubeBase {
+  var position: SIMD3<Float>
+  var size: Float
+  var rotate: Float
 }
 
-struct HyperbolicHelicoidView: View {
+struct ChordsView: View {
   let rootEntity: Entity = Entity()
   @State var mesh: LowLevelMesh?
 
@@ -49,6 +50,7 @@ struct HyperbolicHelicoidView: View {
 
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
+  let cubePipeline: MTLComputePipelineState
   let vertexPipeline: MTLComputePipelineState
 
   @State var pingPongBuffer: PingPongBuffer?
@@ -60,9 +62,11 @@ struct HyperbolicHelicoidView: View {
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
+    let updateCubeBase = library.makeFunction(name: "updateChordsBase")!
+    self.cubePipeline = try! device.makeComputePipelineState(function: updateCubeBase)
 
-    let updateCellVertexes = library.makeFunction(name: "updateHyperbolicHelicoidVertexes")!
-    self.vertexPipeline = try! device.makeComputePipelineState(function: updateCellVertexes)
+    let updateCubeVertexes = library.makeFunction(name: "updateChordsVertexes")!
+    self.vertexPipeline = try! device.makeComputePipelineState(function: updateCubeVertexes)
   }
 
   var body: some View {
@@ -70,38 +74,13 @@ struct HyperbolicHelicoidView: View {
       RealityView { content in
         let mesh = try! createMesh()
 
-        // let pointLight = PointLight()
-        // pointLight.position.z = 2.0
-        // pointLight.light.color = .white
-        // pointLight.light.intensity = 1000
-
-        let spotLight = SpotLight()
-        spotLight.light.color = .white
-        spotLight.light.intensity = 221000
-        spotLight.light.innerAngleInDegrees = 40
-        spotLight.light.outerAngleInDegrees = 80
-        spotLight.light.attenuationRadius = 10
-        spotLight.position = [1, 1, 1]
-        spotLight
-          .look(
-            at: [0, 0, 0],
-            from: [1, 1, 1],
-            upVector: [0, 4, 0],
-            relativeTo: nil
-          )
-        let orangeLightComponent = DirectionalLightComponent(
-          color: .orange, intensity: 10_000
-        )
-
         let modelComponent = try! getModelComponent(mesh: mesh)
         rootEntity.components.set(modelComponent)
-        rootEntity.components.set(orangeLightComponent)
         // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = 1
         // rootEntity.position.x = 1.6
         rootEntity.position.z = -1
         content.add(rootEntity)
-        content.add(spotLight)
         self.mesh = mesh
 
       }
@@ -125,6 +104,7 @@ struct HyperbolicHelicoidView: View {
 
       DispatchQueue.main.async {
         if let vertexBuffer = self.vertexBuffer {
+          self.updateCubeBase()
           self.updateMesh(vertexBuffer: vertexBuffer)
 
           // swap buffers
@@ -148,26 +128,10 @@ struct HyperbolicHelicoidView: View {
   func getModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
     let resource = try MeshResource(from: mesh)
 
-    // var unlitMaterial = UnlitMaterial(color: .white)
-    // unlitMaterial.faceCulling = .none
+    var unlitMaterial = UnlitMaterial(color: .yellow)
+    unlitMaterial.faceCulling = .none
 
-    var material = PhysicallyBasedMaterial()
-    material.baseColor.tint = .yellow
-    material.roughness = PhysicallyBasedMaterial.Roughness(
-      floatLiteral: 0.7
-    )
-    material.metallic = PhysicallyBasedMaterial.Metallic(
-      floatLiteral: 0.3
-    )
-    material.faceCulling = .none
-    // let sheenTint = PhysicallyBasedMaterial.Color(
-    //   red: 0.8, green: 0.8, blue: 0.8, alpha: 1.0
-    // )
-    // material.sheen = PhysicallyBasedMaterial.SheenColor(
-    //   tint: sheenTint
-    // )
-
-    return ModelComponent(mesh: resource, materials: [material])
+    return ModelComponent(mesh: resource, materials: [unlitMaterial])
   }
 
   /// Create a bounding box for the mesh
@@ -176,37 +140,50 @@ struct HyperbolicHelicoidView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let gridSize: Int = 800
-
-  var cellCount: Int {
-    return gridSize * gridSize
-  }
+  let cubeCount: Int = 12000
 
   var vertexCapacity: Int {
-    return cellCount
+    return cubeCount * 8
+  }
+
+  /// Triangle indices for a cube
+  var cubeTriangles: [Int] = [
+    0, 1, 2, 0, 2, 3,
+    4, 5, 6, 4, 6, 7,
+    0, 1, 5, 0, 5, 4,
+    2, 3, 7, 2, 7, 6,
+    0, 3, 7, 0, 7, 4,
+    1, 2, 6, 1, 6, 5,
+  ]
+
+  var cubeFrame: [Int] = [
+    0, 1, 1, 2, 2, 3, 3, 0,
+    4, 5, 5, 6, 6, 7, 7, 4,
+    0, 4, 1, 5, 2, 6, 3, 7,
+  ]
+
+  var shapeIndiceCount: Int {
+    return cubeFrame.count
   }
 
   var indexCount: Int {
-    return (gridSize - 1) * (gridSize - 1) * 6
+    return cubeCount * shapeIndiceCount
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
-    let bufferSize = MemoryLayout<CellBase>.stride * cellCount
+    let bufferSize = MemoryLayout<CubeBase>.stride * cubeCount
     let buffer = PingPongBuffer(device: device, length: bufferSize)
 
     // 使用 contents() 前检查 buffer 是否有效
     let contents = buffer.currentBuffer.contents()
 
-    let cubes = contents.bindMemory(to: CellBase.self, capacity: cellCount)
-    for i in 0..<gridSize {
-      for j in 0..<gridSize {
-        let iv = Float(i) / Float(gridSize) - 0.5
-        let jv = Float(j) / Float(gridSize) - 0.5
-
-        cubes[i * gridSize + j] = CellBase(
-          xy: SIMD2<Float>(iv, jv) * 20
-        )
-      }
+    let cubes = contents.bindMemory(to: CubeBase.self, capacity: cubeCount)
+    for i in 0..<cubeCount {
+      cubes[i] = CubeBase(
+        position: randomPosition(r: 16),
+        size: Float.random(in: 0.1..<1.4),
+        rotate: 0
+      )
     }
 
     // copy data from current buffer to next buffer
@@ -228,15 +205,9 @@ struct HyperbolicHelicoidView: View {
     mesh.withUnsafeMutableIndices { rawIndices in
       let indices = rawIndices.bindMemory(to: UInt32.self)
 
-      for i in 0..<(gridSize - 1) {
-        for j in 0..<(gridSize - 1) {
-          let idx = (i * (gridSize - 1) + j) * 6
-          indices[idx] = UInt32(i * gridSize + j)
-          indices[idx + 1] = UInt32(i * gridSize + j + 1)
-          indices[idx + 2] = UInt32((i + 1) * gridSize + j + 1)
-          indices[idx + 3] = UInt32(i * gridSize + j)
-          indices[idx + 4] = UInt32((i + 1) * gridSize + j + 1)
-          indices[idx + 5] = UInt32((i + 1) * gridSize + j)
+      for i in 0..<cubeCount {
+        for j in 0..<shapeIndiceCount {
+          indices[i * shapeIndiceCount + j] = UInt32(cubeFrame[j]) + UInt32(i * 8)
         }
       }
 
@@ -253,12 +224,39 @@ struct HyperbolicHelicoidView: View {
     return mesh
   }
 
-  @State private var viewStartTime: Date = Date()
+  private func getMovingParams() -> MovingCubesParams {
+    return MovingCubesParams(width: 0.003, dt: 0.02)
+  }
 
-  private func getMovingParams() -> MovingCellParams {
-    let delta = -Float(viewStartTime.timeIntervalSinceNow)
-    return MovingCellParams(
-      width: 0.003, dt: 0.02, timestamp: delta)
+  func updateCubeBase() {
+    guard let pingPongBuffer = pingPongBuffer,
+      let commandBuffer = commandQueue.makeCommandBuffer(),
+      let computeEncoder = commandBuffer.makeComputeCommandEncoder()
+    else {
+      print("updateMesh: failed to get mesh or pingPongBuffer or commandBuffer or computeEncoder")
+      return
+    }
+
+    computeEncoder.setComputePipelineState(cubePipeline)
+
+    // idx 0: pingPongBuffer
+    computeEncoder.setBuffer(
+      pingPongBuffer.currentBuffer, offset: 0, index: 0)
+
+    // idx 1: vertexBuffer
+    computeEncoder.setBuffer(pingPongBuffer.nextBuffer, offset: 0, index: 1)
+
+    var params = getMovingParams()
+    // idx 2: params buffer
+    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 2)
+
+    let threadsPerGrid = MTLSize(width: cubeCount, height: 1, depth: 1)
+    let threadsPerThreadgroup = MTLSize(width: 16, height: 1, depth: 1)
+    computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
+
+    computeEncoder.endEncoding()
+
+    commandBuffer.commit()
   }
 
   func updateMesh(vertexBuffer: MTLBuffer) {
@@ -288,7 +286,7 @@ struct HyperbolicHelicoidView: View {
 
     var params = getMovingParams()
     // idx 2: params buffer
-    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCellParams>.size, index: 2)
+    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 2)
 
     let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
     let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
@@ -310,7 +308,7 @@ struct HyperbolicHelicoidView: View {
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
         indexCount: indexCount,
-        topology: .triangle,
+        topology: .line,
         bounds: getBounds()
       )
     ])
