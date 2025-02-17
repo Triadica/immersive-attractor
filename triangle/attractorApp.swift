@@ -39,7 +39,8 @@ struct AttractorApp: App {
       // CornerBouncingView()
       // PolygonWallView()
       // HyperbolicHelicoidView()
-      ChordsView()
+      // ChordsView()
+      FireworksView()
     }.immersionStyle(selection: .constant(.full), in: .full)
   }
 }

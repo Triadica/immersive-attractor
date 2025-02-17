@@ -26,6 +26,8 @@
 		9A5385512D5FBAB50040CF72 /* HyperbolicHelicoid.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A5385502D5FBAB10040CF72 /* HyperbolicHelicoid.metal */; };
 		9A5385532D61E40F0040CF72 /* ChordsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A5385522D61E4080040CF72 /* ChordsView.swift */; };
 		9A5385552D61E4190040CF72 /* Chords.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A5385542D61E4140040CF72 /* Chords.metal */; };
+		9A5385572D63AC900040CF72 /* FireworksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A5385562D63AC8B0040CF72 /* FireworksView.swift */; };
+		9A5385592D63ACA00040CF72 /* Fireworks.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A5385582D63AC940040CF72 /* Fireworks.metal */; };
 		9A75D3E32C71D16900D27E97 /* RealityKitContent in Frameworks */ = {isa = PBXBuildFile; productRef = 9A75D3E22C71D16900D27E97 /* RealityKitContent */; };
 		9A75D3E52C71D16900D27E97 /* attractorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A75D3E42C71D16900D27E97 /* attractorApp.swift */; };
 		9A75D3EB2C71D16900D27E97 /* ImageBasedLighting.skybox in Resources */ = {isa = PBXBuildFile; fileRef = 9A75D3EA2C71D16900D27E97 /* ImageBasedLighting.skybox */; };
@@ -66,6 +68,8 @@
 		9A5385502D5FBAB10040CF72 /* HyperbolicHelicoid.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = HyperbolicHelicoid.metal; sourceTree = "<group>"; };
 		9A5385522D61E4080040CF72 /* ChordsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordsView.swift; sourceTree = "<group>"; };
 		9A5385542D61E4140040CF72 /* Chords.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Chords.metal; sourceTree = "<group>"; };
+		9A5385562D63AC8B0040CF72 /* FireworksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FireworksView.swift; sourceTree = "<group>"; };
+		9A5385582D63AC940040CF72 /* Fireworks.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Fireworks.metal; sourceTree = "<group>"; };
 		9A75D3DD2C71D16900D27E97 /* triangle.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = triangle.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9A75D3E12C71D16900D27E97 /* RealityKitContent */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = RealityKitContent; sourceTree = "<group>"; };
 		9A75D3E42C71D16900D27E97 /* attractorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = attractorApp.swift; sourceTree = "<group>"; };
@@ -130,6 +134,8 @@
 		9A75D3DF2C71D16900D27E97 /* triangle */ = {
 			isa = PBXGroup;
 			children = (
+				9A5385582D63AC940040CF72 /* Fireworks.metal */,
+				9A5385562D63AC8B0040CF72 /* FireworksView.swift */,
 				9A5385542D61E4140040CF72 /* Chords.metal */,
 				9A5385522D61E4080040CF72 /* ChordsView.swift */,
 				9A5385502D5FBAB10040CF72 /* HyperbolicHelicoid.metal */,
@@ -303,12 +309,14 @@
 				9A5385472D5BCC540040CF72 /* CornerBouncingView.swift in Sources */,
 				9A5385412D5A47230040CF72 /* RadicalLine.metal in Sources */,
 				9A5385452D5A6BA40040CF72 /* SphereBouncing.metal in Sources */,
+				9A5385572D63AC900040CF72 /* FireworksView.swift in Sources */,
 				9A3CD41E2C8A1D9D00E8710C /* MovingLorenz.metal in Sources */,
 				9A1A94E82D54C0D500315602 /* PingPong.swift in Sources */,
 				9A53853F2D5A47140040CF72 /* RadicalLineView.swift in Sources */,
 				9A1A94EA2D54C1A400315602 /* Iterate.swift in Sources */,
 				9A75D3E52C71D16900D27E97 /* attractorApp.swift in Sources */,
 				9A5385512D5FBAB50040CF72 /* HyperbolicHelicoid.metal in Sources */,
+				9A5385592D63ACA00040CF72 /* Fireworks.metal in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
