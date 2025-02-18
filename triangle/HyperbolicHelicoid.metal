@@ -17,10 +17,10 @@ struct CubeBase {
 };
 
 constant float3 squareVertices[] = {
-  float3( 1.0, 0.0, 0.0),
-  float3( 0.0, 1.0, 0.0),
-  float3(-1.0, 0.0, 0.0),
-  float3( 0.0,-1.0, 0.0),
+    float3(1.0, 0.0, 0.0),
+    float3(0.0, 1.0, 0.0),
+    float3(-1.0, 0.0, 0.0),
+    float3(0.0, -1.0, 0.0),
 };
 
 float3 hyperbolicHelicoid(float2 uv, float tau) {
@@ -69,25 +69,20 @@ float3 mobiusTransformation(float3 pt, float t) {
   return float3(xd, yd, zd);
 }
 
-
 kernel void updateHyperbolicHelicoidVertexes(
-                                      device CubeBase *codeBaseList [[buffer(0)]],
-                                      device VertexData *outputVertices [[buffer(1)]],
-                                      constant MovingCubesParams &params [[buffer(2)]],
-                                      uint id [[thread_position_in_grid]])
-{
+    device CubeBase *codeBaseList [[buffer(0)]],
+    device VertexData *outputVertices [[buffer(1)]],
+    constant MovingCubesParams &params [[buffer(2)]],
+    uint id [[thread_position_in_grid]]) {
   CubeBase base = codeBaseList[id];
-  float3 position = hyperbolicHelicoid(
-    base.xy,
-    7.0 * sin(params.timestamp * 0.7)
-    // 2.
-  );
-  position = mobiusTransformation(
-    position.xzy,
-    sin(params.timestamp * 0.2) * 1.3
-    // -1.2
-  );
+  float3 position =
+      hyperbolicHelicoid(base.xy, 7.0 * sin(params.timestamp * 0.7)
+                         // 2.
+      );
+  position =
+      mobiusTransformation(position.xzy, sin(params.timestamp * 0.2) * 1.3
+                           // -1.2
+      );
 
   outputVertices[id].position = position * 0.4;
 }
-

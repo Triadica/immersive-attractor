@@ -21,16 +21,14 @@ struct CellBase {
   float angle;
 };
 
-kernel void updateChordsBase(
-                            device CellBase *cellBaseList [[buffer(0)]],
-                            device CellBase *outputCellBaseList [[buffer(1)]],
-                            constant MovingCubesParams &params [[buffer(2)]],
-                            uint id [[thread_position_in_grid]])
-{
+kernel void updateChordsBase(device CellBase *cellBaseList [[buffer(0)]],
+                             device CellBase *outputCellBaseList [[buffer(1)]],
+                             constant MovingCubesParams &params [[buffer(2)]],
+                             uint id [[thread_position_in_grid]]) {
   CellBase base = cellBaseList[id];
   float3 p0 = float3(0.0, 0.5, 0.0);
   float r0 = length(p0 - base.position);
-  float3 p1 = p0 + float3(0.0, 0.0, -r0)*sin(params.timestamp * 0.2);
+  float3 p1 = p0 + float3(0.0, 0.0, -r0) * sin(params.timestamp * 0.2);
 
   float3 v_base_1 = p1 - base.position;
   float3 v_base_0 = p0 - base.position;
@@ -38,7 +36,7 @@ kernel void updateChordsBase(
   float footOfPerpCoefficient = dot(v_base_0, v_base_1_unit);
   float3 footOfPerp = base.position + footOfPerpCoefficient * v_base_1_unit;
   float verticalDistance = length(footOfPerp - p0);
-  float centersDistance = r0*r0/verticalDistance;
+  float centersDistance = r0 * r0 / verticalDistance;
   float3 nextCenter = p0 + normalize(footOfPerp - p0) * centersDistance;
   float nextRadius = length(nextCenter - base.position);
 
@@ -47,13 +45,12 @@ kernel void updateChordsBase(
   outputCellBaseList[id].angle = atan2(r0, nextRadius);
 }
 
-
-kernel void updateChordsVertexes(
-                               device CellBase *cellBaseList [[buffer(0)]],
-                               device VertexData *outputVertices [[buffer(1)]],
-                               constant MovingCubesParams &params [[buffer(2)]],
-                               uint id [[thread_position_in_grid]])
-{
+kernel void updateChordsVertexes(device CellBase *cellBaseList [[buffer(0)]],
+                                 device VertexData *outputVertices
+                                 [[buffer(1)]],
+                                 constant MovingCubesParams &params
+                                 [[buffer(2)]],
+                                 uint id [[thread_position_in_grid]]) {
   uint count = 21;
   float3 p0 = float3(0.0, 0.5, 0.0);
 

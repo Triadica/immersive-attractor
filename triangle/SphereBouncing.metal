@@ -4,8 +4,8 @@ using namespace metal;
 
 struct VertexData {
   float3 position;
-    // float3 normal;
-    // float2 uv;
+  // float3 normal;
+  // float2 uv;
 };
 
 struct MovingAttractorLineParams {
@@ -20,12 +20,13 @@ struct CubeBase {
   float rotate;
 };
 
-kernel void updateSphereBouncingBase(
-                                    device CubeBase *codeBaseList [[buffer(0)]],
-                                    device CubeBase *outputCodeBaseList [[buffer(1)]],
-                                    constant MovingAttractorLineParams &params [[buffer(2)]],
-                                    uint id [[thread_position_in_grid]])
-{
+kernel void updateSphereBouncingBase(device CubeBase *codeBaseList
+                                     [[buffer(0)]],
+                                     device CubeBase *outputCodeBaseList
+                                     [[buffer(1)]],
+                                     constant MovingAttractorLineParams &params
+                                     [[buffer(2)]],
+                                     uint id [[thread_position_in_grid]]) {
   CubeBase base = codeBaseList[id];
   float3 position = base.position;
   float3 velocity = base.velocity;
@@ -44,28 +45,27 @@ kernel void updateSphereBouncingBase(
     float3 vToCenter = dot(velocity, unit) * unit;
     float3 vPerp = velocity - vToCenter;
     float3 vVerticalReversed = vPerp - vToCenter * 0.98;
-    outputCodeBaseList[id].velocity = vVerticalReversed + acceleration * params.dt;
+    outputCodeBaseList[id].velocity =
+        vVerticalReversed + acceleration * params.dt;
   }
 }
 
-
-kernel void updateSphereBouncingVertexes(
-                                        device CubeBase *codeBaseList [[buffer(0)]],
-                                        device VertexData *outputVertices [[buffer(1)]],
-                                        device VertexData *previousVertices [[buffer(2)]],
-                                        constant MovingAttractorLineParams &params [[buffer(3)]],
-                                        uint id [[thread_position_in_grid]])
-{
+kernel void
+updateSphereBouncingVertexes(device CubeBase *codeBaseList [[buffer(0)]],
+                             device VertexData *outputVertices [[buffer(1)]],
+                             device VertexData *previousVertices [[buffer(2)]],
+                             constant MovingAttractorLineParams &params
+                             [[buffer(3)]],
+                             uint id [[thread_position_in_grid]]) {
   uint vertexPerCell = params.vertexPerCell;
   uint cellIdx = id / vertexPerCell;
   uint cellInnerIdx = id % vertexPerCell;
 
   if (cellInnerIdx == 0) {
     CubeBase base = codeBaseList[cellIdx];
-    outputVertices[id].position = float3(base.position.x, base.position.y, base.position.z-0.2) * 0.4;
+    outputVertices[id].position =
+        float3(base.position.x, base.position.y, base.position.z - 0.2) * 0.4;
   } else {
-    outputVertices[id].position = previousVertices[id-1].position;
+    outputVertices[id].position = previousVertices[id - 1].position;
   }
-
 }
-

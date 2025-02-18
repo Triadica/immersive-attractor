@@ -4,8 +4,8 @@ using namespace metal;
 
 struct VertexData {
   float3 position;
-    // float3 normal;
-    // float2 uv;
+  // float3 normal;
+  // float2 uv;
 };
 
 struct MovingAttractorLineParams {
@@ -18,12 +18,13 @@ struct CubeBase {
   float3 velocity;
 };
 
-kernel void updateCornerBouncingBase(
-                                     device CubeBase *codeBaseList [[buffer(0)]],
-                                     device CubeBase *outputCodeBaseList [[buffer(1)]],
-                                     constant MovingAttractorLineParams &params [[buffer(2)]],
-                                     uint id [[thread_position_in_grid]])
-{
+kernel void updateCornerBouncingBase(device CubeBase *codeBaseList
+                                     [[buffer(0)]],
+                                     device CubeBase *outputCodeBaseList
+                                     [[buffer(1)]],
+                                     constant MovingAttractorLineParams &params
+                                     [[buffer(2)]],
+                                     uint id [[thread_position_in_grid]]) {
   CubeBase base = codeBaseList[id];
   float3 position = base.position;
   float3 velocity = base.velocity;
@@ -66,24 +67,23 @@ kernel void updateCornerBouncingBase(
   outputCodeBaseList[id].position = positionNext;
 }
 
-
-kernel void updateCornerBouncingVertexes(
-                                         device CubeBase *codeBaseList [[buffer(0)]],
-                                         device VertexData *outputVertices [[buffer(1)]],
-                                         device VertexData *previousVertices [[buffer(2)]],
-                                         constant MovingAttractorLineParams &params [[buffer(3)]],
-                                         uint id [[thread_position_in_grid]])
-{
+kernel void
+updateCornerBouncingVertexes(device CubeBase *codeBaseList [[buffer(0)]],
+                             device VertexData *outputVertices [[buffer(1)]],
+                             device VertexData *previousVertices [[buffer(2)]],
+                             constant MovingAttractorLineParams &params
+                             [[buffer(3)]],
+                             uint id [[thread_position_in_grid]]) {
   uint vertexPerCell = params.vertexPerCell;
   uint cellIdx = id / vertexPerCell;
   uint cellInnerIdx = id % vertexPerCell;
 
   if (cellInnerIdx == 0) {
     CubeBase base = codeBaseList[cellIdx];
-    outputVertices[id].position = float3(base.position.x, base.position.y, base.position.z-0.2) * 0.32 - float3(0., 1., 0.);
+    outputVertices[id].position =
+        float3(base.position.x, base.position.y, base.position.z - 0.2) * 0.32 -
+        float3(0., 1., 0.);
   } else {
-    outputVertices[id].position = previousVertices[id-1].position;
+    outputVertices[id].position = previousVertices[id - 1].position;
   }
-
 }
-
