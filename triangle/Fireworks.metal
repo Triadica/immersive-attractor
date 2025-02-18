@@ -49,7 +49,7 @@ kernel void updateFireworksBase(device CellBase *codeBaseList [[buffer(0)]],
     float a1 = simpleRand(float(id) + 1.2 * params.timestamp);
     float a2 = simpleRand(float(id) + 1.3 * params.timestamp);
     float3 v = fiboGridN(round(a1 * 9000), 9000);
-    output.velocity = (float3(0., 1.4, 0.) + v * 0.2) * (0.5 + 0.5 * a2);
+    output.velocity = (float3(0., 2.4, 0.) + v * 0.2) * (0.5 + 0.5 * a2);
     output.lifeValue = 2.0 * (0.4 + simpleRand(float(id) + params.timestamp));
     output.step = 0.0;
   } else if (base.position.y <= 0.0) {
@@ -60,7 +60,7 @@ kernel void updateFireworksBase(device CellBase *codeBaseList [[buffer(0)]],
     output.step = base.step + 1.0;
   } else {
     output.position = base.position + base.velocity * params.dt;
-    output.velocity = base.velocity + float3(0., -0.4, 0.) * params.dt;
+    output.velocity = base.velocity + float3(0., -1.2, 0.) * params.dt;
     output.lifeValue = base.lifeValue - params.dt * 0.4;
     output.step = base.step + 1.0;
   }
@@ -82,9 +82,10 @@ kernel void updateFireworksVertexes(device CellBase *codeBaseList [[buffer(0)]],
   CellBase leadingBase = codeBaseList[leadingIdx];
   CellBase base = codeBaseList[cellIdx];
 
-  if (cellInnerIdx == 0 || base.step <= 2) {
+  if (cellInnerIdx == 0 || base.step <= 4) {
     outputVertices[id].position =
-        float3(base.position.x, base.position.y, base.position.z - 1.) * 1.;
+        float3(base.position.x, base.position.y, base.position.z - 1.) * 1. -
+        float3(0., 1, 0.);
   } else {
     outputVertices[id].position = previousVertices[id - 1].position;
   }
