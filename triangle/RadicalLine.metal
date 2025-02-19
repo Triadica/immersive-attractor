@@ -39,7 +39,7 @@ kernel void updateRadicalLineBase(device CellBase *codeBaseList [[buffer(0)]],
                                   constant MovingRadicalLineParams &params
                                   [[buffer(2)]],
                                   uint id [[thread_position_in_grid]]) {
-  if (id < 1) {
+    if (id < 1) {
     outputCodeBaseList[id].position = float3(0., 0., 0.);
     return;
   }

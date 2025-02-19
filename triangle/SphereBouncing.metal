@@ -17,7 +17,7 @@ struct CubeBase {
   float3 position;
   float size;
   float3 velocity;
-  float rotate;
+        float rotate;
 };
 
 kernel void updateSphereBouncingBase(device CubeBase *codeBaseList
