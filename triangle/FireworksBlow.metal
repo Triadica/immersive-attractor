@@ -26,8 +26,6 @@ struct CellBase {
 
 static float simpleRand(float seed) { return fract(sin(seed) * 43758.5453123); }
 
-static float randBalanced(float seed) { return simpleRand(seed) * 2.0 - 1.0; }
-
 static float3 fiboGridN(float n, float total) {
   float z = (2.0 * n - 1.0) / total - 1.0;
   float t = sqrt(1.0 - z * z);
@@ -44,18 +42,21 @@ kernel void updateFireworksBlowBase(
     uint id [[thread_position_in_grid]]) {
   CellBase base = codeBaseList[id];
   device CellBase &output = outputCodeBaseList[id];
+  float idf = float(id);
 
   if (base.lifeValue <= 0.0) {
     // reset the position and velocity
-    output.position = float3(0., 2.0, 0.);
-    float a1 = simpleRand(float(id) + 1.2 * params.timestamp);
+    output.position = float3(0., 1.5, 0.);
+    float a1 = simpleRand(idf - 1.2 * params.timestamp);
     float a2 = simpleRand(1.3 * params.timestamp);
     float a3 = simpleRand(1.4 * params.timestamp);
-    float3 v = fiboGridN(round(a1 * 120), 120);
-    output.velocity = float3(0., 0.5, 0.) + v * 0.6;
-    output.lifeValue = 1.6 * (0.6 + a2);
+    float a4 = simpleRand(2.5 * params.timestamp);
+    float directions = (0.02 + simpleRand(3.6 * params.timestamp)) * 200;
+    float3 v = fiboGridN(round(a1 * directions), directions);
+    output.velocity = float3(0., 0.5, 0.) + v * (0.5 + a4 * 0.2);
+    output.lifeValue = 4. * (0.1 + a2);
     output.step = 0.0;
-    output.bounceChance = output.lifeValue - 1.2 * (a3 + 0.03);
+    output.bounceChance = output.lifeValue - 1.2 * (a3 + 0.1);
   } else if (base.position.y <= 0.0) {
     output.velocity =
         float3(base.velocity.x, -base.velocity.y * 0.3, base.velocity.z);
@@ -64,15 +65,17 @@ kernel void updateFireworksBlowBase(
     output.step = base.step + 1.0;
     output.bounceChance = base.bounceChance;
   } else if (base.lifeValue <= base.bounceChance) {
-    float a1 = simpleRand(float(id) + 2.2 * params.timestamp);
-    // float a2 = simpleRand(float(id) + 2.3 * params.timestamp);
-    float3 v = fiboGridN(round(a1 * 7431), 7431);
-    output.velocity = 0.4 * base.velocity + v * 0.3;
+    float a1 = simpleRand(idf - 2.2 * params.timestamp);
+    float a2 = simpleRand(idf - 3.3 * params.timestamp);
+    float directions = (0.5 + simpleRand(3.6 * params.timestamp)) * 600;
+    float3 v = fiboGridN(a1 * directions, directions);
+    output.velocity = 0.5 * base.velocity + v * (0.1 + a2 * 0.6);
     output.lifeValue = base.lifeValue - params.dt * 0.4;
     output.step = base.step + 1.0;
     output.bounceChance = -1.;
     output.position = base.position + base.velocity * params.dt;
   } else {
+    float v = length(base.velocity);
     output.position = base.position + base.velocity * params.dt;
     output.velocity = base.velocity + float3(0., -0.2, 0.) * params.dt;
     output.lifeValue = base.lifeValue - params.dt * 0.4;
@@ -89,15 +92,14 @@ kernel void updateFireworksBlowVertexes(
     uint id [[thread_position_in_grid]]) {
   uint vertexPerCell = params.vertexPerCell;
   uint cellIdx = id / vertexPerCell;
-  uint cellInnerIdx = id % vertexPerCell;
-
   uint leadingIdx = cellIdx * vertexPerCell;
+  uint cellInnerIdx = id - leadingIdx;
+
   CellBase base = codeBaseList[cellIdx];
 
-  if (cellInnerIdx == 0 || base.step <= 4) {
+  if (base.step <= 4 || cellInnerIdx == 0) {
     outputVertices[id].position =
-        float3(base.position.x, base.position.y, base.position.z - 1.) * 1. -
-        float3(0., 1, 0.);
+        float3(base.position.x, base.position.y - 1, base.position.z - 1.);
   } else {
     outputVertices[id].position = previousVertices[id - 1].position;
   }

@@ -147,8 +147,8 @@ struct FireworksBlowView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let cellCount: Int = 160000
-  let cellSegment: Int = 3
+  let cellCount: Int = 100000
+  let cellSegment: Int = 4
 
   var vertexPerCell: Int {
     return cellSegment + 1
