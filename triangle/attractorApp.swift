@@ -41,7 +41,8 @@ struct AttractorApp: App {
       // HyperbolicHelicoidView()
       // ChordsView()
       // FireworksView()
-      FireworksBlowView()
+      // FireworksBlowView()
+      HopfFibrationView()
     }.immersionStyle(selection: .constant(.full), in: .full)
   }
 }
