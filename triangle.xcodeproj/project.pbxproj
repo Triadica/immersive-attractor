@@ -32,6 +32,8 @@
 		9A53855D2D663DA30040CF72 /* FireworksBlow.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A53855C2D663D9C0040CF72 /* FireworksBlow.metal */; };
 		9A6F2A2D2D6B8B4A007F336F /* HopfFibrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A6F2A2C2D6B8B43007F336F /* HopfFibrationView.swift */; };
 		9A6F2A2F2D6B8B50007F336F /* HopfFibration.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A6F2A2E2D6B8B4D007F336F /* HopfFibration.metal */; };
+		9A6F2A322D6CE6C1007F336F /* HopfFibrationLayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A6F2A312D6CE6C1007F336F /* HopfFibrationLayerView.swift */; };
+		9A6F2A332D6CE6C1007F336F /* HopfFibrationLayer.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A6F2A302D6CE6C1007F336F /* HopfFibrationLayer.metal */; };
 		9A75D3E32C71D16900D27E97 /* RealityKitContent in Frameworks */ = {isa = PBXBuildFile; productRef = 9A75D3E22C71D16900D27E97 /* RealityKitContent */; };
 		9A75D3E52C71D16900D27E97 /* attractorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A75D3E42C71D16900D27E97 /* attractorApp.swift */; };
 		9A75D3EB2C71D16900D27E97 /* ImageBasedLighting.skybox in Resources */ = {isa = PBXBuildFile; fileRef = 9A75D3EA2C71D16900D27E97 /* ImageBasedLighting.skybox */; };
@@ -78,6 +80,8 @@
 		9A53855C2D663D9C0040CF72 /* FireworksBlow.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = FireworksBlow.metal; sourceTree = "<group>"; };
 		9A6F2A2C2D6B8B43007F336F /* HopfFibrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HopfFibrationView.swift; sourceTree = "<group>"; };
 		9A6F2A2E2D6B8B4D007F336F /* HopfFibration.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = HopfFibration.metal; sourceTree = "<group>"; };
+		9A6F2A302D6CE6C1007F336F /* HopfFibrationLayer.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = HopfFibrationLayer.metal; sourceTree = "<group>"; };
+		9A6F2A312D6CE6C1007F336F /* HopfFibrationLayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HopfFibrationLayerView.swift; sourceTree = "<group>"; };
 		9A75D3DD2C71D16900D27E97 /* triangle.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = triangle.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9A75D3E12C71D16900D27E97 /* RealityKitContent */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = RealityKitContent; sourceTree = "<group>"; };
 		9A75D3E42C71D16900D27E97 /* attractorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = attractorApp.swift; sourceTree = "<group>"; };
@@ -142,6 +146,8 @@
 		9A75D3DF2C71D16900D27E97 /* triangle */ = {
 			isa = PBXGroup;
 			children = (
+				9A6F2A302D6CE6C1007F336F /* HopfFibrationLayer.metal */,
+				9A6F2A312D6CE6C1007F336F /* HopfFibrationLayerView.swift */,
 				9A6F2A2E2D6B8B4D007F336F /* HopfFibration.metal */,
 				9A6F2A2C2D6B8B43007F336F /* HopfFibrationView.swift */,
 				9A53855C2D663D9C0040CF72 /* FireworksBlow.metal */,
@@ -313,6 +319,8 @@
 				9A1A94EE2D54C5DC00315602 /* CubesMoving.metal in Sources */,
 				9AD4CB772D588FDA00E55977 /* AttractorLineView.swift in Sources */,
 				9A53854B2D5D0C1A0040CF72 /* PolygonWallView.swift in Sources */,
+				9A6F2A322D6CE6C1007F336F /* HopfFibrationLayerView.swift in Sources */,
+				9A6F2A332D6CE6C1007F336F /* HopfFibrationLayer.metal in Sources */,
 				9A53854D2D5D0C250040CF72 /* PolygonWall.metal in Sources */,
 				9A3CD4232C8A1E9300E8710C /* MovingLorenzView.swift in Sources */,
 				9A1A94EC2D54C5C400315602 /* CubesMovingView.swift in Sources */,
