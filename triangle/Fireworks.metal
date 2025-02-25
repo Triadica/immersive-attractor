@@ -34,12 +34,11 @@ static float3 fiboGridN(float n, float total) {
   return float3(x, y, z);
 }
 
-kernel void updateFireworksBase(device CellBase *codeBaseList [[buffer(0)]],
-                                device CellBase *outputCodeBaseList
-                                [[buffer(1)]],
-                                constant MovingAttractorLineParams &params
-                                [[buffer(2)]],
-                                uint id [[thread_position_in_grid]]) {
+kernel void updateFireworksBase(
+    device CellBase *codeBaseList [[buffer(0)]],
+    device CellBase *outputCodeBaseList [[buffer(1)]],
+    constant MovingAttractorLineParams &params [[buffer(2)]],
+    uint id [[thread_position_in_grid]]) {
   CellBase base = codeBaseList[id];
   device CellBase &output = outputCodeBaseList[id];
 
@@ -66,14 +65,12 @@ kernel void updateFireworksBase(device CellBase *codeBaseList [[buffer(0)]],
   }
 }
 
-kernel void updateFireworksVertexes(device CellBase *codeBaseList [[buffer(0)]],
-                                    device VertexData *outputVertices
-                                    [[buffer(1)]],
-                                    device VertexData *previousVertices
-                                    [[buffer(2)]],
-                                    constant MovingAttractorLineParams &params
-                                    [[buffer(3)]],
-                                    uint id [[thread_position_in_grid]]) {
+kernel void updateFireworksVertexes(
+    device CellBase *codeBaseList [[buffer(0)]],
+    device VertexData *outputVertices [[buffer(1)]],
+    device VertexData *previousVertices [[buffer(2)]],
+    constant MovingAttractorLineParams &params [[buffer(3)]],
+    uint id [[thread_position_in_grid]]) {
   uint vertexPerCell = params.vertexPerCell;
   uint cellIdx = id / vertexPerCell;
   uint cellInnerIdx = id % vertexPerCell;

@@ -18,13 +18,11 @@ struct CubeBase {
   float3 velocity;
 };
 
-kernel void updateCornerBouncingBase(device CubeBase *codeBaseList
-                                     [[buffer(0)]],
-                                     device CubeBase *outputCodeBaseList
-                                     [[buffer(1)]],
-                                     constant MovingAttractorLineParams &params
-                                     [[buffer(2)]],
-                                     uint id [[thread_position_in_grid]]) {
+kernel void updateCornerBouncingBase(
+    device CubeBase *codeBaseList [[buffer(0)]],
+    device CubeBase *outputCodeBaseList [[buffer(1)]],
+    constant MovingAttractorLineParams &params [[buffer(2)]],
+    uint id [[thread_position_in_grid]]) {
   CubeBase base = codeBaseList[id];
   float3 position = base.position;
   float3 velocity = base.velocity;
@@ -67,13 +65,12 @@ kernel void updateCornerBouncingBase(device CubeBase *codeBaseList
   outputCodeBaseList[id].position = positionNext;
 }
 
-kernel void
-updateCornerBouncingVertexes(device CubeBase *codeBaseList [[buffer(0)]],
-                             device VertexData *outputVertices [[buffer(1)]],
-                             device VertexData *previousVertices [[buffer(2)]],
-                             constant MovingAttractorLineParams &params
-                             [[buffer(3)]],
-                             uint id [[thread_position_in_grid]]) {
+kernel void updateCornerBouncingVertexes(
+    device CubeBase *codeBaseList [[buffer(0)]],
+    device VertexData *outputVertices [[buffer(1)]],
+    device VertexData *previousVertices [[buffer(2)]],
+    constant MovingAttractorLineParams &params [[buffer(3)]],
+    uint id [[thread_position_in_grid]]) {
   uint vertexPerCell = params.vertexPerCell;
   uint cellIdx = id / vertexPerCell;
   uint cellInnerIdx = id % vertexPerCell;

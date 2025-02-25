@@ -47,24 +47,22 @@ float3 fourwingLineIteration(float3 p, float dt) {
   return p + d;
 }
 
-kernel void updateAttractorLineBase(device CubeBase *codeBaseList [[buffer(0)]],
-                                    device CubeBase *outputCodeBaseList
-                                    [[buffer(1)]],
-                                    constant MovingAttractorLineParams &params
-                                    [[buffer(2)]],
-                                    uint id [[thread_position_in_grid]]) {
+kernel void updateAttractorLineBase(
+    device CubeBase *codeBaseList [[buffer(0)]],
+    device CubeBase *outputCodeBaseList [[buffer(1)]],
+    constant MovingAttractorLineParams &params [[buffer(2)]],
+    uint id [[thread_position_in_grid]]) {
   CubeBase base = codeBaseList[id];
   outputCodeBaseList[id].position =
       fourwingLineIteration(base.position, params.dt);
 }
 
-kernel void
-updateAttractorLineVertexes(device CubeBase *codeBaseList [[buffer(0)]],
-                            device VertexData *outputVertices [[buffer(1)]],
-                            device VertexData *previousVertices [[buffer(2)]],
-                            constant MovingAttractorLineParams &params
-                            [[buffer(3)]],
-                            uint id [[thread_position_in_grid]]) {
+kernel void updateAttractorLineVertexes(
+    device CubeBase *codeBaseList [[buffer(0)]],
+    device VertexData *outputVertices [[buffer(1)]],
+    device VertexData *previousVertices [[buffer(2)]],
+    constant MovingAttractorLineParams &params [[buffer(3)]],
+    uint id [[thread_position_in_grid]]) {
   uint vertexPerCell = params.vertexPerCell;
   uint cellIdx = id / vertexPerCell;
   uint cellInnerIdx = id % vertexPerCell;

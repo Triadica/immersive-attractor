@@ -33,13 +33,12 @@ float3 radical_lorenzLineIteration(float3 p, float dt) {
   return p + d;
 }
 
-kernel void updateRadicalLineBase(device CellBase *codeBaseList [[buffer(0)]],
-                                  device CellBase *outputCodeBaseList
-                                  [[buffer(1)]],
-                                  constant MovingRadicalLineParams &params
-                                  [[buffer(2)]],
-                                  uint id [[thread_position_in_grid]]) {
-    if (id < 1) {
+kernel void updateRadicalLineBase(
+    device CellBase *codeBaseList [[buffer(0)]],
+    device CellBase *outputCodeBaseList [[buffer(1)]],
+    constant MovingRadicalLineParams &params [[buffer(2)]],
+    uint id [[thread_position_in_grid]]) {
+  if (id < 1) {
     outputCodeBaseList[id].position = float3(0., 0., 0.);
     return;
   }
@@ -51,13 +50,12 @@ kernel void updateRadicalLineBase(device CellBase *codeBaseList [[buffer(0)]],
   outputCodeBaseList[id].velocity = vNext;
 }
 
-kernel void
-updateRadicalLineVertexes(device CellBase *codeBaseList [[buffer(0)]],
-                          device VertexData *outputVertices [[buffer(1)]],
-                          device VertexData *previousVertices [[buffer(2)]],
-                          constant MovingRadicalLineParams &params
-                          [[buffer(3)]],
-                          uint id [[thread_position_in_grid]]) {
+kernel void updateRadicalLineVertexes(
+    device CellBase *codeBaseList [[buffer(0)]],
+    device VertexData *outputVertices [[buffer(1)]],
+    device VertexData *previousVertices [[buffer(2)]],
+    constant MovingRadicalLineParams &params [[buffer(3)]],
+    uint id [[thread_position_in_grid]]) {
   if (id < 1) {
     outputVertices[id].position = float3(0., 0., -4.);
     return;

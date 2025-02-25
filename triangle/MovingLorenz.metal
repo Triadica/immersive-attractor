@@ -90,11 +90,11 @@ float3 dequanLiIteration(float3 p, float dt) {
   return p + dp;
 }
 
-kernel void updateMovingLorenz(device VertexData *vertices [[buffer(0)]],
-                               device VertexData *outputVertices [[buffer(1)]],
-                               constant MovingLorenzParams &params
-                               [[buffer(2)]],
-                               uint id [[thread_position_in_grid]]) {
+kernel void updateMovingLorenz(
+    device VertexData *vertices [[buffer(0)]],
+    device VertexData *outputVertices [[buffer(1)]],
+    constant MovingLorenzParams &params [[buffer(2)]],
+    uint id [[thread_position_in_grid]]) {
   bool leading = vertices[id].leading;
   bool atSide = vertices[id].atSide;
   bool secondary = vertices[id].secondary;

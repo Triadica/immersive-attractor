@@ -27,12 +27,11 @@ constant float3 squareVertices[] = {
     float3(0.0, -1.0, 0.0),
 };
 
-kernel void updatePolygonWallBase(device CubeBase *codeBaseList [[buffer(0)]],
-                                  device CubeBase *outputCodeBaseList
-                                  [[buffer(1)]],
-                                  constant MovingCubesParams &params
-                                  [[buffer(2)]],
-                                  uint id [[thread_position_in_grid]]) {
+kernel void updatePolygonWallBase(
+    device CubeBase *codeBaseList [[buffer(0)]],
+    device CubeBase *outputCodeBaseList [[buffer(1)]],
+    constant MovingCubesParams &params [[buffer(2)]],
+    uint id [[thread_position_in_grid]]) {
   CubeBase base = codeBaseList[id];
   // outputCodeBaseList[id].position.z = 0.2 * sin(base.rotate *
   // params.timestamp * 0.4) - 0.6;
@@ -43,11 +42,11 @@ float2 complexMul(float2 a, float2 b) {
   return float2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
 }
 
-kernel void
-updatePolygonWallVertexes(device CubeBase *codeBaseList [[buffer(0)]],
-                          device VertexData *outputVertices [[buffer(1)]],
-                          constant MovingCubesParams &params [[buffer(2)]],
-                          uint id [[thread_position_in_grid]]) {
+kernel void updatePolygonWallVertexes(
+    device CubeBase *codeBaseList [[buffer(0)]],
+    device VertexData *outputVertices [[buffer(1)]],
+    constant MovingCubesParams &params [[buffer(2)]],
+    uint id [[thread_position_in_grid]]) {
   uint cubeIdx = id / 4;
   CubeBase base = codeBaseList[cubeIdx];
   // vertice

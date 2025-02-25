@@ -21,10 +21,11 @@ struct CellBase {
   float angle;
 };
 
-kernel void updateChordsBase(device CellBase *cellBaseList [[buffer(0)]],
-                             device CellBase *outputCellBaseList [[buffer(1)]],
-                             constant MovingCubesParams &params [[buffer(2)]],
-                             uint id [[thread_position_in_grid]]) {
+kernel void updateChordsBase(
+    device CellBase *cellBaseList [[buffer(0)]],
+    device CellBase *outputCellBaseList [[buffer(1)]],
+    constant MovingCubesParams &params [[buffer(2)]],
+    uint id [[thread_position_in_grid]]) {
   CellBase base = cellBaseList[id];
   float3 p0 = float3(0.0, 0.5, 0.0);
   float r0 = length(p0 - base.position);
@@ -45,12 +46,11 @@ kernel void updateChordsBase(device CellBase *cellBaseList [[buffer(0)]],
   outputCellBaseList[id].angle = atan2(r0, nextRadius);
 }
 
-kernel void updateChordsVertexes(device CellBase *cellBaseList [[buffer(0)]],
-                                 device VertexData *outputVertices
-                                 [[buffer(1)]],
-                                 constant MovingCubesParams &params
-                                 [[buffer(2)]],
-                                 uint id [[thread_position_in_grid]]) {
+kernel void updateChordsVertexes(
+    device CellBase *cellBaseList [[buffer(0)]],
+    device VertexData *outputVertices [[buffer(1)]],
+    constant MovingCubesParams &params [[buffer(2)]],
+    uint id [[thread_position_in_grid]]) {
   uint count = 21;
   float3 p0 = float3(0.0, 0.5, 0.0);
 
