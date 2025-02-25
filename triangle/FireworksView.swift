@@ -76,9 +76,13 @@ struct FireworksView: View {
   var body: some View {
     GeometryReader3D { proxy in
       RealityView { content in
-        let mesh = try! createMesh()
+        guard let mesh = try? createMesh(),
+          let modelComponent = try? getModelComponent(mesh: mesh)
+        else {
+          print("Failed to create mesh or model component")
+          return
+        }
 
-        let modelComponent = try! getModelComponent(mesh: mesh)
         rootEntity.components.set(modelComponent)
         // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = 1

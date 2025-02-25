@@ -68,7 +68,12 @@ struct HyperbolicHelicoidView: View {
   var body: some View {
     GeometryReader3D { proxy in
       RealityView { content in
-        let mesh = try! createMesh()
+        guard let mesh = try? createMesh(),
+          let modelComponent = try? getModelComponent(mesh: mesh)
+        else {
+          print("Failed to create mesh or model component")
+          return
+        }
 
         // let pointLight = PointLight()
         // pointLight.position.z = 2.0
@@ -93,7 +98,6 @@ struct HyperbolicHelicoidView: View {
           color: .orange, intensity: 10_000
         )
 
-        let modelComponent = try! getModelComponent(mesh: mesh)
         rootEntity.components.set(modelComponent)
         rootEntity.components.set(orangeLightComponent)
         // rootEntity.scale = SIMD3(repeating: 1.)

@@ -73,9 +73,12 @@ struct PolygonWallView: View {
   var body: some View {
     GeometryReader3D { proxy in
       RealityView { content in
-        let mesh = try! createMesh()
-
-        let modelComponent = try! getModelComponent(mesh: mesh)
+        guard let mesh = try? createMesh(),
+          let modelComponent = try? getModelComponent(mesh: mesh)
+        else {
+          print("Failed to create mesh or model component")
+          return
+        }
         rootEntity.components.set(modelComponent)
         // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = 1

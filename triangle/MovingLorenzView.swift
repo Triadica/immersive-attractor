@@ -96,9 +96,12 @@ struct MovingLorenzView: View {
 
         self.pingPongBuffer = PingPongBuffer(
           device: device, length: MemoryLayout<VertexData>.stride * vertexCapacity)
-        let mesh = try! createMesh()
-
-        let modelComponent = try! getModelComponent(mesh: mesh)
+        guard let mesh = try? createMesh(),
+          let modelComponent = try? getModelComponent(mesh: mesh)
+        else {
+          print("Failed to create mesh or model component")
+          return
+        }
         rootEntity.components.set(modelComponent)
         rootEntity.scale = SIMD3(repeating: stripScale)
         rootEntity.position.y = 1
