@@ -45,7 +45,7 @@ static float3 rotateAroundY(float3 v, float angle) {
   return float3(v.z * s + v.x * c, v.y, v.z * c - v.x * s);
 }
 
-kernel void updateHopfFibrationLayerBase(
+kernel void updateMobiusGridBase(
     device CellBase *codeBaseList [[buffer(0)]],
     device CellBase *outputCodeBaseList [[buffer(1)]],
     constant MovingAttractorLineParams &params [[buffer(2)]],
@@ -57,7 +57,7 @@ kernel void updateHopfFibrationLayerBase(
   output.index = base.index + 1;
 }
 
-kernel void updateHopfFibrationLayerVertexes(
+kernel void updateMobiusGridVertexes(
     device CellBase *codeBaseList [[buffer(0)]],
     device VertexData *outputVertices [[buffer(1)]],
     constant MovingAttractorLineParams &params [[buffer(2)]],

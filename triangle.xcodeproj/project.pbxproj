@@ -40,6 +40,8 @@
 		9A75D3ED2C71D16B00D27E97 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9A75D3EC2C71D16B00D27E97 /* Assets.xcassets */; };
 		9A75D3F02C71D16B00D27E97 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9A75D3EF2C71D16B00D27E97 /* Preview Assets.xcassets */; };
 		9A75D3FB2C71D16B00D27E97 /* triangleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A75D3FA2C71D16B00D27E97 /* triangleTests.swift */; };
+		9AC67CF62D6F8F9700071E59 /* MobiusGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AC67CF52D6F8F8F00071E59 /* MobiusGridView.swift */; };
+		9AC67CF82D6F8F9E00071E59 /* MobiusGrid.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9AC67CF72D6F8F9B00071E59 /* MobiusGrid.metal */; };
 		9AD4CB772D588FDA00E55977 /* AttractorLineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AD4CB762D588FCF00E55977 /* AttractorLineView.swift */; };
 		9AD4CB792D588FE600E55977 /* AttractorLine.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9AD4CB782D588FDE00E55977 /* AttractorLine.metal */; };
 /* End PBXBuildFile section */
@@ -91,6 +93,8 @@
 		9A75D3F12C71D16B00D27E97 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		9A75D3F62C71D16B00D27E97 /* triangleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = triangleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9A75D3FA2C71D16B00D27E97 /* triangleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = triangleTests.swift; sourceTree = "<group>"; };
+		9AC67CF52D6F8F8F00071E59 /* MobiusGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobiusGridView.swift; sourceTree = "<group>"; };
+		9AC67CF72D6F8F9B00071E59 /* MobiusGrid.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = MobiusGrid.metal; sourceTree = "<group>"; };
 		9AD4CB762D588FCF00E55977 /* AttractorLineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttractorLineView.swift; sourceTree = "<group>"; };
 		9AD4CB782D588FDE00E55977 /* AttractorLine.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = AttractorLine.metal; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -146,6 +150,8 @@
 		9A75D3DF2C71D16900D27E97 /* triangle */ = {
 			isa = PBXGroup;
 			children = (
+				9AC67CF72D6F8F9B00071E59 /* MobiusGrid.metal */,
+				9AC67CF52D6F8F8F00071E59 /* MobiusGridView.swift */,
 				9A6F2A302D6CE6C1007F336F /* HopfFibrationLayer.metal */,
 				9A6F2A312D6CE6C1007F336F /* HopfFibrationLayerView.swift */,
 				9A6F2A2E2D6B8B4D007F336F /* HopfFibration.metal */,
@@ -335,10 +341,12 @@
 				9A5385572D63AC900040CF72 /* FireworksView.swift in Sources */,
 				9A3CD41E2C8A1D9D00E8710C /* MovingLorenz.metal in Sources */,
 				9A1A94E82D54C0D500315602 /* PingPong.swift in Sources */,
+				9AC67CF62D6F8F9700071E59 /* MobiusGridView.swift in Sources */,
 				9A53853F2D5A47140040CF72 /* RadicalLineView.swift in Sources */,
 				9A1A94EA2D54C1A400315602 /* Iterate.swift in Sources */,
 				9A75D3E52C71D16900D27E97 /* attractorApp.swift in Sources */,
 				9A53855B2D663D970040CF72 /* FireworksBlowView.swift in Sources */,
+				9AC67CF82D6F8F9E00071E59 /* MobiusGrid.metal in Sources */,
 				9A5385512D5FBAB50040CF72 /* HyperbolicHelicoid.metal in Sources */,
 				9A5385592D63ACA00040CF72 /* Fireworks.metal in Sources */,
 			);

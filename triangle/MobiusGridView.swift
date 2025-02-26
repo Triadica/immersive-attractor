@@ -39,7 +39,7 @@ private struct CellBase {
   var index: Float
 }
 
-struct HopfFibrationLayerView: View {
+struct MobiusGirdView: View {
   let rootEntity: Entity = Entity()
   @State var mesh: LowLevelMesh?
 
@@ -64,10 +64,10 @@ struct HopfFibrationLayerView: View {
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
-    let updateAttractorBase = library.makeFunction(name: "updateHopfFibrationLayerBase")!
+    let updateAttractorBase = library.makeFunction(name: "updateMobiusGridBase")!
     self.attractorPipeline = try! device.makeComputePipelineState(function: updateAttractorBase)
 
-    let updatelinesVertexes = library.makeFunction(name: "updateHopfFibrationLayerVertexes")!
+    let updatelinesVertexes = library.makeFunction(name: "updateMobiusGridVertexes")!
     self.vertexPipeline = try! device.makeComputePipelineState(function: updatelinesVertexes)
   }
 
@@ -135,7 +135,7 @@ struct HopfFibrationLayerView: View {
   func getModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
     let resource = try MeshResource(from: mesh)
 
-    var unlitMaterial = UnlitMaterial(color: .cyan)
+    var unlitMaterial = UnlitMaterial(color: .systemPink)
     unlitMaterial.faceCulling = .none
 
     return ModelComponent(mesh: resource, materials: [unlitMaterial])
@@ -147,8 +147,8 @@ struct HopfFibrationLayerView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let cellCount: Int = 2400
-  let cellSegment: Int = 400
+  let cellCount: Int = 800
+  let cellSegment: Int = 800
 
   var vertexPerCell: Int {
     return cellSegment
