@@ -23,7 +23,7 @@ constant float3 squareVertices[] = {
     float3(0.0, -1.0, 0.0),
 };
 
-float3 hyperbolicHelicoid(float2 uv, float tau) {
+static float3 hyperbolicHelicoid(float2 uv, float tau) {
   float u = uv.x;
   float v = uv.y;
 
@@ -38,7 +38,7 @@ float3 hyperbolicHelicoid(float2 uv, float tau) {
 // https://gist.github.com/Dan-Piker/f7d790b3967d41bff8b0291f4cf7bd9e
 // https://www.desmos.com/3d/gl6fnutnck
 // (I don't have a understanding of the math behind this transformation yet)
-float3 mobiusTransformation(float3 pt, float t) {
+static float3 mobiusTransformation(float3 pt, float t) {
   // Initial point coordinates
   float xa = pt.x;
   float ya = pt.y;

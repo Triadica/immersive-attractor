@@ -19,64 +19,52 @@ struct CellBase {
   float index;
 };
 
-// based on math from https://www.youtube.com/watch?v=dkyvZo68IoM&t=647s
-// theta in 0..2pi, phi in 0..pi, alpha in 0..4pi
-// in which alpha is the angle of the torus, phi is the angle of the circle
-static float3 hopfFibration(float alpha, float phi, float theta) {
-  float sinV = sin(theta * 0.5);
-  float cosV = cos(theta * 0.5);
-  float x0 = cos((alpha + phi) * 0.5) * sinV;
-  float x1 = sin((alpha + phi) * 0.5) * sinV;
-  float x2 = cos((alpha - phi) * 0.5) * cosV;
-  float x3 = sin((alpha - phi) * 0.5) * cosV;
-  float divisor = 1 / (1 - x3);
-  return float3(x0 * divisor, x1 * divisor, x2 * divisor);
-}
+// Mobius transformation generated from:
+// https://gist.github.com/Dan-Piker/f7d790b3967d41bff8b0291f4cf7bd9e
+// https://www.desmos.com/3d/gl6fnutnck
+// (I don't have a understanding of the math behind this transformation yet)
+static float3 mobiusTransformation(float3 pt, float t) {
+  // Initial point coordinates
+  float xa = pt.x;
+  float ya = pt.y;
+  float za = pt.z;
 
-static float3 rotateAroundZ(float3 v, float angle) {
-  float c = cos(angle);
-  float s = sin(angle);
-  return float3(v.x * c - v.y * s, v.x * s + v.y * c, v.z);
-}
+  // Constants for rotation
+  float p = 0.0;
+  float q = 1.0;
 
-static float3 rotateAroundY(float3 v, float angle) {
-  float c = cos(angle);
-  float s = sin(angle);
-  return float3(v.z * s + v.x * c, v.y, v.z * c - v.x * s);
-}
+  // Reverse stereographic projection to hypersphere
+  float denom = 1.0 + xa * xa + ya * ya + za * za;
+  float xb = 2.0 * xa / denom;
+  float yb = 2.0 * ya / denom;
+  float zb = 2.0 * za / denom;
+  float wb = (-1.0 + xa * xa + ya * ya + za * za) / denom;
 
-kernel void updateMobiusGridBase(
-    device CellBase *codeBaseList [[buffer(0)]],
-    device CellBase *outputCodeBaseList [[buffer(1)]],
-    constant MovingAttractorLineParams &params [[buffer(2)]],
-    uint id [[thread_position_in_grid]]) {
-  CellBase base = codeBaseList[id];
-  device CellBase &output = outputCodeBaseList[id];
+  // Rotate hypersphere
+  float xc = xb * cos(p * t) + yb * sin(p * t);
+  float yc = -xb * sin(p * t) + yb * cos(p * t);
+  float zc = zb * cos(q * t) - wb * sin(q * t);
+  float wc = zb * sin(q * t) + wb * cos(q * t);
 
-  output.position = base.position;
-  output.index = base.index + 1;
+  // Project stereographically back to 3D
+  float xd = xc / (1.0 - wc);
+  float yd = yc / (1.0 - wc);
+  float zd = zc / (1.0 - wc);
+
+  return float3(xd, yd, zd);
 }
 
 kernel void updateMobiusGridVertexes(
     device CellBase *codeBaseList [[buffer(0)]],
     device VertexData *outputVertices [[buffer(1)]],
     constant MovingAttractorLineParams &params [[buffer(2)]],
-    // device VertexData *previousVertices [[buffer(3)]],
     uint id [[thread_position_in_grid]]) {
 
   uint vertexPerCell = params.vertexPerCell;
   uint cellIdx = id / vertexPerCell;
   uint cellInnerIdx = id % vertexPerCell;
 
-  float PI = 3.14159265359;
-  float alpha = cellInnerIdx * 4 * PI / vertexPerCell;
+  float3 position = codeBaseList[cellIdx].position;
 
-  float3 position =
-      rotateAroundZ(codeBaseList[cellIdx].position, params.timestamp * 0.5);
-  float theta = atan2(position.z, position.x);
-  float phi = atan2(
-      sqrt(position.x * position.x + position.z * position.z), position.y);
-
-  outputVertices[id].position =
-      hopfFibration(alpha, phi, theta).xzy * 0.1 + float3(0, 0, -0.5);
+  outputVertices[id].position = position;
 }

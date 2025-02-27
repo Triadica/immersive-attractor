@@ -43,7 +43,8 @@ struct AttractorApp: App {
       // FireworksView()
       // FireworksBlowView()
       // HopfFibrationView()
-      HopfFibrationLayerView()
+      // HopfFibrationLayerView()
+      MobiusGirdView()
     }.immersionStyle(selection: .constant(.full), in: .full)
   }
 }

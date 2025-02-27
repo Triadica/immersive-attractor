@@ -10,14 +10,10 @@ private struct MovingCellParams {
 
 private struct VertexData {
   var position: SIMD3<Float> = .zero
-  // var normal: SIMD3<Float> = .zero
-  // var uv: SIMD2<Float> = .zero
 
   @MainActor static var vertexAttributes: [LowLevelMesh.Attribute] = [
     .init(
       semantic: .position, format: .float3, offset: MemoryLayout<Self>.offset(of: \.position)!)
-    // .init(semantic: .normal, format: .float3, offset: MemoryLayout<Self>.offset(of: \.normal)!),
-    // .init(semantic: .uv0, format: .float2, offset: MemoryLayout<Self>.offset(of: \.uv)!),
   ]
 
   @MainActor static var vertexLayouts: [LowLevelMesh.Layout] = [
@@ -50,7 +46,7 @@ struct MobiusGirdView: View {
 
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
-  let attractorPipeline: MTLComputePipelineState
+
   let vertexPipeline: MTLComputePipelineState
 
   @State var pingPongBuffer: PingPongBuffer?
@@ -64,8 +60,6 @@ struct MobiusGirdView: View {
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
-    let updateAttractorBase = library.makeFunction(name: "updateMobiusGridBase")!
-    self.attractorPipeline = try! device.makeComputePipelineState(function: updateAttractorBase)
 
     let updatelinesVertexes = library.makeFunction(name: "updateMobiusGridVertexes")!
     self.vertexPipeline = try! device.makeComputePipelineState(function: updatelinesVertexes)
@@ -104,15 +98,12 @@ struct MobiusGirdView: View {
 
     self.vertexBuffer = device.makeBuffer(
       length: MemoryLayout<VertexData>.stride * vertexCapacity, options: .storageModeShared)
-    self.vertexPrevBuffer = device.makeBuffer(
-      length: MemoryLayout<VertexData>.stride * vertexCapacity, options: .storageModeShared)
 
     timer = Timer.scheduledTimer(withTimeInterval: 1 / fps, repeats: true) { _ in
 
       DispatchQueue.main.async {
         if let vertexBuffer = self.vertexBuffer {
-          self.updateCellBase()
-          self.updateMesh(vertexBuffer: vertexBuffer, prevBuffer: self.vertexPrevBuffer!)
+          self.updateMesh(vertexBuffer: vertexBuffer)
 
           // swap buffers
           self.pingPongBuffer!.swap()
@@ -147,30 +138,26 @@ struct MobiusGirdView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let cellCount: Int = 800
-  let cellSegment: Int = 800
+  let gridSize: Int = 40
+
+  var cellCount: Int {
+    return gridSize * gridSize * gridSize * 3
+  }
+
+  let cellSegment: Int = 4
 
   var vertexPerCell: Int {
-    return cellSegment
+    return cellSegment + 1
   }
-  var indicePerCell: Int {
-    return cellSegment * 2
-  }
-
   var vertexCapacity: Int {
     return cellCount * vertexPerCell
   }
+
+  var indicePerCell: Int {
+    return cellSegment * 2
+  }
   var indiceCapacity: Int {
     return cellCount * indicePerCell
-  }
-
-  func fibonacciGrid(n: Float, total: Float) -> SIMD3<Float> {
-    let z = (2.0 * n - 1.0) / total - 1.0
-    let t = sqrt(1.0 - z * z)
-    let t2 = 2.0 * 3.14159265359 * 1.61803398875 * n
-    let x = t * cos(t2)
-    let y = t * sin(t2)
-    return SIMD3(x, y, z)
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
@@ -181,20 +168,47 @@ struct MobiusGirdView: View {
     let contents = buffer.currentBuffer.contents()
 
     let cells = contents.bindMemory(to: CellBase.self, capacity: cellCount)
-    for i in 0..<cellCount {
-      let angle = Float(i) * 0.06
-      let radius: Float = 1.0
-      var height = (Float(i) / Float(cellCount) - 0.5) * 3
-      height = round(height * 2) / 2
-      let pos = SIMD3<Float>(
-        radius * sin(angle),
-        height,
-        radius * cos(angle)
-      )
-      cells[i] = CellBase(
-        position: pos,
-        index: Float(i)
-      )
+
+    let cellLength = Float(1)
+
+    for xi in 0..<gridSize {
+      for yi in 0..<gridSize {
+        for zi in 0..<gridSize {
+          let x = Float(xi) / Float(gridSize) * 2 - 1
+          let y = Float(yi) / Float(gridSize) * 2 - 1
+          let z = Float(zi) / Float(gridSize) * 2 - 1
+          let pos = SIMD3<Float>(x, y, z) * cellLength
+
+          let index = xi * gridSize * gridSize + yi * gridSize + zi * 3 * vertexPerCell
+          // create 3 branches in each direction
+
+          var cellIdx = index
+          for i in 0..<vertexPerCell {
+            let dx = Float(i) / Float(cellSegment) * cellLength
+            cells[cellIdx] = CellBase(
+              position: pos + SIMD3<Float>(dx * Float(i), 0, 0),
+              index: Float(cellIdx)
+            )
+            cellIdx += 1
+          }
+          for i in 0..<vertexPerCell {
+            let dy = Float(i) / Float(cellSegment) * cellLength
+            cells[cellIdx] = CellBase(
+              position: pos + SIMD3<Float>(0, dy * Float(i), 0),
+              index: Float(cellIdx)
+            )
+            cellIdx += 1
+          }
+          for i in 0..<vertexPerCell {
+            let dz = Float(i) / Float(cellSegment) * cellLength
+            cells[cellIdx] = CellBase(
+              position: pos + SIMD3<Float>(0, 0, dz * Float(i)),
+              index: Float(cellIdx)
+            )
+            cellIdx += 1
+          }
+        }
+      }
     }
 
     // copy data from current buffer to next buffer
@@ -222,8 +236,6 @@ struct MobiusGirdView: View {
           let half = j / 2
           if is_even {
             indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half)
-          } else if j == indicePerCell - 1 {
-            indices[i * indicePerCell + j] = UInt32(i * vertexPerCell)
           } else {
             indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half + 1)
           }
@@ -253,38 +265,7 @@ struct MobiusGirdView: View {
     return MovingCellParams(vertexPerCell: Int32(vertexPerCell), dt: 0.8 * dt, timestamp: delta)
   }
 
-  func updateCellBase() {
-    guard let pingPongBuffer = pingPongBuffer,
-      let commandBuffer = commandQueue.makeCommandBuffer(),
-      let computeEncoder = commandBuffer.makeComputeCommandEncoder()
-    else {
-      print("updateMesh: failed to get mesh or pingPongBuffer or commandBuffer or computeEncoder")
-      return
-    }
-
-    computeEncoder.setComputePipelineState(attractorPipeline)
-
-    // idx 0: pingPongBuffer
-    computeEncoder.setBuffer(
-      pingPongBuffer.currentBuffer, offset: 0, index: 0)
-
-    // idx 1: vertexBuffer
-    computeEncoder.setBuffer(pingPongBuffer.nextBuffer, offset: 0, index: 1)
-
-    var params = getMovingParams()
-    // idx 2: params buffer
-    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCellParams>.size, index: 2)
-
-    let threadsPerGrid = MTLSize(width: cellCount, height: 1, depth: 1)
-    let threadsPerThreadgroup = MTLSize(width: 16, height: 1, depth: 1)
-    computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
-
-    computeEncoder.endEncoding()
-
-    commandBuffer.commit()
-  }
-
-  func updateMesh(vertexBuffer: MTLBuffer, prevBuffer: MTLBuffer) {
+  func updateMesh(vertexBuffer: MTLBuffer) {
     guard let mesh = mesh,
       let pingPongBuffer = pingPongBuffer,
       let commandBuffer = commandQueue.makeCommandBuffer(),
@@ -298,8 +279,6 @@ struct MobiusGirdView: View {
     mesh.withUnsafeMutableBytes(bufferIndex: 0) { rawBytes in
       vertexBuffer.contents().copyMemory(
         from: rawBytes.baseAddress!, byteCount: rawBytes.count)
-      prevBuffer.contents().copyMemory(
-        from: rawBytes.baseAddress!, byteCount: rawBytes.count)
     }
 
     computeEncoder.setComputePipelineState(vertexPipeline)
@@ -310,8 +289,6 @@ struct MobiusGirdView: View {
 
     // idx 1: vertexBuffer
     computeEncoder.setBuffer(vertexBuffer, offset: 0, index: 1)
-    // idx 2: prevBuffer
-    // computeEncoder.setBuffer(prevBuffer, offset: 0, index: 2)
 
     var params = getMovingParams()
     // idx 3: params buffer
@@ -337,7 +314,7 @@ struct MobiusGirdView: View {
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
         indexCount: indiceCapacity,
-        topology: .line,
+        topology: .lineStrip,
         bounds: getBounds()
       )
     ])
