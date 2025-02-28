@@ -126,7 +126,7 @@ struct MobiusGirdView: View {
   func getModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
     let resource = try MeshResource(from: mesh)
 
-    var unlitMaterial = UnlitMaterial(color: .systemPink)
+    var unlitMaterial = UnlitMaterial(color: .cyan)
     unlitMaterial.faceCulling = .none
 
     return ModelComponent(mesh: resource, materials: [unlitMaterial])
@@ -138,13 +138,15 @@ struct MobiusGirdView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let gridSize: Int = 40
+  let gridSize: Int = 24
+
+  let gridLength: Float = 1.0
 
   var cellCount: Int {
     return gridSize * gridSize * gridSize * 3
   }
 
-  let cellSegment: Int = 4
+  let cellSegment: Int = 12
 
   var vertexPerCell: Int {
     return cellSegment + 1
@@ -161,48 +163,57 @@ struct MobiusGirdView: View {
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
-    let bufferSize = MemoryLayout<CellBase>.stride * cellCount
+    let bufferSize = MemoryLayout<CellBase>.stride * vertexCapacity
     let buffer = PingPongBuffer(device: device, length: bufferSize)
 
     // 使用 contents() 前检查 buffer 是否有效
     let contents = buffer.currentBuffer.contents()
 
-    let cells = contents.bindMemory(to: CellBase.self, capacity: cellCount)
+    let cells = contents.bindMemory(to: CellBase.self, capacity: vertexCapacity)
 
-    let cellLength = Float(1)
-
+    let mid = Float(gridSize) / 2
     for xi in 0..<gridSize {
       for yi in 0..<gridSize {
         for zi in 0..<gridSize {
-          let x = Float(xi) / Float(gridSize) * 2 - 1
-          let y = Float(yi) / Float(gridSize) * 2 - 1
-          let z = Float(zi) / Float(gridSize) * 2 - 1
-          let pos = SIMD3<Float>(x, y, z) * cellLength
 
-          let index = xi * gridSize * gridSize + yi * gridSize + zi * 3 * vertexPerCell
+          let x = Float(xi) - mid
+          let y = Float(yi) - mid
+          let z = Float(zi) - mid
+          let pos = SIMD3<Float>(x, y, z) * gridLength
+
+          let index = (xi * gridSize * gridSize + yi * gridSize + zi) * 3 * vertexPerCell
           // create 3 branches in each direction
 
           var cellIdx = index
           for i in 0..<vertexPerCell {
-            let dx = Float(i) / Float(cellSegment) * cellLength
+            var dx = Float(i) / Float(cellSegment) * gridLength
+            if xi + 1 == gridSize {
+              dx = 0
+            }
             cells[cellIdx] = CellBase(
-              position: pos + SIMD3<Float>(dx * Float(i), 0, 0),
+              position: pos + SIMD3<Float>(dx, 0, 0),
               index: Float(cellIdx)
             )
             cellIdx += 1
           }
           for i in 0..<vertexPerCell {
-            let dy = Float(i) / Float(cellSegment) * cellLength
+            var dy = Float(i) / Float(cellSegment) * gridLength
+            if yi + 1 == gridSize {
+              dy = 0
+            }
             cells[cellIdx] = CellBase(
-              position: pos + SIMD3<Float>(0, dy * Float(i), 0),
+              position: pos + SIMD3<Float>(0, dy, 0),
               index: Float(cellIdx)
             )
             cellIdx += 1
           }
           for i in 0..<vertexPerCell {
-            let dz = Float(i) / Float(cellSegment) * cellLength
+            var dz = Float(i) / Float(cellSegment) * gridLength
+            if zi + 1 == gridSize {
+              dz = 0
+            }
             cells[cellIdx] = CellBase(
-              position: pos + SIMD3<Float>(0, 0, dz * Float(i)),
+              position: pos + SIMD3<Float>(0, 0, dz),
               index: Float(cellIdx)
             )
             cellIdx += 1
@@ -314,7 +325,7 @@ struct MobiusGirdView: View {
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
         indexCount: indiceCapacity,
-        topology: .lineStrip,
+        topology: .line,
         bounds: getBounds()
       )
     ])

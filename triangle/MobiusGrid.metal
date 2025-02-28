@@ -60,11 +60,13 @@ kernel void updateMobiusGridVertexes(
     constant MovingAttractorLineParams &params [[buffer(2)]],
     uint id [[thread_position_in_grid]]) {
 
-  uint vertexPerCell = params.vertexPerCell;
-  uint cellIdx = id / vertexPerCell;
-  uint cellInnerIdx = id % vertexPerCell;
-
-  float3 position = codeBaseList[cellIdx].position;
+  float3 p = codeBaseList[id].position;
+  float t = params.timestamp * 0.20;
+  // float t = 0;
+  float3 position = mobiusTransformation(p, t);
+  position = position.xzy;
+  position.z -= 2.0;
+  position.y = -position.y;
 
   outputVertices[id].position = position;
 }
