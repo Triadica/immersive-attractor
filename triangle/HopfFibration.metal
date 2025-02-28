@@ -43,8 +43,8 @@ kernel void updateHopfFibrationBase(
 
   float dt = params.dt;
   float i = log(1.0 + base.index) * dt;
-  output.theta = base.theta + i * 0.1 + 0.01;
-  output.phi = base.phi + i * 0.4;
+  output.theta = base.theta + i * 0.02 + 0.01;
+  output.phi = base.phi + i * 0.1;
 }
 
 kernel void updateHopfFibrationVertexes(
