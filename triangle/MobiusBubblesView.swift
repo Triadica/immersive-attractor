@@ -3,7 +3,6 @@ import RealityKit
 import SwiftUI
 
 private struct MovingCellParams {
-  var vertexPerCell: Int32
   var dt: Float
   var timestamp: Float = 0
 }
@@ -32,7 +31,7 @@ private struct VertexData {
 /// placement of a cube
 private struct CellBase {
   var position: SIMD3<Float> = .zero
-  var index: Float
+  var seed: Float = 0
 }
 
 struct MobiusBubblesView: View {
@@ -104,9 +103,7 @@ struct MobiusBubblesView: View {
       DispatchQueue.main.async {
         if let vertexBuffer = self.vertexBuffer {
           self.updateMesh(vertexBuffer: vertexBuffer)
-
-          // swap buffers
-          self.pingPongBuffer!.swap()
+          // no need to swap buffers
         } else {
           print("[ERR] vertex buffer is not initialized")
         }
@@ -134,91 +131,47 @@ struct MobiusBubblesView: View {
 
   /// Create a bounding box for the mesh
   func getBounds() -> BoundingBox {
-    let radius: Float = 2
+    let radius: Float = 10
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let gridSize: Int = 24
+  var sphereVertexes: [SIMD3<Float>] {
+    makeSphereWithIterate(times: 3)
+  }
 
-  let gridLength: Float = 1.0
+  let sphereCount: Int = 400
 
   var cellCount: Int {
-    return gridSize * gridSize * gridSize * 3
+    return sphereVertexes.count * sphereCount
   }
 
-  let cellSegment: Int = 12
-
-  var vertexPerCell: Int {
-    return cellSegment + 1
-  }
   var vertexCapacity: Int {
-    return cellCount * vertexPerCell
+    return cellCount
   }
 
-  var indicePerCell: Int {
-    return cellSegment * 2
-  }
   var indiceCapacity: Int {
-    return cellCount * indicePerCell
+    return cellCount
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
-    let bufferSize = MemoryLayout<CellBase>.stride * vertexCapacity
+    let bufferSize = MemoryLayout<CellBase>.stride * cellCount
     let buffer = PingPongBuffer(device: device, length: bufferSize)
 
     // 使用 contents() 前检查 buffer 是否有效
     let contents = buffer.currentBuffer.contents()
 
-    let cells = contents.bindMemory(to: CellBase.self, capacity: vertexCapacity)
+    let cells = contents.bindMemory(to: CellBase.self, capacity: cellCount)
+    let shape = sphereVertexes
 
-    let mid = Float(gridSize) / 2
-    for xi in 0..<gridSize {
-      for yi in 0..<gridSize {
-        for zi in 0..<gridSize {
-
-          let x = Float(xi) - mid
-          let y = Float(yi) - mid
-          let z = Float(zi) - mid
-          let pos = SIMD3<Float>(x, y, z) * gridLength
-
-          let index = (xi * gridSize * gridSize + yi * gridSize + zi) * 3 * vertexPerCell
-          // create 3 branches in each direction
-
-          var cellIdx = index
-          for i in 0..<vertexPerCell {
-            var dx = Float(i) / Float(cellSegment) * gridLength
-            if xi + 1 == gridSize {
-              dx = 0
-            }
-            cells[cellIdx] = CellBase(
-              position: pos + SIMD3<Float>(dx, 0, 0),
-              index: Float(cellIdx)
-            )
-            cellIdx += 1
-          }
-          for i in 0..<vertexPerCell {
-            var dy = Float(i) / Float(cellSegment) * gridLength
-            if yi + 1 == gridSize {
-              dy = 0
-            }
-            cells[cellIdx] = CellBase(
-              position: pos + SIMD3<Float>(0, dy, 0),
-              index: Float(cellIdx)
-            )
-            cellIdx += 1
-          }
-          for i in 0..<vertexPerCell {
-            var dz = Float(i) / Float(cellSegment) * gridLength
-            if zi + 1 == gridSize {
-              dz = 0
-            }
-            cells[cellIdx] = CellBase(
-              position: pos + SIMD3<Float>(0, 0, dz),
-              index: Float(cellIdx)
-            )
-            cellIdx += 1
-          }
-        }
+    for i in 0..<sphereCount {
+      let center = randomPosition(r: 20)
+      let radius = Float.random(in: 0.1...4)
+      let seed = Float.random(in: 0...10)
+      for j in 0..<shape.count {
+        let idx = i * shape.count + j
+        let p = center + shape[j] * radius
+        cells[idx].position = p
+        cells[idx].seed = seed
       }
     }
 
@@ -242,17 +195,8 @@ struct MobiusBubblesView: View {
       let indices = rawIndices.bindMemory(to: UInt32.self)
 
       for i in 0..<cellCount {
-        for j in 0..<indicePerCell {
-          let is_even = j % 2 == 0
-          let half = j / 2
-          if is_even {
-            indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half)
-          } else {
-            indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half + 1)
-          }
-        }
+        indices[i] = UInt32(i)
       }
-
     }
 
     mesh.parts.replaceAll([
@@ -273,7 +217,7 @@ struct MobiusBubblesView: View {
     let delta = -Float(viewStartTime.timeIntervalSinceNow)
     let dt = delta - frameDelta
     frameDelta = delta
-    return MovingCellParams(vertexPerCell: Int32(vertexPerCell), dt: 0.8 * dt, timestamp: delta)
+    return MovingCellParams(dt: 0.8 * dt, timestamp: delta)
   }
 
   func updateMesh(vertexBuffer: MTLBuffer) {

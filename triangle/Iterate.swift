@@ -1,9 +1,4 @@
-//
-//  Iterate.swift
-//  triangle
-//
-//  Created by chen on 2025/2/6.
-//
+import simd
 
 private func fakeIteration(p: SIMD3<Float>, dt: Float) -> SIMD3<Float> {
   let d = SIMD3<Float>(0.1, 0.1, -0.1) * dt
@@ -42,4 +37,89 @@ func randomPosition(r: Float) -> SIMD3<Float> {
   let y = Float.random(in: -r...r)
   let z = Float.random(in: -r...r)
   return SIMD3<Float>(x, y, z)
+}
+
+struct Triangle {
+  var a: SIMD3<Float>
+  var b: SIMD3<Float>
+  var c: SIMD3<Float>
+}
+
+private func makeSphereIterateInternal(
+  triangles: [Triangle]
+) -> [Triangle] {
+  var newTriangles: [Triangle] = []
+
+  for triangle in triangles {
+    // Calculate midpoints
+    let abN = (triangle.a + triangle.b) * 0.5
+    let bcN = (triangle.b + triangle.c) * 0.5
+    let caN = (triangle.c + triangle.a) * 0.5
+
+    // Create four new triangles
+    newTriangles.append(Triangle(a: triangle.a, b: abN, c: caN))
+    newTriangles.append(Triangle(a: abN, b: triangle.b, c: bcN))
+    newTriangles.append(Triangle(a: caN, b: bcN, c: triangle.c))
+    newTriangles.append(Triangle(a: abN, b: bcN, c: caN))
+  }
+
+  return newTriangles
+}
+
+// create regular octahedron first, then split each face into 4 triangles, and finally create sphere
+func makeSphereWithIterate(times: Int) -> [SIMD3<Float>] {
+
+  var triangles: [Triangle] = []
+
+  // Create octahedron vertices
+  let x1 = SIMD3<Float>(1, 0, 0)
+  let x2 = SIMD3<Float>(-1, 0, 0)
+  let y1 = SIMD3<Float>(0, 1, 0)
+  let y2 = SIMD3<Float>(0, -1, 0)
+  let z1 = SIMD3<Float>(0, 0, 1)
+  let z2 = SIMD3<Float>(0, 0, -1)
+
+  // Initial triangles (octahedron faces)
+  triangles.append(Triangle(a: x1, b: y1, c: z1))
+  triangles.append(Triangle(a: y1, b: z1, c: x2))
+  triangles.append(Triangle(a: y1, b: x2, c: z2))
+  triangles.append(Triangle(a: y1, b: z2, c: x1))
+  triangles.append(Triangle(a: y2, b: z1, c: x1))
+  triangles.append(Triangle(a: y2, b: x2, c: z1))
+  triangles.append(Triangle(a: y2, b: z2, c: x2))
+  triangles.append(Triangle(a: y2, b: x1, c: z2))
+
+  // Perform subdivision
+  for _ in 0..<times {
+    triangles = makeSphereIterateInternal(triangles: triangles)
+  }
+
+  // for each triangle, project point with radius to sphere, and push 6 vertices
+  var vertices: [SIMD3<Float>] = []
+
+  for triangle in triangles {
+    let a = simd.normalize(triangle.a)
+    let b = simd.normalize(triangle.b)
+    let c = simd.normalize(triangle.c)
+    // let a = triangle.a
+    // let b = triangle.b
+    // let c = triangle.c
+
+    vertices.append(a)
+    vertices.append(b)
+    // vertices.append(b)
+    // vertices.append(a)
+
+    vertices.append(b)
+    vertices.append(c)
+    // vertices.append(c)
+    // vertices.append(b)
+
+    vertices.append(c)
+    vertices.append(a)
+    // vertices.append(a)
+    // vertices.append(c)
+  }
+
+  return vertices
 }
