@@ -5,6 +5,7 @@ import SwiftUI
 private struct MovingCubesParams {
   var vertexPerCell: Int32
   var dt: Float
+  var timestamp: Float = 0
 }
 
 private struct VertexData {
@@ -33,11 +34,10 @@ private struct VertexData {
 }
 
 /// placement of a cube
-private struct CubeBase {
+private struct CellBase {
+  var original: SIMD3<Float>
   var position: SIMD3<Float>
-  var size: Float
-  var velocity: SIMD3<Float> = .zero
-  var rotate: Float
+  var velocity: Float = 0
 }
 
 struct MobiusTrailView: View {
@@ -148,8 +148,12 @@ struct MobiusTrailView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let cellCount: Int = 50000
-  let cellSegment: Int = 16
+  let gridSize: Int = 30
+
+  var cellCount: Int {
+    return gridSize * gridSize * gridSize
+  }
+  let cellSegment: Int = 40
 
   var vertexPerCell: Int {
     return cellSegment + 1
@@ -166,20 +170,30 @@ struct MobiusTrailView: View {
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
-    let bufferSize = MemoryLayout<CubeBase>.stride * cellCount
+    let bufferSize = MemoryLayout<CellBase>.stride * cellCount
     let buffer = PingPongBuffer(device: device, length: bufferSize)
 
     // 使用 contents() 前检查 buffer 是否有效
     let contents = buffer.currentBuffer.contents()
 
-    let cubes = contents.bindMemory(to: CubeBase.self, capacity: cellCount)
-    for i in 0..<cellCount {
-      cubes[i] = CubeBase(
-        position: randomPosition(r: 0.0) + SIMD3<Float>(0, 0, 0.6),
-        size: Float.random(in: 0.1..<1.4),
-        velocity: normalize(randomPosition(r: 1)) * 0.2 + SIMD3<Float>(1, 0, 0),
-        rotate: 0
-      )
+    let cells = contents.bindMemory(to: CellBase.self, capacity: cellCount)
+
+    // create points in 3D grid, each point is a group of vertexes
+    for xi in 0..<gridSize {
+      for yi in 0..<gridSize {
+        for zi in 0..<gridSize {
+          let i = xi * gridSize * gridSize + yi * gridSize + zi
+          let x = Float(xi) / Float(gridSize) * 2 - 1
+          let y = Float(yi) / Float(gridSize) * 2 - 1
+          let z = Float(zi) / Float(gridSize) * 2 - 1
+          let pos = SIMD3<Float>(x, y, z) * 0.2
+          cells[i] = CellBase(
+            original: pos,
+            position: pos,
+            velocity: Float.random(in: 0.08...0.4)
+          )
+        }
+      }
     }
 
     // copy data from current buffer to next buffer
@@ -226,8 +240,16 @@ struct MobiusTrailView: View {
     return mesh
   }
 
+  @State private var viewStartTime: Date = Date()
+  @State private var frameDelta: Float = 0.0
+
   private func getMovingParams() -> MovingCubesParams {
-    return MovingCubesParams(vertexPerCell: Int32(vertexPerCell), dt: 0.006)
+    let delta = -Float(viewStartTime.timeIntervalSinceNow)
+    let dt = delta - frameDelta
+    frameDelta = delta
+    return MovingCubesParams(
+      vertexPerCell: Int32(vertexPerCell), dt: 0.006,
+      timestamp: delta)
   }
 
   func updateCubeBase() {
