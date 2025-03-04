@@ -34,7 +34,7 @@ private struct CellBase {
   var seed: Float = 0
 }
 
-struct MobiusBubblesView: View {
+struct LotusView: View {
   let rootEntity: Entity = Entity()
   @State var mesh: LowLevelMesh?
 
@@ -60,7 +60,7 @@ struct MobiusBubblesView: View {
 
     let library = device.makeDefaultLibrary()!
 
-    let updateVertexes = library.makeFunction(name: "updateMobiusBubblesVertexes")!
+    let updateVertexes = library.makeFunction(name: "updateLotusVertexes")!
     self.vertexPipeline = try! device.makeComputePipelineState(function: updateVertexes)
   }
 

@@ -53,7 +53,7 @@ static float3 mobiusTransformation(float3 pt, float t) {
   return float3(xd, yd, zd);
 }
 
-kernel void updateMobiusBubblesVertexes(
+kernel void updateLotusVertexes(
     device CellBase *codeBaseList [[buffer(0)]],
     device VertexData *outputVertices [[buffer(1)]],
     constant MovingAttractorLineParams &params [[buffer(2)]],
