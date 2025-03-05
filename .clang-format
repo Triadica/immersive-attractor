@@ -1,0 +1,10 @@
+# Metal is based on C++, sharing similar syntax
+# clang-format primarily focuses on syntax structure rather than language-specific features
+# So C++ formatting rules work well for Metal code
+Language: Cpp
+
+BasedOnStyle: LLVM
+IndentWrappedFunctionNames: true
+AlignAfterOpenBracket: AlwaysBreak
+BinPackArguments: false
+BinPackParameters: false

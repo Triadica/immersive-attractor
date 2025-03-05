@@ -60,7 +60,8 @@ float3 aizawaIteration(float3 p, float dt) {
 
   float dx = (z - b) * x - d0 * y;
   float dy = d0 * x + (z - b) * y;
-  float dz = c + a * z - pow(z, 3.0) / 3.0 - (x * x + y * y) * (1. + e * z) + f * z * pow(x, 3.0);
+  float dz = c + a * z - pow(z, 3.0) / 3.0 - (x * x + y * y) * (1. + e * z) +
+             f * z * pow(x, 3.0);
 
   float3 d = float3(dx, dy, dz) * dt * 0.8;
   return p + d;
@@ -89,13 +90,11 @@ float3 dequanLiIteration(float3 p, float dt) {
   return p + dp;
 }
 
-
 kernel void updateMovingLorenz(
-  device VertexData* vertices [[buffer(0)]],
-  device VertexData *outputVertices [[buffer(1)]],
-  constant MovingLorenzParams& params [[buffer(2)]],
-  uint id [[thread_position_in_grid]])
-{
+    device VertexData *vertices [[buffer(0)]],
+    device VertexData *outputVertices [[buffer(1)]],
+    constant MovingLorenzParams &params [[buffer(2)]],
+    uint id [[thread_position_in_grid]]) {
   bool leading = vertices[id].leading;
   bool atSide = vertices[id].atSide;
   bool secondary = vertices[id].secondary;
@@ -108,27 +107,28 @@ kernel void updateMovingLorenz(
 
   if (leading) {
     if (secondary) {
-      outputVertices[id].position = vertices[id-2].position;
+      outputVertices[id].position = vertices[id - 2].position;
       return;
     }
     if (atSide) {
-      float3 basePosition = vertices[id-1].position;
-      // float3 nextPosition = fourwingIteration(basePosition, params.dt);
+      float3 basePosition = vertices[id - 1].position;
+      float3 nextPosition = fourwingIteration(basePosition, params.dt);
       // float3 nextPosition = lorenzIteration(basePosition, params.dt);
-      float3 nextPosition = aizawaIteration(basePosition, params.dt);
+      // float3 nextPosition = aizawaIteration(basePosition, params.dt);
+      // float3 nextPosition = dequanLiIteration(basePosition, params.dt);
       outputVertices[id].position = nextPosition;
       outputVertices[id].position = nextPosition + float3(params.width, 0., 0.);
     } else {
       float3 basePosition = vertices[id].position;
-      // float3 nextPosition = fourwingIteration(basePosition, params.dt);
+      float3 nextPosition = fourwingIteration(basePosition, params.dt);
       // float3 nextPosition = lorenzIteration(basePosition, params.dt);
-      float3 nextPosition = aizawaIteration(basePosition, params.dt);
+      // float3 nextPosition = aizawaIteration(basePosition, params.dt);
+      // float3 nextPosition = dequanLiIteration(basePosition, params.dt);
+
       outputVertices[id].position = nextPosition;
     }
   } else {
     outputVertices[id].position = vertices[id - 4].position;
     return;
   }
-
 }
-
