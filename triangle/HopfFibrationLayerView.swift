@@ -164,15 +164,6 @@ struct HopfFibrationLayerView: View {
     return cellCount * indicePerCell
   }
 
-  func fibonacciGrid(n: Float, total: Float) -> SIMD3<Float> {
-    let z = (2.0 * n - 1.0) / total - 1.0
-    let t = sqrt(1.0 - z * z)
-    let t2 = 2.0 * 3.14159265359 * 1.61803398875 * n
-    let x = t * cos(t2)
-    let y = t * sin(t2)
-    return SIMD3(x, y, z)
-  }
-
   func createPingPongBuffer() -> PingPongBuffer {
     let bufferSize = MemoryLayout<CellBase>.stride * cellCount
     let buffer = PingPongBuffer(device: device, length: bufferSize)

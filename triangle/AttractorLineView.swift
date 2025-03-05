@@ -75,7 +75,8 @@ struct AttractorLineView: View {
     GeometryReader3D { proxy in
       RealityView { content in
         guard let mesh = try? createMesh(),
-              let modelComponent = try? getModelComponent(mesh: mesh) else {
+          let modelComponent = try? getModelComponent(mesh: mesh)
+        else {
           print("Failed to create mesh or model component")
           return
         }

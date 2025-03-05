@@ -135,22 +135,22 @@ struct LotusView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  var sphereVertexes: [SIMD3<Float>] {
-    makeSphereWithIterate(times: 3)
-  }
+  let petalCount: Int = 20
+  let petalArea: Int = 40  // half of the area
 
-  let sphereCount: Int = 400
+  let venationSize: Int = 6
+  let segmentCount: Int = 10
 
   var cellCount: Int {
-    return sphereVertexes.count * sphereCount
+    return petalCount * venationSize * (segmentCount + 1)
   }
 
   var vertexCapacity: Int {
-    return cellCount
+    return petalCount * venationSize * (segmentCount + 1)
   }
 
   var indiceCapacity: Int {
-    return cellCount
+    return petalCount * venationSize * segmentCount * 2
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
@@ -161,17 +161,31 @@ struct LotusView: View {
     let contents = buffer.currentBuffer.contents()
 
     let cells = contents.bindMemory(to: CellBase.self, capacity: cellCount)
-    let shape = sphereVertexes
 
-    for i in 0..<sphereCount {
-      let center = randomPosition(r: 12)
-      let radius = Float.random(in: 0.1...4)
-      let seed = Float.random(in: 0...10)
-      for j in 0..<shape.count {
-        let idx = i * shape.count + j
-        let p = center + shape[j] * radius
-        cells[idx].position = p
-        cells[idx].seed = seed
+    for petalIdx in 0..<petalCount {
+      let endPoint = fibonacciGrid(
+        n: Float(petalIdx),
+        total: Float(petalArea)
+      )
+      let angle = atan2(endPoint.x, endPoint.z)
+      for venationIdx in 0..<venationSize {
+        let ver = Float(venationIdx) - Float(venationSize) * 0.5
+        let vertationAngle = angle + ver * 0.04
+        let r0: Float = 0.1
+        // TODO use angle
+        let venationStart = SIMD3<Float>(
+          r0 * cos(vertationAngle),
+          0,
+          r0 * sin(vertationAngle)
+        )
+        for segmentIdx in 0...segmentCount {
+          let t = Float(segmentIdx) / Float(segmentCount)
+          let vertation = venationStart + (endPoint - venationStart) * t
+          let idx =
+            petalIdx * venationSize * (segmentCount + 1) + venationIdx * (segmentCount + 1)
+            + segmentIdx
+          cells[idx].position = vertation
+        }
       }
     }
 
