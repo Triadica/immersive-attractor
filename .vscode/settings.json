@@ -12,5 +12,6 @@
     "**/Assets.xcassets": true,
     "Packages/RealityKitContent": true,
     "triangle.xcodeproj": true
-  }
+  },
+  "swift.SDK": "/Applications/Xcode.app/Contents/Developer/Platforms/XROS.platform/Developer/SDKs/XROS2.2.sdk"
 }
