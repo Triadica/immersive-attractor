@@ -133,3 +133,29 @@ func fibonacciGrid(n: Float, total: Float) -> SIMD3<Float> {
   let y = t * sin(t2)
   return SIMD3(x, z, y)
 }
+
+/// Performs one iteration of the generalized triangle map, transforming a point `p0`
+/// based on the positions of three attractor points `p1`, `p2`, and `p3`, and a parameter `t`.
+/// The parameter `t` controls the relative influence of each attractor point on the new position.
+///
+/// - Precondition: `p1`, `p2`, and `p3` should be distinct points to form a valid triangle.
+///
+/// - Parameters:
+///   - p0: The point to transform.
+///   - p1: The first attractor point.
+///   - p2: The second attractor point.
+///   - p3: The third attractor point.
+///   - t: The parameter controlling the relative influence of the attractor points.
+/// - Returns: The new position of the point `p0` after one iteration of the map.
+func bezierCurve(p0: SIMD3<Float>, p1: SIMD3<Float>, p2: SIMD3<Float>, p3: SIMD3<Float>, t: Float) -> SIMD3<Float> {
+  let t2 = t * t
+  let t3 = t2 * t
+  let mt = 1 - t
+  let mt2 = mt * mt
+  let mt3 = mt2 * mt
+  let term1 = p0 * mt3
+  let term2 = p1 * 3 * mt2 * t
+  let term3 = p2 * 3 * mt * t2
+  let term4 = p3 * t3
+  return term1 + term2 + term3 + term4
+}

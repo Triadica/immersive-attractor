@@ -135,22 +135,34 @@ struct LotusView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let petalCount: Int = 20
-  let petalArea: Int = 40  // half of the area
+  let petalCount: Int = 60
+  var petalArea: Float {
+    Float(petalCount) * 1.5
+  }
 
-  let venationSize: Int = 6
-  let segmentCount: Int = 10
+  let venationSize: Int = 32
+  let venationGap: Float = 0.04
+
+  let segmentCount: Int = 40
+
+  var verticesPerStrip: Int {
+    return segmentCount + 1
+  }
 
   var cellCount: Int {
-    return petalCount * venationSize * (segmentCount + 1)
+    return petalCount * venationSize * verticesPerStrip
   }
 
   var vertexCapacity: Int {
-    return petalCount * venationSize * (segmentCount + 1)
+    return cellCount
+  }
+
+  var indicesPerStrip: Int {
+    return segmentCount * 2
   }
 
   var indiceCapacity: Int {
-    return petalCount * venationSize * segmentCount * 2
+    return petalCount * venationSize * indicesPerStrip
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
@@ -167,24 +179,29 @@ struct LotusView: View {
         n: Float(petalIdx),
         total: Float(petalArea)
       )
-      let angle = atan2(endPoint.x, endPoint.z)
+      let angle = atan2(endPoint.z, endPoint.x)
       for venationIdx in 0..<venationSize {
-        let ver = Float(venationIdx) - Float(venationSize) * 0.5
-        let vertationAngle = angle + ver * 0.04
+        let ve: Float = Float(venationIdx) - Float(venationSize) * 0.5
+        let venationAngle = angle + ve * venationGap
         let r0: Float = 0.1
-        // TODO use angle
-        let venationStart = SIMD3<Float>(
-          r0 * cos(vertationAngle),
-          0,
-          r0 * sin(vertationAngle)
-        )
+        let yPart: SIMD3<Float> = SIMD3<Float>(0, endPoint.y * 0.2, 0)
+        let venationStart =
+          SIMD3<Float>(
+            r0 * cos(venationAngle),
+            0,
+            r0 * sin(venationAngle)
+          ) + yPart * 0.08
+        let p1 = venationStart * 5 + yPart * 0.4
+        let p2: SIMD3<Float> = venationStart * 5 + yPart * 0.4
         for segmentIdx in 0...segmentCount {
-          let t = Float(segmentIdx) / Float(segmentCount)
-          let vertation = venationStart + (endPoint - venationStart) * t
           let idx =
             petalIdx * venationSize * (segmentCount + 1) + venationIdx * (segmentCount + 1)
             + segmentIdx
-          cells[idx].position = vertation
+          let t = Float(segmentIdx) / Float(segmentCount)
+          // let venation = venationStart + (endPoint - venationStart) * t
+          let venation: SIMD3<Float> = bezierCurve(
+            p0: venationStart, p1: p1, p2: p2, p3: endPoint, t: t)
+          cells[idx].position = venation
         }
       }
     }
@@ -208,8 +225,20 @@ struct LotusView: View {
     mesh.withUnsafeMutableIndices { rawIndices in
       let indices = rawIndices.bindMemory(to: UInt32.self)
 
-      for i in 0..<cellCount {
-        indices[i] = UInt32(i)
+      let size = petalCount * venationSize
+      for i in 0..<size {
+        for j in 0..<indicesPerStrip {
+          let idx = i * indicesPerStrip + j  // for indice location
+          let vertexIdxBase = i * verticesPerStrip  // for vertex location
+          let even = j % 2 == 0
+          let half = j / 2
+          if even {
+            indices[idx] = UInt32(vertexIdxBase + half)
+          } else {
+            indices[idx] = UInt32(vertexIdxBase + half + 1)
+          }
+
+        }
       }
     }
 
