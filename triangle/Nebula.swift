@@ -5,6 +5,7 @@ import SwiftUI
 private struct MovingCubesParams {
   var vertexPerCell: Int32
   var dt: Float
+  var cellSize: Int32 = 0
 }
 
 private struct VertexData {
@@ -33,11 +34,9 @@ private struct VertexData {
 }
 
 /// placement of a cube
-private struct CubeBase {
-  var position: SIMD3<Float>
-  var size: Float
+private struct CellBase {
+  var position: SIMD3<Float> = .zero
   var velocity: SIMD3<Float> = .zero
-  var rotate: Float
 }
 
 struct NebulaView: View {
@@ -112,7 +111,7 @@ struct NebulaView: View {
 
       DispatchQueue.main.async {
         if let vertexBuffer = self.vertexBuffer {
-          self.updateCubeBase()
+          self.updateCellBase()
           self.updateMesh(vertexBuffer: vertexBuffer, prevBuffer: self.vertexPrevBuffer!)
 
           // swap buffers
@@ -148,8 +147,8 @@ struct NebulaView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let cellCount: Int = 50000
-  let cellSegment: Int = 16
+  let cellCount: Int = 10000
+  let cellSegment: Int = 3
 
   var vertexPerCell: Int {
     return cellSegment + 1
@@ -166,19 +165,18 @@ struct NebulaView: View {
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
-    let bufferSize = MemoryLayout<CubeBase>.stride * cellCount
+    let bufferSize = MemoryLayout<CellBase>.stride * cellCount
     let buffer = PingPongBuffer(device: device, length: bufferSize)
 
     // 使用 contents() 前检查 buffer 是否有效
     let contents = buffer.currentBuffer.contents()
 
-    let cubes = contents.bindMemory(to: CubeBase.self, capacity: cellCount)
+    let cubes = contents.bindMemory(to: CellBase.self, capacity: cellCount)
     for i in 0..<cellCount {
-      cubes[i] = CubeBase(
-        position: randomPosition(r: 0.0) + SIMD3<Float>(0, 0, 0.6),
-        size: Float.random(in: 0.1..<1.4),
-        velocity: normalize(randomPosition(r: 1)) * 0.2 + SIMD3<Float>(1, 0, 0),
-        rotate: 0
+      cubes[i] = CellBase(
+        position: randomPointInSphere2(radius: 2.0),
+        velocity: randomPointInSphere2(radius: 0.02)
+        // velocity:
       )
     }
 
@@ -227,10 +225,11 @@ struct NebulaView: View {
   }
 
   private func getMovingParams() -> MovingCubesParams {
-    return MovingCubesParams(vertexPerCell: Int32(vertexPerCell), dt: 0.006)
+    return MovingCubesParams(
+      vertexPerCell: Int32(vertexPerCell), dt: 0.04, cellSize: Int32(cellCount))
   }
 
-  func updateCubeBase() {
+  func updateCellBase() {
     guard let pingPongBuffer = pingPongBuffer,
       let commandBuffer = commandQueue.makeCommandBuffer(),
       let computeEncoder = commandBuffer.makeComputeCommandEncoder()

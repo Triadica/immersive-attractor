@@ -11,13 +11,12 @@ struct VertexData {
 struct MovingAttractorLineParams {
   int vertexPerCell;
   float dt;
+  int cellSize;
 };
 
 struct CubeBase {
   float3 position;
-  float size;
   float3 velocity;
-  float rotate;
 };
 
 kernel void updateNebulaBase(
@@ -28,24 +27,50 @@ kernel void updateNebulaBase(
   CubeBase base = codeBaseList[id];
   float3 position = base.position;
   float3 velocity = base.velocity;
-  float3 acceleration = float3(0., -0.2, 0.);
+  // Total number of particles in the simulation
+  uint particleCount = params.cellSize;
+
+  float3 acceleration = float3(0.0, 0.0, 0.0);
+
+  for (uint otherIdx = 0; otherIdx < particleCount; otherIdx++) {
+    if (otherIdx == id) {
+      continue;
+    }
+
+    CubeBase otherParticle = codeBaseList[otherIdx];
+    float3 displacement = otherParticle.position - position;
+    float distance = length(displacement);
+    float3 direction = normalize(displacement);
+
+    // Improved collision response with energy dissipation
+    if (distance > 0.02) {
+      float s = distance * 1000;
+      // Conservative gravity force
+      float3 gravityForce = direction * 2.0 / (s * s);
+      acceleration += gravityForce;
+    } else {
+      // Calculate collision damping (energy loss)
+      float collisionDamping = 0.96; // some loss of energy
+      float overlapDistance = 0.1 - distance;
+
+      // Apply repulsive force based on penetration depth
+      // acceleration -= direction * overlapDistance * 10.0;
+
+      // Apply velocity damping in the direction of collision
+      float relativeVelocityMagnitude =
+          dot(velocity - otherParticle.velocity, direction) * 0.1;
+      if (relativeVelocityMagnitude < 0) {
+        acceleration -=
+            direction * relativeVelocityMagnitude * collisionDamping;
+      }
+    }
+  }
+
   float3 positionNext = position + velocity * params.dt;
   float3 velocityNext = velocity + acceleration * params.dt;
 
-  float3 areaCenter = float3(0., 0.5, 0.);
-  float d = distance(positionNext, areaCenter);
-  if (d < 1.2) {
-    outputCodeBaseList[id].velocity = velocityNext;
-    outputCodeBaseList[id].position = positionNext;
-  } else {
-    // reverse the velocity in the direction of the areaCenter
-    float3 unit = normalize(areaCenter - positionNext);
-    float3 vToCenter = dot(velocity, unit) * unit;
-    float3 vPerp = velocity - vToCenter;
-    float3 vVerticalReversed = vPerp - vToCenter * 0.98;
-    outputCodeBaseList[id].velocity =
-        vVerticalReversed + acceleration * params.dt;
-  }
+  outputCodeBaseList[id].position = positionNext;
+  outputCodeBaseList[id].velocity = velocityNext;
 }
 
 kernel void updateNebulaVertexes(
@@ -60,8 +85,7 @@ kernel void updateNebulaVertexes(
 
   if (cellInnerIdx == 0) {
     CubeBase base = codeBaseList[cellIdx];
-    outputVertices[id].position =
-        float3(base.position.x, base.position.y, base.position.z - 0.2) * 0.4;
+    outputVertices[id].position = base.position * 0.4 - float3(0.0, 0.0, 1.0);
   } else {
     outputVertices[id].position = previousVertices[id - 1].position;
   }
