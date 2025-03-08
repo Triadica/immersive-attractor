@@ -47,7 +47,8 @@ struct AttractorApp: App {
       // MobiusGirdView()
       // MobiusTrailView()
       // MobiusBubblesView()
-      LotusView()
+      // LotusView()
+      NebulaView()
     }.immersionStyle(selection: .constant(.full), in: .full)
   }
 }
