@@ -34,7 +34,7 @@ private struct CellBase {
   var seed: Float = 0
 }
 
-struct MobiusBubblesView: View {
+struct LotusView: View {
   let rootEntity: Entity = Entity()
   @State var mesh: LowLevelMesh?
 
@@ -60,7 +60,7 @@ struct MobiusBubblesView: View {
 
     let library = device.makeDefaultLibrary()!
 
-    let updateVertexes = library.makeFunction(name: "updateMobiusBubblesVertexes")!
+    let updateVertexes = library.makeFunction(name: "updateLotusVertexes")!
     self.vertexPipeline = try! device.makeComputePipelineState(function: updateVertexes)
   }
 
@@ -123,9 +123,10 @@ struct MobiusBubblesView: View {
   func getModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
     let resource = try MeshResource(from: mesh)
 
-    var unlitMaterial = UnlitMaterial(color: .cyan)
+    var unlitMaterial = UnlitMaterial(color: UIColor(red: 1, green: 0.7, blue: 0.7, alpha: 1.0))
     unlitMaterial.faceCulling = .none
 
+    
     return ModelComponent(mesh: resource, materials: [unlitMaterial])
   }
 
@@ -135,22 +136,34 @@ struct MobiusBubblesView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  var sphereVertexes: [SIMD3<Float>] {
-    makeSphereWithIterate(times: 3)
+  let petalCount: Int = 60
+  var petalArea: Float {
+    Float(petalCount) * 1.5
   }
 
-  let sphereCount: Int = 400
+  let venationSize: Int = 32
+  let venationGap: Float = 0.04
+
+  let segmentCount: Int = 40
+
+  var verticesPerStrip: Int {
+    return segmentCount + 1
+  }
 
   var cellCount: Int {
-    return sphereVertexes.count * sphereCount
+    return petalCount * venationSize * verticesPerStrip
   }
 
   var vertexCapacity: Int {
     return cellCount
   }
 
+  var indicesPerStrip: Int {
+    return segmentCount * 2
+  }
+
   var indiceCapacity: Int {
-    return cellCount
+    return petalCount * venationSize * indicesPerStrip
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
@@ -161,17 +174,36 @@ struct MobiusBubblesView: View {
     let contents = buffer.currentBuffer.contents()
 
     let cells = contents.bindMemory(to: CellBase.self, capacity: cellCount)
-    let shape = sphereVertexes
 
-    for i in 0..<sphereCount {
-      let center = randomPosition(r: 20)
-      let radius = Float.random(in: 0.1...4)
-      let seed = Float.random(in: 0...10)
-      for j in 0..<shape.count {
-        let idx = i * shape.count + j
-        let p = center + shape[j] * radius
-        cells[idx].position = p
-        cells[idx].seed = seed
+    for petalIdx in 0..<petalCount {
+      let endPoint = fibonacciGrid(
+        n: Float(petalIdx),
+        total: Float(petalArea)
+      )
+      let angle = atan2(endPoint.z, endPoint.x)
+      for venationIdx in 0..<venationSize {
+        let ve: Float = Float(venationIdx) - Float(venationSize) * 0.5
+        let venationAngle = angle + ve * venationGap
+        let r0: Float = 0.1
+        let yPart: SIMD3<Float> = SIMD3<Float>(0, endPoint.y * 0.2, 0)
+        let venationStart =
+          SIMD3<Float>(
+            r0 * cos(venationAngle),
+            0,
+            r0 * sin(venationAngle)
+          ) + yPart * 0.08
+        let p1 = venationStart * 5 + yPart * 0.4
+        let p2: SIMD3<Float> = venationStart * 5 + yPart * 0.4
+        for segmentIdx in 0...segmentCount {
+          let idx =
+            petalIdx * venationSize * (segmentCount + 1) + venationIdx * (segmentCount + 1)
+            + segmentIdx
+          let t = Float(segmentIdx) / Float(segmentCount)
+          // let venation = venationStart + (endPoint - venationStart) * t
+          let venation: SIMD3<Float> = bezierCurve(
+            p0: venationStart, p1: p1, p2: p2, p3: endPoint, t: t)
+          cells[idx].position = venation
+        }
       }
     }
 
@@ -194,8 +226,20 @@ struct MobiusBubblesView: View {
     mesh.withUnsafeMutableIndices { rawIndices in
       let indices = rawIndices.bindMemory(to: UInt32.self)
 
-      for i in 0..<cellCount {
-        indices[i] = UInt32(i)
+      let size = petalCount * venationSize
+      for i in 0..<size {
+        for j in 0..<indicesPerStrip {
+          let idx = i * indicesPerStrip + j  // for indice location
+          let vertexIdxBase = i * verticesPerStrip  // for vertex location
+          let even = j % 2 == 0
+          let half = j / 2
+          if even {
+            indices[idx] = UInt32(vertexIdxBase + half)
+          } else {
+            indices[idx] = UInt32(vertexIdxBase + half + 1)
+          }
+
+        }
       }
     }
 

@@ -2,9 +2,10 @@ import Metal
 import RealityKit
 import SwiftUI
 
-private struct MovingCubesParams {
+private struct MovingCellParams {
   var vertexPerCell: Int32
   var dt: Float
+  var timestamp: Float = 0
 }
 
 private struct VertexData {
@@ -33,13 +34,12 @@ private struct VertexData {
 }
 
 /// placement of a cube
-private struct CubeBase {
-  var position: SIMD3<Float>
-  var size: Float
-  var rotate: Float
+private struct CellBase {
+  var position: SIMD3<Float> = .zero
+  var index: Float
 }
 
-struct AttractorLineView: View {
+struct HopfFibrationLayerView: View {
   let rootEntity: Entity = Entity()
   @State var mesh: LowLevelMesh?
 
@@ -64,10 +64,10 @@ struct AttractorLineView: View {
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
-    let updateAttractorBase = library.makeFunction(name: "updateAttractorLineBase")!
+    let updateAttractorBase = library.makeFunction(name: "updateHopfFibrationLayerBase")!
     self.attractorPipeline = try! device.makeComputePipelineState(function: updateAttractorBase)
 
-    let updatelinesVertexes = library.makeFunction(name: "updateAttractorLineVertexes")!
+    let updatelinesVertexes = library.makeFunction(name: "updateHopfFibrationLayerVertexes")!
     self.vertexPipeline = try! device.makeComputePipelineState(function: updatelinesVertexes)
   }
 
@@ -75,7 +75,8 @@ struct AttractorLineView: View {
     GeometryReader3D { proxy in
       RealityView { content in
         guard let mesh = try? createMesh(),
-              let modelComponent = try? getModelComponent(mesh: mesh) else {
+          let modelComponent = try? getModelComponent(mesh: mesh)
+        else {
           print("Failed to create mesh or model component")
           return
         }
@@ -110,7 +111,7 @@ struct AttractorLineView: View {
 
       DispatchQueue.main.async {
         if let vertexBuffer = self.vertexBuffer {
-          self.updateCubeBase()
+          self.updateCellBase()
           self.updateMesh(vertexBuffer: vertexBuffer, prevBuffer: self.vertexPrevBuffer!)
 
           // swap buffers
@@ -134,7 +135,7 @@ struct AttractorLineView: View {
   func getModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
     let resource = try MeshResource(from: mesh)
 
-    var unlitMaterial = UnlitMaterial(color: .yellow)
+    var unlitMaterial = UnlitMaterial(color: .systemPink)
     unlitMaterial.faceCulling = .none
 
     return ModelComponent(mesh: resource, materials: [unlitMaterial])
@@ -146,11 +147,11 @@ struct AttractorLineView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let cellCount: Int = 50000
-  let cellSegment: Int = 8
+  let cellCount: Int = 800
+  let cellSegment: Int = 800
 
   var vertexPerCell: Int {
-    return cellSegment + 1
+    return cellSegment
   }
   var indicePerCell: Int {
     return cellSegment * 2
@@ -164,18 +165,26 @@ struct AttractorLineView: View {
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
-    let bufferSize = MemoryLayout<CubeBase>.stride * cellCount
+    let bufferSize = MemoryLayout<CellBase>.stride * cellCount
     let buffer = PingPongBuffer(device: device, length: bufferSize)
 
     // 使用 contents() 前检查 buffer 是否有效
     let contents = buffer.currentBuffer.contents()
 
-    let cubes = contents.bindMemory(to: CubeBase.self, capacity: cellCount)
+    let cells = contents.bindMemory(to: CellBase.self, capacity: cellCount)
     for i in 0..<cellCount {
-      cubes[i] = CubeBase(
-        position: randomPosition(r: 1),
-        size: Float.random(in: 0.1..<1.4),
-        rotate: 0
+      let angle = Float(i) * 0.06
+      let radius: Float = 1.0
+      var height = (Float(i) / Float(cellCount) - 0.5) * 3
+      height = round(height * 2) / 2
+      let pos = SIMD3<Float>(
+        radius * sin(angle),
+        height,
+        radius * cos(angle)
+      )
+      cells[i] = CellBase(
+        position: pos,
+        index: Float(i)
       )
     }
 
@@ -204,6 +213,8 @@ struct AttractorLineView: View {
           let half = j / 2
           if is_even {
             indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half)
+          } else if j == indicePerCell - 1 {
+            indices[i * indicePerCell + j] = UInt32(i * vertexPerCell)
           } else {
             indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half + 1)
           }
@@ -223,11 +234,17 @@ struct AttractorLineView: View {
     return mesh
   }
 
-  private func getMovingParams() -> MovingCubesParams {
-    return MovingCubesParams(vertexPerCell: Int32(vertexPerCell), dt: 0.008)
+  @State private var viewStartTime: Date = Date()
+  @State private var frameDelta: Float = 0.0
+
+  private func getMovingParams() -> MovingCellParams {
+    let delta = -Float(viewStartTime.timeIntervalSinceNow)
+    let dt = delta - frameDelta
+    frameDelta = delta
+    return MovingCellParams(vertexPerCell: Int32(vertexPerCell), dt: 0.8 * dt, timestamp: delta)
   }
 
-  func updateCubeBase() {
+  func updateCellBase() {
     guard let pingPongBuffer = pingPongBuffer,
       let commandBuffer = commandQueue.makeCommandBuffer(),
       let computeEncoder = commandBuffer.makeComputeCommandEncoder()
@@ -247,7 +264,7 @@ struct AttractorLineView: View {
 
     var params = getMovingParams()
     // idx 2: params buffer
-    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 2)
+    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCellParams>.size, index: 2)
 
     let threadsPerGrid = MTLSize(width: cellCount, height: 1, depth: 1)
     let threadsPerThreadgroup = MTLSize(width: 16, height: 1, depth: 1)
@@ -285,11 +302,11 @@ struct AttractorLineView: View {
     // idx 1: vertexBuffer
     computeEncoder.setBuffer(vertexBuffer, offset: 0, index: 1)
     // idx 2: prevBuffer
-    computeEncoder.setBuffer(prevBuffer, offset: 0, index: 2)
+    // computeEncoder.setBuffer(prevBuffer, offset: 0, index: 2)
 
     var params = getMovingParams()
     // idx 3: params buffer
-    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 3)
+    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCellParams>.size, index: 2)
 
     let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
     let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
