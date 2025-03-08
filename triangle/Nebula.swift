@@ -171,11 +171,12 @@ struct NebulaView: View {
     // 使用 contents() 前检查 buffer 是否有效
     let contents = buffer.currentBuffer.contents()
 
-    let cubes = contents.bindMemory(to: CellBase.self, capacity: cellCount)
+    let cubes: UnsafeMutablePointer<CellBase> = contents.bindMemory(
+      to: CellBase.self, capacity: cellCount)
     for i in 0..<cellCount {
       cubes[i] = CellBase(
-        position: randomPointInSphere2(radius: 2.0),
-        velocity: randomPointInSphere2(radius: 0.02)
+        position: randomPointInSphere2(radius: 1.0),
+        velocity: randomPointInSphere2(radius: 0.04)
         // velocity:
       )
     }
@@ -226,7 +227,7 @@ struct NebulaView: View {
 
   private func getMovingParams() -> MovingCubesParams {
     return MovingCubesParams(
-      vertexPerCell: Int32(vertexPerCell), dt: 0.04, cellSize: Int32(cellCount))
+      vertexPerCell: Int32(vertexPerCell), dt: 0.03, cellSize: Int32(cellCount))
   }
 
   func updateCellBase() {

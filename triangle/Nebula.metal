@@ -43,14 +43,14 @@ kernel void updateNebulaBase(
     float3 direction = normalize(displacement);
 
     // Improved collision response with energy dissipation
-    if (distance > 0.02) {
+    if (distance > 0.022) {
       float s = distance * 1000;
       // Conservative gravity force
       float3 gravityForce = direction * 2.0 / (s * s);
       acceleration += gravityForce;
     } else {
       // Calculate collision damping (energy loss)
-      float collisionDamping = 0.96; // some loss of energy
+      float collisionDamping = 0.99; // some loss of energy
       float overlapDistance = 0.1 - distance;
 
       // Apply repulsive force based on penetration depth
@@ -58,7 +58,7 @@ kernel void updateNebulaBase(
 
       // Apply velocity damping in the direction of collision
       float relativeVelocityMagnitude =
-          dot(velocity - otherParticle.velocity, direction) * 0.1;
+          dot(velocity - otherParticle.velocity, direction) * 0.18;
       if (relativeVelocityMagnitude < 0) {
         acceleration -=
             direction * relativeVelocityMagnitude * collisionDamping;
