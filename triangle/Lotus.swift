@@ -123,9 +123,10 @@ struct LotusView: View {
   func getModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
     let resource = try MeshResource(from: mesh)
 
-    var unlitMaterial = UnlitMaterial(color: .cyan)
+    var unlitMaterial = UnlitMaterial(color: UIColor(red: 1, green: 0.7, blue: 0.7, alpha: 1.0))
     unlitMaterial.faceCulling = .none
 
+    
     return ModelComponent(mesh: resource, materials: [unlitMaterial])
   }
 
