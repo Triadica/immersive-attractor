@@ -10,14 +10,11 @@ private struct MovingCellParams {
 
 private struct VertexData {
   var position: SIMD3<Float> = .zero
-  // var normal: SIMD3<Float> = .zero
-  // var uv: SIMD2<Float> = .zero
 
   @MainActor static var vertexAttributes: [LowLevelMesh.Attribute] = [
     .init(
       semantic: .position, format: .float3, offset: MemoryLayout<Self>.offset(of: \.position)!)
-    // .init(semantic: .normal, format: .float3, offset: MemoryLayout<Self>.offset(of: \.normal)!),
-    // .init(semantic: .uv0, format: .float2, offset: MemoryLayout<Self>.offset(of: \.uv)!),
+
   ]
 
   @MainActor static var vertexLayouts: [LowLevelMesh.Layout] = [
@@ -44,30 +41,13 @@ struct FractalBranchesView: View {
   let rootEntity: Entity = Entity()
   @State var mesh: LowLevelMesh?
 
-  let fps: Double = 120
-
-  @State var timer: Timer?
-  @State private var updateTrigger = false
-
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
-  let cubePipeline: MTLComputePipelineState
-  let vertexPipeline: MTLComputePipelineState
-
-  @State var pingPongBuffer: PingPongBuffer?
-  /// The vertex buffer for the mesh
-  @State var vertexBuffer: MTLBuffer?
 
   init() {
     self.device = MTLCreateSystemDefaultDevice()!
     self.commandQueue = device.makeCommandQueue()!
 
-    let library = device.makeDefaultLibrary()!
-    let updateCellBase = library.makeFunction(name: "updatePolygonWallBase")!
-    self.cubePipeline = try! device.makeComputePipelineState(function: updateCellBase)
-
-    let updateCellVertexes = library.makeFunction(name: "updatePolygonWallVertexes")!
-    self.vertexPipeline = try! device.makeComputePipelineState(function: updateCellVertexes)
   }
 
   var body: some View {
@@ -88,45 +68,8 @@ struct FractalBranchesView: View {
         self.mesh = mesh
 
       }
-      .onAppear {
-        startTimer()
-      }
-      .onDisappear {
-        stopTimer()
-      }
+
     }
-  }
-
-  func startTimer() {
-    self.mesh = try! createMesh()  // recreate mesh when start timer
-    self.pingPongBuffer = createPingPongBuffer()
-
-    self.vertexBuffer = device.makeBuffer(
-      length: MemoryLayout<VertexData>.stride * vertexCapacity, options: .storageModeShared)
-
-    timer = Timer.scheduledTimer(withTimeInterval: 1 / fps, repeats: true) { _ in
-
-      DispatchQueue.main.async {
-        if let vertexBuffer = self.vertexBuffer {
-          self.updateCellBase()
-          self.updateMesh(vertexBuffer: vertexBuffer)
-
-          // swap buffers
-          self.pingPongBuffer!.swap()
-        } else {
-          print("[ERR] vertex buffer is not initialized")
-        }
-        self.updateTrigger.toggle()
-      }
-    }
-  }
-
-  func stopTimer() {
-    timer?.invalidate()
-    timer = nil
-    pingPongBuffer = nil
-    mesh = nil
-    self.vertexBuffer = nil
   }
 
   func getModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
@@ -144,75 +87,50 @@ struct FractalBranchesView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let cellCount: Int = 600
+  func createMesh() throws -> LowLevelMesh {
 
-  var vertexCapacity: Int {
-    return cellCount * 4
-  }
-
-  var cubeFrame: [Int] = [
-    0, 1, 1, 2, 2, 3, 3, 0,
-  ]
-
-  var shapeIndiceCount: Int {
-    return cubeFrame.count
-  }
-
-  var indexCount: Int {
-    return cellCount * shapeIndiceCount
-  }
-
-  func createPingPongBuffer() -> PingPongBuffer {
-    let bufferSize = MemoryLayout<CellBase>.stride * cellCount
-    let buffer = PingPongBuffer(device: device, length: bufferSize)
-
-    // 使用 contents() 前检查 buffer 是否有效
-    let contents = buffer.currentBuffer.contents()
-
-    let cubes = contents.bindMemory(to: CellBase.self, capacity: cellCount)
-    var acc = 0.1
-    var acc2 = -0.1
-    for i in 0..<cellCount {
-      acc += 0.02
-      acc2 += 0.002
-      cubes[i] = CellBase(
-        position: SIMD3(0, 0, 0),
-        size: Float(acc),
-        rotate: Float(acc2)
-      )
+    let v0 = SIMD3<Float>(0, 1, 0)
+    let v1 = SIMD3<Float>(0, 0, 1)
+    var allVertexes: [SIMD3<Float>] = []
+    func write(p0: SIMD3<Float>, p1: SIMD3<Float>) {
+      allVertexes.append(p0)
+      allVertexes.append(p1)
     }
 
-    // copy data from current buffer to next buffer
-    buffer.nextBuffer.contents().copyMemory(
-      from: buffer.currentBuffer.contents(), byteCount: buffer.currentBuffer.length)
+    buildUmbrella(
+      p0: SIMD3<Float>(0, 0, 0), v0: v0, relative: v1, parts: 8, elevation: Float.pi * 0.5,
+      decay: 0.36,
+      step: 7,
+      write: write)
 
-    return buffer
-  }
+    let allLength = allVertexes.count
 
-  func createMesh() throws -> LowLevelMesh {
     var desc = VertexData.descriptor
-    desc.vertexCapacity = vertexCapacity
-    desc.indexCapacity = indexCount
+    desc.vertexCapacity = allLength
+    desc.indexCapacity = allLength
 
     let mesh = try LowLevelMesh(descriptor: desc)
 
-    // vertexes are set from compute shader
+    mesh.withUnsafeMutableBytes(bufferIndex: 0) { rawBytes in
+      let vertexes = rawBytes.bindMemory(to: VertexData.self)
+
+      for i in 0..<allLength {
+        vertexes[i].position = allVertexes[i] - SIMD3<Float>(0, 0.5, 0)
+      }
+    }
 
     mesh.withUnsafeMutableIndices { rawIndices in
       let indices = rawIndices.bindMemory(to: UInt32.self)
 
-      for i in 0..<cellCount {
-        for j in 0..<shapeIndiceCount {
-          indices[i * shapeIndiceCount + j] = UInt32(cubeFrame[j]) + UInt32(i * 8)
-        }
+      for i in 0..<allLength {
+        indices[i] = UInt32(i)
       }
-
     }
 
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
-        indexCount: indexCount,
-        topology: .lineStrip,
+        indexCount: allLength,
+        topology: .line,
         bounds: getBounds()
       )
     ])
@@ -228,89 +146,55 @@ struct FractalBranchesView: View {
       width: 0.003, dt: 0.02, timestamp: delta)
   }
 
-  func updateCellBase() {
-    guard let pingPongBuffer = pingPongBuffer,
-      let commandBuffer = commandQueue.makeCommandBuffer(),
-      let computeEncoder = commandBuffer.makeComputeCommandEncoder()
-    else {
-      print("updateMesh: failed to get mesh or pingPongBuffer or commandBuffer or computeEncoder")
-      return
-    }
+}
+func rotate3D(origin: SIMD3<Float>, axis: SIMD3<Float>, angle: Float, p: SIMD3<Float>) -> SIMD3<
+  Float
+> {
+  let cosD = cos(angle)
+  let sinD = sin(angle)
+  let pV = p - origin
+  let h = dot(axis, pV)
+  let hV = h * axis  // Simplified multiplication
+  let flatPV = pV - hV
+  let flatPVLength = length(flatPV)
 
-    computeEncoder.setComputePipelineState(cubePipeline)
-
-    // idx 0: pingPongBuffer
-    computeEncoder.setBuffer(
-      pingPongBuffer.currentBuffer, offset: 0, index: 0)
-
-    // idx 1: vertexBuffer
-    computeEncoder.setBuffer(pingPongBuffer.nextBuffer, offset: 0, index: 1)
-
-    var params = getMovingParams()
-    // idx 2: params buffer
-    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCellParams>.size, index: 2)
-
-    let threadsPerGrid = MTLSize(width: cellCount, height: 1, depth: 1)
-    let threadsPerThreadgroup = MTLSize(width: 16, height: 1, depth: 1)
-    computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
-
-    computeEncoder.endEncoding()
-
-    commandBuffer.commit()
+  // Avoid unnecessary normalization if flatPV is near zero
+  if flatPVLength < 1e-6 {
+    return origin + hV
   }
 
-  func updateMesh(vertexBuffer: MTLBuffer) {
-    guard let mesh = mesh,
-      let pingPongBuffer = pingPongBuffer,
-      let commandBuffer = commandQueue.makeCommandBuffer(),
-      let computeEncoder = commandBuffer.makeComputeCommandEncoder()
-    else {
-      print("updateMesh: failed to get mesh or pingPongBuffer or commandBuffer or computeEncoder")
-      return
-    }
+  let rotDirection = cross(flatPV, axis) / flatPVLength  // Combined normalize and cross
+  return origin + hV + flatPV * cosD + (rotDirection * flatPVLength) * sinD
+}
 
-    // copy data from mesh to vertexBuffer
-    mesh.withUnsafeMutableBytes(bufferIndex: 0) { rawBytes in
-      vertexBuffer.contents().copyMemory(
-        from: rawBytes.baseAddress!, byteCount: rawBytes.count)
-    }
+func buildUmbrella(
+  p0: SIMD3<Float>, v0: SIMD3<Float>, relative: SIMD3<Float>, parts: Int,
+  elevation: Float, decay: Float, step: Int, write: (SIMD3<Float>, SIMD3<Float>) -> Void
+) {
+  guard step > 0 else { return }
 
-    computeEncoder.setComputePipelineState(vertexPipeline)
+  let l0 = length(v0)
+  let forward = v0 / l0
 
-    // idx 0: pingPongBuffer
-    computeEncoder.setBuffer(
-      pingPongBuffer.currentBuffer, offset: 0, index: 0)
+  // Precompute constants
+  let cosElev = cos(elevation)
+  let sinElev = sin(elevation)
+  let pNext = p0 + v0
+  let theta0 = 2 * Float.pi / Float(parts)
 
-    // idx 1: vertexBuffer
-    computeEncoder.setBuffer(vertexBuffer, offset: 0, index: 1)
+  // Cache cross products
+  let rightward = normalize(cross(v0, relative))
+  let upward = cross(rightward, forward)
+  let line0 = (forward * cosElev + upward * sinElev) * (l0 * decay)
 
-    var params = getMovingParams()
-    // idx 2: params buffer
-    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCellParams>.size, index: 2)
+  write(p0, pNext)
 
-    let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
-    let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
-    computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
-
-    computeEncoder.endEncoding()
-
-    // copy data from vertexBuffer to mesh
-    let blitEncoder = commandBuffer.makeBlitCommandEncoder()!
-    blitEncoder.copy(
-      from: vertexBuffer, sourceOffset: 0,
-      to: mesh.replace(bufferIndex: 0, using: commandBuffer), destinationOffset: 0,
-      size: vertexBuffer.length)
-    blitEncoder.endEncoding()
-
-    commandBuffer.commit()
-
-    // apply entity with mesh data
-    mesh.parts.replaceAll([
-      LowLevelMesh.Part(
-        indexCount: indexCount,
-        topology: .line,
-        bounds: getBounds()
-      )
-    ])
+  // Use stride for better performance
+  let origin = SIMD3<Float>.zero
+  for idx in stride(from: 0, to: parts, by: 1) {
+    let line = rotate3D(origin: origin, axis: forward, angle: theta0 * Float(idx), p: line0)
+    buildUmbrella(
+      p0: pNext, v0: line, relative: v0, parts: parts, elevation: elevation,
+      decay: decay, step: step - 1, write: write)
   }
 }

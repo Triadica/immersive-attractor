@@ -34,7 +34,7 @@ struct AttractorApp: App {
   @Environment(\.openImmersiveSpace) private var openImmersiveSpace
   @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
 
-  @State private var selectedDemo: VisibilityDemo = .cubesMoving
+  @State private var selectedDemo: VisibilityDemo = .fractalBranches
 
   @State private var isImmersionActive = false
 
@@ -61,7 +61,7 @@ struct AttractorApp: App {
           Text("Mobius Bubbles").tag(VisibilityDemo.mobiusBubbles)
           Text("Lotus").tag(VisibilityDemo.lotus)
           Text("Nebula").tag(VisibilityDemo.nebula)
-          Text("Fractal Branches").tag(VisibilityDemo.nebula)
+          Text("Fractal Branches").tag(VisibilityDemo.fractalBranches)
         }.pickerStyle(.wheel).padding(.bottom, 32).frame(
           width: 400,
           height: 600,
