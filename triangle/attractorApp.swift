@@ -26,6 +26,7 @@ private enum VisibilityDemo: String {
   case mobiusBubbles = "Mobius Bubbles"
   case lotus = "Lotus"
   case nebula = "Nebula"
+  case fractalBranches = "Fractal Branches"
 }
 
 @main
@@ -60,6 +61,7 @@ struct AttractorApp: App {
           Text("Mobius Bubbles").tag(VisibilityDemo.mobiusBubbles)
           Text("Lotus").tag(VisibilityDemo.lotus)
           Text("Nebula").tag(VisibilityDemo.nebula)
+          Text("Fractal Branches").tag(VisibilityDemo.nebula)
         }.pickerStyle(.wheel).padding(.bottom, 32).frame(
           width: 400,
           height: 600,
@@ -126,6 +128,8 @@ struct AttractorApp: App {
           LotusView()
         case .nebula:
           NebulaView()
+        case .fractalBranches:
+          FractalBranchesView()
         }
       }
 

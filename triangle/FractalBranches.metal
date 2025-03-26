@@ -27,7 +27,7 @@ constant float3 squareVertices[] = {
     float3(0.0, -1.0, 0.0),
 };
 
-kernel void updatePolygonWallBase(
+kernel void updateFractalBranchesBase(
     device CubeBase *codeBaseList [[buffer(0)]],
     device CubeBase *outputCodeBaseList [[buffer(1)]],
     constant MovingCubesParams &params [[buffer(2)]],
@@ -42,7 +42,7 @@ static float2 complexMul(float2 a, float2 b) {
   return float2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
 }
 
-kernel void updatePolygonWallVertexes(
+kernel void updateFractalBranchesVertexes(
     device CubeBase *codeBaseList [[buffer(0)]],
     device VertexData *outputVertices [[buffer(1)]],
     constant MovingCubesParams &params [[buffer(2)]],
