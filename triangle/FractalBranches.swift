@@ -2,7 +2,7 @@ import Metal
 import RealityKit
 import SwiftUI
 
-private struct VertexData {wa
+private struct VertexData {
   var position: SIMD3<Float> = .zero
 
   @MainActor static var vertexAttributes: [LowLevelMesh.Attribute] = [
@@ -47,9 +47,9 @@ struct FractalBranchesView: View {
         }
         rootEntity.components.set(modelComponent)
         // rootEntity.scale = SIMD3(repeating: 1.)
-        rootEntity.position.y = 1
+        rootEntity.position.y = -0.5
         // rootEntity.position.x = 1.6
-        rootEntity.position.z = -1
+        // rootEntity.position.z = 0
         content.add(rootEntity)
         self.mesh = mesh
 
@@ -75,7 +75,7 @@ struct FractalBranchesView: View {
 
   func createMesh() throws -> LowLevelMesh {
 
-    let v0 = SIMD3<Float>(0, 1, 0)
+    let v0 = SIMD3<Float>(0, 2, 0)
     let v1 = SIMD3<Float>(0, 0, 1)
     var allVertexes: [SIMD3<Float>] = []
     func write(p0: SIMD3<Float>, p1: SIMD3<Float>) {
@@ -86,7 +86,7 @@ struct FractalBranchesView: View {
     buildUmbrella(
       p0: SIMD3<Float>(0, 0, 0), v0: v0, relative: v1, parts: 8, elevation: Float.pi * 0.5,
       decay: 0.36,
-      step: 7,
+      step: 8,
       write: write)
 
     let allLength = allVertexes.count
@@ -101,7 +101,7 @@ struct FractalBranchesView: View {
       let vertexes = rawBytes.bindMemory(to: VertexData.self)
 
       for i in 0..<allLength {
-        vertexes[i].position = allVertexes[i] - SIMD3<Float>(0, 0.5, 0)
+        vertexes[i].position = allVertexes[i]
       }
     }
 
