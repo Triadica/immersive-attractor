@@ -44,6 +44,7 @@
 		9A75D3FB2C71D16B00D27E97 /* triangleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A75D3FA2C71D16B00D27E97 /* triangleTests.swift */; };
 		9A92D3792D9473820021FFCE /* FractalBranches.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A92D3782D9473750021FFCE /* FractalBranches.swift */; };
 		9A92D37D2D95B8890021FFCE /* FractalUmbrella.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A92D37C2D95B8720021FFCE /* FractalUmbrella.swift */; };
+		9A92D37F2D95D0380021FFCE /* FractalTree.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A92D37E2D95D0330021FFCE /* FractalTree.swift */; };
 		9A9BADF52D74599E009C0510 /* MobiusTrail.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A9BADF42D745992009C0510 /* MobiusTrail.metal */; };
 		9A9BADF72D7459B0009C0510 /* MobiusTrail.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A9BADF62D7459A2009C0510 /* MobiusTrail.swift */; };
 		9A9BADF92D7490E5009C0510 /* MobiusBubbles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A9BADF82D7490D7009C0510 /* MobiusBubbles.swift */; };
@@ -107,6 +108,7 @@
 		9A75D3FA2C71D16B00D27E97 /* triangleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = triangleTests.swift; sourceTree = "<group>"; };
 		9A92D3782D9473750021FFCE /* FractalBranches.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FractalBranches.swift; sourceTree = "<group>"; };
 		9A92D37C2D95B8720021FFCE /* FractalUmbrella.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FractalUmbrella.swift; sourceTree = "<group>"; };
+		9A92D37E2D95D0330021FFCE /* FractalTree.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FractalTree.swift; sourceTree = "<group>"; };
 		9A9BADF42D745992009C0510 /* MobiusTrail.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = MobiusTrail.metal; sourceTree = "<group>"; };
 		9A9BADF62D7459A2009C0510 /* MobiusTrail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobiusTrail.swift; sourceTree = "<group>"; };
 		9A9BADF82D7490D7009C0510 /* MobiusBubbles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobiusBubbles.swift; sourceTree = "<group>"; };
@@ -170,6 +172,7 @@
 		9A75D3DF2C71D16900D27E97 /* triangle */ = {
 			isa = PBXGroup;
 			children = (
+				9A92D37E2D95D0330021FFCE /* FractalTree.swift */,
 				9A92D37C2D95B8720021FFCE /* FractalUmbrella.swift */,
 				9A92D3782D9473750021FFCE /* FractalBranches.swift */,
 				9A75D3EC2C71D16B00D27E97 /* Assets.xcassets */,
@@ -385,6 +388,7 @@
 				9A53855B2D663D970040CF72 /* FireworksBlow.swift in Sources */,
 				9A9BADF92D7490E5009C0510 /* MobiusBubbles.swift in Sources */,
 				9A45F3A32D7C5B130042486A /* Nebula.swift in Sources */,
+				9A92D37F2D95D0380021FFCE /* FractalTree.swift in Sources */,
 				9AC67CF82D6F8F9E00071E59 /* MobiusGrid.metal in Sources */,
 				9A9BADFF2D78C70C009C0510 /* Lotus.swift in Sources */,
 				9A5385512D5FBAB50040CF72 /* HyperbolicHelicoid.metal in Sources */,
