@@ -27,6 +27,7 @@ private enum VisibilityDemo: String {
   case lotus = "Lotus"
   case nebula = "Nebula"
   case fractalBranches = "Fractal Branches"
+  case fractalUmbrella = "Fractal Umbrella"
 }
 
 @main
@@ -34,7 +35,7 @@ struct AttractorApp: App {
   @Environment(\.openImmersiveSpace) private var openImmersiveSpace
   @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
 
-  @State private var selectedDemo: VisibilityDemo = .fractalBranches
+  @State private var selectedDemo: VisibilityDemo = .fractalUmbrella
 
   @State private var isImmersionActive = false
 
@@ -62,6 +63,7 @@ struct AttractorApp: App {
           Text("Lotus").tag(VisibilityDemo.lotus)
           Text("Nebula").tag(VisibilityDemo.nebula)
           Text("Fractal Branches").tag(VisibilityDemo.fractalBranches)
+          Text("Fractal Umbrella").tag(VisibilityDemo.fractalUmbrella)
         }.pickerStyle(.wheel).padding(.bottom, 32).frame(
           width: 400,
           height: 600,
@@ -130,6 +132,8 @@ struct AttractorApp: App {
           NebulaView()
         case .fractalBranches:
           FractalBranchesView()
+        case .fractalUmbrella:
+          FractalUmbrellaView()
         }
       }
 
