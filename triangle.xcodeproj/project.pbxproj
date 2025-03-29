@@ -45,6 +45,7 @@
 		9A92D3792D9473820021FFCE /* FractalBranches.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A92D3782D9473750021FFCE /* FractalBranches.swift */; };
 		9A92D37D2D95B8890021FFCE /* FractalUmbrella.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A92D37C2D95B8720021FFCE /* FractalUmbrella.swift */; };
 		9A92D37F2D95D0380021FFCE /* FractalTree.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A92D37E2D95D0330021FFCE /* FractalTree.swift */; };
+		9A92D3812D986ACA0021FFCE /* GestureComponent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A92D3802D986ACA0021FFCE /* GestureComponent.swift */; };
 		9A9BADF52D74599E009C0510 /* MobiusTrail.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A9BADF42D745992009C0510 /* MobiusTrail.metal */; };
 		9A9BADF72D7459B0009C0510 /* MobiusTrail.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A9BADF62D7459A2009C0510 /* MobiusTrail.swift */; };
 		9A9BADF92D7490E5009C0510 /* MobiusBubbles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A9BADF82D7490D7009C0510 /* MobiusBubbles.swift */; };
@@ -109,6 +110,7 @@
 		9A92D3782D9473750021FFCE /* FractalBranches.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FractalBranches.swift; sourceTree = "<group>"; };
 		9A92D37C2D95B8720021FFCE /* FractalUmbrella.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FractalUmbrella.swift; sourceTree = "<group>"; };
 		9A92D37E2D95D0330021FFCE /* FractalTree.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FractalTree.swift; sourceTree = "<group>"; };
+		9A92D3802D986ACA0021FFCE /* GestureComponent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureComponent.swift; sourceTree = "<group>"; };
 		9A9BADF42D745992009C0510 /* MobiusTrail.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = MobiusTrail.metal; sourceTree = "<group>"; };
 		9A9BADF62D7459A2009C0510 /* MobiusTrail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobiusTrail.swift; sourceTree = "<group>"; };
 		9A9BADF82D7490D7009C0510 /* MobiusBubbles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobiusBubbles.swift; sourceTree = "<group>"; };
@@ -173,6 +175,7 @@
 			isa = PBXGroup;
 			children = (
 				9A92D37E2D95D0330021FFCE /* FractalTree.swift */,
+				9A92D3802D986ACA0021FFCE /* GestureComponent.swift */,
 				9A92D37C2D95B8720021FFCE /* FractalUmbrella.swift */,
 				9A92D3782D9473750021FFCE /* FractalBranches.swift */,
 				9A75D3EC2C71D16B00D27E97 /* Assets.xcassets */,
@@ -354,6 +357,7 @@
 				9A5385552D61E4190040CF72 /* Chords.metal in Sources */,
 				9A9BADF52D74599E009C0510 /* MobiusTrail.metal in Sources */,
 				9A53854F2D5FBAAE0040CF72 /* HyperbolicHelicoid.swift in Sources */,
+				9A92D3812D986ACA0021FFCE /* GestureComponent.swift in Sources */,
 				9A6F2A2D2D6B8B4A007F336F /* HopfFibration.swift in Sources */,
 				9AD4CB792D588FE600E55977 /* AttractorLine.metal in Sources */,
 				9A1A94EE2D54C5DC00315602 /* CubesMoving.metal in Sources */,
