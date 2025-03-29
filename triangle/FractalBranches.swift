@@ -186,7 +186,7 @@ func buildUmbrella(
       decay: decay, step: step - 1, write: write, middle: middle)
   }
   if middle {
-    let line = v0 * decay * decay
+    let line = v0 * pow(decay, 1.5)
     buildUmbrella(
       p0: pNext, v0: line, relative: relative, parts: parts, elevation: elevation,
       decay: decay, step: step - 1, write: write, middle: middle)

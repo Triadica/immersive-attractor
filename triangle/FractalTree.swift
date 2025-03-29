@@ -45,6 +45,10 @@ private struct GestureComponent: Component, Codable {
   @MainActor mutating func onDragChange(value: EntityTargetValue<DragGesture.Value>) {
     guard canDrag else { return }
     let entity = value.entity
+    // Skip if already scaling or rotating
+    if GestureComponent.state.isScaling || GestureComponent.state.isRotating {
+      return
+    }
 
     if !GestureComponent.state.isDragging {
       GestureComponent.state.targetedEntity = entity
@@ -164,7 +168,7 @@ struct FractalTreeView: View {
             rootEntity.components[GestureComponent.self] = component
           }
       )
-      .simultaneousGesture(
+      .gesture(
         RotateGesture3D()
           .targetedToEntity(rootEntity)
           .onChanged { value in
@@ -223,8 +227,8 @@ struct FractalTreeView: View {
     }
 
     buildUmbrella(
-      p0: SIMD3<Float>(0, 0, 0), v0: v0, relative: v1, parts: 8, elevation: 0.25 * Float.pi,
-      decay: 0.4,
+      p0: SIMD3<Float>(0, 0, 0), v0: v0, relative: v1, parts: 7, elevation: 0.32 * Float.pi,
+      decay: 0.46,
       step: 7,
       write: write, middle: true)
 
