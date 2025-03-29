@@ -31,7 +31,7 @@ private final class GestureStateComponent: @unchecked Sendable {
   var isDragging = false
   var startScale: SIMD3<Float> = .one
   var isScaling = false
-  var startOrientation = simd_quatf()
+  var startOrientation = Rotation3D.identity
   var isRotating = false
 }
 
@@ -76,11 +76,22 @@ private struct GestureComponent: Component, Codable {
 
     if !GestureComponent.state.isRotating {
       GestureComponent.state.targetedEntity = entity
-      GestureComponent.state.startOrientation = entity.orientation
+      GestureComponent.state.startOrientation = Rotation3D(entity.orientation)
       GestureComponent.state.isRotating = true
     }
 
-    entity.orientation = value.entity.transform.rotation
+    // Create a flipped rotation to correct the rotation direction
+    let rotation = value.rotation
+    let flippedRotation = Rotation3D(
+      angle: rotation.angle,
+      axis: RotationAxis3D(
+        x: -rotation.axis.x,
+        y: rotation.axis.y,
+        z: -rotation.axis.z))
+
+    // Apply the flipped rotation to the starting orientation
+    let newOrientation = GestureComponent.state.startOrientation.rotated(by: flippedRotation)
+    entity.setOrientation(.init(newOrientation), relativeTo: nil)
   }
 
   mutating func onGestureEnded() {
@@ -135,7 +146,7 @@ struct FractalTreeView: View {
           ))
 
         // Move entity closer to user
-        rootEntity.position = SIMD3<Float>(0, 1.5, -1)  // Adjust these values
+        rootEntity.position = SIMD3<Float>(0, 0, -1)  // Adjust these values
         content.add(rootEntity)
         self.mesh = mesh
       }
@@ -153,12 +164,13 @@ struct FractalTreeView: View {
             rootEntity.components[GestureComponent.self] = component
           }
       )
-      .gesture(
-        MagnifyGesture()
+      .simultaneousGesture(
+        RotateGesture3D()
           .targetedToEntity(rootEntity)
           .onChanged { value in
+
             var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onScaleChange(value: value)
+            component.onRotateChange(value: value)
             rootEntity.components[GestureComponent.self] = component
           }
           .onEnded { _ in
@@ -167,16 +179,17 @@ struct FractalTreeView: View {
             rootEntity.components[GestureComponent.self] = component
           }
       )
-      .gesture(
-        RotateGesture3D()
+      .simultaneousGesture(
+        MagnifyGesture()
           .targetedToEntity(rootEntity)
           .onChanged { value in
             var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onRotateChange(value: value)
+            component.onScaleChange(value: value)
             rootEntity.components[GestureComponent.self] = component
           }
           .onEnded { _ in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            var component: GestureComponent =
+              rootEntity.components[GestureComponent.self] ?? GestureComponent()
             component.onGestureEnded()
             rootEntity.components[GestureComponent.self] = component
           }
@@ -205,8 +218,8 @@ struct FractalTreeView: View {
     let v1 = SIMD3<Float>(0, 0, 1)
     var allVertexes: [SIMD3<Float>] = []
     func write(p0: SIMD3<Float>, p1: SIMD3<Float>) {
-      allVertexes.append(p0)
-      allVertexes.append(p1)
+      allVertexes.append(p0 - v0)
+      allVertexes.append(p1 - v0)
     }
 
     buildUmbrella(
