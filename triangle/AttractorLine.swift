@@ -5,7 +5,6 @@ import SwiftUI
 private struct MovingCubesParams {
   var vertexPerCell: Int32
   var dt: Float
-  var timestamp: Float = 0
 }
 
 private struct VertexData {
@@ -34,14 +33,13 @@ private struct VertexData {
 }
 
 /// placement of a cube
-private struct CellBase {
+private struct CubeBase {
   var position: SIMD3<Float>
-  var step: Float
-  var velocity: SIMD3<Float> = .zero
-  var lifeValue: Float
+  var size: Float
+  var rotate: Float
 }
 
-struct FireworksView: View {
+struct AttractorLineView: View {
   let rootEntity: Entity = Entity()
   @State var mesh: LowLevelMesh?
 
@@ -66,10 +64,10 @@ struct FireworksView: View {
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
-    let updateAttractorBase = library.makeFunction(name: "updateFireworksBase")!
+    let updateAttractorBase = library.makeFunction(name: "updateAttractorLineBase")!
     self.attractorPipeline = try! device.makeComputePipelineState(function: updateAttractorBase)
 
-    let updatelinesVertexes = library.makeFunction(name: "updateFireworksVertexes")!
+    let updatelinesVertexes = library.makeFunction(name: "updateAttractorLineVertexes")!
     self.vertexPipeline = try! device.makeComputePipelineState(function: updatelinesVertexes)
   }
 
@@ -82,8 +80,24 @@ struct FireworksView: View {
           print("Failed to create mesh or model component")
           return
         }
-
         rootEntity.components.set(modelComponent)
+
+        // Add components for gesture support
+        rootEntity.components.set(GestureComponent())
+        rootEntity.components.set(InputTargetComponent())
+
+        // Adjust collision box size to match actual content
+        let bounds = getBounds()
+        rootEntity.components.set(
+          CollisionComponent(
+            shapes: [
+              .generateBox(
+                width: bounds.extents.x * 4,
+                height: bounds.extents.y * 4,
+                depth: bounds.extents.z * 4)
+            ]
+          ))
+
         // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = 1
         // rootEntity.position.z = -2
@@ -98,6 +112,50 @@ struct FireworksView: View {
       .onDisappear {
         stopTimer()
       }
+      .gesture(
+        DragGesture()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onDragChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
+      .gesture(
+        RotateGesture3D()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onRotateChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
+      .simultaneousGesture(
+        MagnifyGesture()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onScaleChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component: GestureComponent =
+              rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
     }
   }
 
@@ -114,7 +172,7 @@ struct FireworksView: View {
 
       DispatchQueue.main.async {
         if let vertexBuffer = self.vertexBuffer {
-          self.updateCellBase()
+          self.updateCubeBase()
           self.updateMesh(vertexBuffer: vertexBuffer, prevBuffer: self.vertexPrevBuffer!)
 
           // swap buffers
@@ -150,8 +208,8 @@ struct FireworksView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let cellCount: Int = 40000
-  let cellSegment: Int = 16
+  let cellCount: Int = 50000
+  let cellSegment: Int = 8
 
   var vertexPerCell: Int {
     return cellSegment + 1
@@ -168,19 +226,18 @@ struct FireworksView: View {
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
-    let bufferSize = MemoryLayout<CellBase>.stride * cellCount
+    let bufferSize = MemoryLayout<CubeBase>.stride * cellCount
     let buffer = PingPongBuffer(device: device, length: bufferSize)
 
     // 使用 contents() 前检查 buffer 是否有效
     let contents = buffer.currentBuffer.contents()
 
-    let cubes = contents.bindMemory(to: CellBase.self, capacity: cellCount)
+    let cubes = contents.bindMemory(to: CubeBase.self, capacity: cellCount)
     for i in 0..<cellCount {
-      cubes[i] = CellBase(
-        position: randomPosition(r: 0.0) + SIMD3<Float>(0, 0.0, -1),
-        step: 0,
-        velocity: normalize(randomPosition(r: 1)) * 0.1 + SIMD3<Float>(0, 1, 0),
-        lifeValue: 0
+      cubes[i] = CubeBase(
+        position: randomPosition(r: 1),
+        size: Float.random(in: 0.1..<1.4),
+        rotate: 0
       )
     }
 
@@ -228,17 +285,11 @@ struct FireworksView: View {
     return mesh
   }
 
-  @State private var viewStartTime: Date = Date()
-  @State private var frameDelta: Float = 0.0
-
   private func getMovingParams() -> MovingCubesParams {
-    let delta = -Float(viewStartTime.timeIntervalSinceNow)
-    let dt = delta - frameDelta
-    frameDelta = delta
-    return MovingCubesParams(vertexPerCell: Int32(vertexPerCell), dt: 0.8 * dt, timestamp: delta)
+    return MovingCubesParams(vertexPerCell: Int32(vertexPerCell), dt: 0.008)
   }
 
-  func updateCellBase() {
+  func updateCubeBase() {
     guard let pingPongBuffer = pingPongBuffer,
       let commandBuffer = commandQueue.makeCommandBuffer(),
       let computeEncoder = commandBuffer.makeComputeCommandEncoder()

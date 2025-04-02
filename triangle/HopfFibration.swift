@@ -3,16 +3,20 @@ import RealityKit
 import SwiftUI
 
 private struct MovingCellParams {
+  var vertexPerCell: Int32
   var dt: Float
-  var timestamp: Float = 0
 }
 
 private struct VertexData {
   var position: SIMD3<Float> = .zero
+  // var normal: SIMD3<Float> = .zero
+  // var uv: SIMD2<Float> = .zero
 
   @MainActor static var vertexAttributes: [LowLevelMesh.Attribute] = [
     .init(
       semantic: .position, format: .float3, offset: MemoryLayout<Self>.offset(of: \.position)!)
+    // .init(semantic: .normal, format: .float3, offset: MemoryLayout<Self>.offset(of: \.normal)!),
+    // .init(semantic: .uv0, format: .float2, offset: MemoryLayout<Self>.offset(of: \.uv)!),
   ]
 
   @MainActor static var vertexLayouts: [LowLevelMesh.Layout] = [
@@ -30,11 +34,12 @@ private struct VertexData {
 
 /// placement of a cube
 private struct CellBase {
-  var position: SIMD3<Float> = .zero
-  var seed: Float = 0
+  var phi: Float
+  var theta: Float
+  var index: Float
 }
 
-struct MobiusBubblesView: View {
+struct HopfFibrationView: View {
   let rootEntity: Entity = Entity()
   @State var mesh: LowLevelMesh?
 
@@ -45,7 +50,7 @@ struct MobiusBubblesView: View {
 
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
-
+  let attractorPipeline: MTLComputePipelineState
   let vertexPipeline: MTLComputePipelineState
 
   @State var pingPongBuffer: PingPongBuffer?
@@ -59,9 +64,11 @@ struct MobiusBubblesView: View {
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
+    let updateAttractorBase = library.makeFunction(name: "updateHopfFibrationBase")!
+    self.attractorPipeline = try! device.makeComputePipelineState(function: updateAttractorBase)
 
-    let updateVertexes = library.makeFunction(name: "updateMobiusBubblesVertexes")!
-    self.vertexPipeline = try! device.makeComputePipelineState(function: updateVertexes)
+    let updatelinesVertexes = library.makeFunction(name: "updateHopfFibrationVertexes")!
+    self.vertexPipeline = try! device.makeComputePipelineState(function: updatelinesVertexes)
   }
 
   var body: some View {
@@ -73,7 +80,23 @@ struct MobiusBubblesView: View {
           print("Failed to create mesh or model component")
           return
         }
+
         rootEntity.components.set(modelComponent)
+        // Add components for gesture support
+        rootEntity.components.set(GestureComponent())
+        rootEntity.components.set(InputTargetComponent())
+        // Adjust collision box size to match actual content
+        let bounds = getBounds()
+        rootEntity.components.set(
+          CollisionComponent(
+            shapes: [
+              .generateBox(
+                width: bounds.extents.x * 4,
+                height: bounds.extents.y * 4,
+                depth: bounds.extents.z * 4)
+            ]
+          ))
+
         // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = 1
         // rootEntity.position.z = -2
@@ -88,6 +111,50 @@ struct MobiusBubblesView: View {
       .onDisappear {
         stopTimer()
       }
+      .gesture(
+        DragGesture()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onDragChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
+      .gesture(
+        RotateGesture3D()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onRotateChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
+      .simultaneousGesture(
+        MagnifyGesture()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onScaleChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component: GestureComponent =
+              rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
     }
   }
 
@@ -97,13 +164,18 @@ struct MobiusBubblesView: View {
 
     self.vertexBuffer = device.makeBuffer(
       length: MemoryLayout<VertexData>.stride * vertexCapacity, options: .storageModeShared)
+    self.vertexPrevBuffer = device.makeBuffer(
+      length: MemoryLayout<VertexData>.stride * vertexCapacity, options: .storageModeShared)
 
     timer = Timer.scheduledTimer(withTimeInterval: 1 / fps, repeats: true) { _ in
 
       DispatchQueue.main.async {
         if let vertexBuffer = self.vertexBuffer {
-          self.updateMesh(vertexBuffer: vertexBuffer)
-          // no need to swap buffers
+          self.updateCellBase()
+          self.updateMesh(vertexBuffer: vertexBuffer, prevBuffer: self.vertexPrevBuffer!)
+
+          // swap buffers
+          self.pingPongBuffer!.swap()
         } else {
           print("[ERR] vertex buffer is not initialized")
         }
@@ -131,26 +203,25 @@ struct MobiusBubblesView: View {
 
   /// Create a bounding box for the mesh
   func getBounds() -> BoundingBox {
-    let radius: Float = 10
+    let radius: Float = 2
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  var sphereVertexes: [SIMD3<Float>] {
-    makeSphereWithIterate(times: 3)
+  let cellCount: Int = 400
+  let cellSegment: Int = 800
+
+  var vertexPerCell: Int {
+    return cellSegment
   }
-
-  let sphereCount: Int = 400
-
-  var cellCount: Int {
-    return sphereVertexes.count * sphereCount
+  var indicePerCell: Int {
+    return cellSegment * 2
   }
 
   var vertexCapacity: Int {
-    return cellCount
+    return cellCount * vertexPerCell
   }
-
   var indiceCapacity: Int {
-    return cellCount
+    return cellCount * indicePerCell
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
@@ -161,18 +232,18 @@ struct MobiusBubblesView: View {
     let contents = buffer.currentBuffer.contents()
 
     let cells = contents.bindMemory(to: CellBase.self, capacity: cellCount)
-    let shape = sphereVertexes
-
-    for i in 0..<sphereCount {
-      let center = randomPosition(r: 20)
-      let radius = Float.random(in: 0.1...4)
-      let seed = Float.random(in: 0...10)
-      for j in 0..<shape.count {
-        let idx = i * shape.count + j
-        let p = center + shape[j] * radius
-        cells[idx].position = p
-        cells[idx].seed = seed
-      }
+    var theta = 0.4
+    var phi = 0.4
+    for i in 0..<cellCount {
+      theta += 0.03
+      phi += 0.02
+      cells[i] = CellBase(
+        // phi: Float(round(phi / 8) * 8),
+        phi: Float(phi),
+        // theta: Float(round(theta / 16) * 16)
+        theta: Float(theta),
+        index: Float(i)
+      )
     }
 
     // copy data from current buffer to next buffer
@@ -195,8 +266,19 @@ struct MobiusBubblesView: View {
       let indices = rawIndices.bindMemory(to: UInt32.self)
 
       for i in 0..<cellCount {
-        indices[i] = UInt32(i)
+        for j in 0..<indicePerCell {
+          let is_even = j % 2 == 0
+          let half = j / 2
+          if is_even {
+            indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half)
+          } else if j == indicePerCell - 1 {
+            indices[i * indicePerCell + j] = UInt32(i * vertexPerCell)
+          } else {
+            indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half + 1)
+          }
+        }
       }
+
     }
 
     mesh.parts.replaceAll([
@@ -210,17 +292,42 @@ struct MobiusBubblesView: View {
     return mesh
   }
 
-  @State private var viewStartTime: Date = Date()
-  @State private var frameDelta: Float = 0.0
-
   private func getMovingParams() -> MovingCellParams {
-    let delta = -Float(viewStartTime.timeIntervalSinceNow)
-    let dt = delta - frameDelta
-    frameDelta = delta
-    return MovingCellParams(dt: 0.8 * dt, timestamp: delta)
+    return MovingCellParams(vertexPerCell: Int32(vertexPerCell), dt: 0.006)
   }
 
-  func updateMesh(vertexBuffer: MTLBuffer) {
+  func updateCellBase() {
+    guard let pingPongBuffer = pingPongBuffer,
+      let commandBuffer = commandQueue.makeCommandBuffer(),
+      let computeEncoder = commandBuffer.makeComputeCommandEncoder()
+    else {
+      print("updateMesh: failed to get mesh or pingPongBuffer or commandBuffer or computeEncoder")
+      return
+    }
+
+    computeEncoder.setComputePipelineState(attractorPipeline)
+
+    // idx 0: pingPongBuffer
+    computeEncoder.setBuffer(
+      pingPongBuffer.currentBuffer, offset: 0, index: 0)
+
+    // idx 1: vertexBuffer
+    computeEncoder.setBuffer(pingPongBuffer.nextBuffer, offset: 0, index: 1)
+
+    var params = getMovingParams()
+    // idx 2: params buffer
+    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCellParams>.size, index: 2)
+
+    let threadsPerGrid = MTLSize(width: cellCount, height: 1, depth: 1)
+    let threadsPerThreadgroup = MTLSize(width: 16, height: 1, depth: 1)
+    computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
+
+    computeEncoder.endEncoding()
+
+    commandBuffer.commit()
+  }
+
+  func updateMesh(vertexBuffer: MTLBuffer, prevBuffer: MTLBuffer) {
     guard let mesh = mesh,
       let pingPongBuffer = pingPongBuffer,
       let commandBuffer = commandQueue.makeCommandBuffer(),
@@ -234,6 +341,8 @@ struct MobiusBubblesView: View {
     mesh.withUnsafeMutableBytes(bufferIndex: 0) { rawBytes in
       vertexBuffer.contents().copyMemory(
         from: rawBytes.baseAddress!, byteCount: rawBytes.count)
+      prevBuffer.contents().copyMemory(
+        from: rawBytes.baseAddress!, byteCount: rawBytes.count)
     }
 
     computeEncoder.setComputePipelineState(vertexPipeline)
@@ -244,10 +353,12 @@ struct MobiusBubblesView: View {
 
     // idx 1: vertexBuffer
     computeEncoder.setBuffer(vertexBuffer, offset: 0, index: 1)
+    // idx 2: prevBuffer
+    computeEncoder.setBuffer(prevBuffer, offset: 0, index: 2)
 
     var params = getMovingParams()
     // idx 3: params buffer
-    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCellParams>.size, index: 2)
+    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCellParams>.size, index: 3)
 
     let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
     let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)

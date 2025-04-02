@@ -2,8 +2,8 @@ import Metal
 import RealityKit
 import SwiftUI
 
-private struct MovingCubesParams {
-  var vertexPerCell: Int32
+private struct MovingCellParams {
+  var width: Float
   var dt: Float
   var timestamp: Float = 0
 }
@@ -36,13 +36,11 @@ private struct VertexData {
 /// placement of a cube
 private struct CellBase {
   var position: SIMD3<Float>
-  var step: Float
-  var velocity: SIMD3<Float> = .zero
-  var lifeValue: Float
-  var bounceChance: Float = 0.1
+  var size: Float
+  var rotate: Float
 }
 
-struct FireworksBlowView: View {
+struct PolygonWallView: View {
   let rootEntity: Entity = Entity()
   @State var mesh: LowLevelMesh?
 
@@ -53,25 +51,23 @@ struct FireworksBlowView: View {
 
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
-  let attractorPipeline: MTLComputePipelineState
+  let cubePipeline: MTLComputePipelineState
   let vertexPipeline: MTLComputePipelineState
 
   @State var pingPongBuffer: PingPongBuffer?
   /// The vertex buffer for the mesh
   @State var vertexBuffer: MTLBuffer?
-  /// to track previous state of vertex buffer
-  @State var vertexPrevBuffer: MTLBuffer?
 
   init() {
     self.device = MTLCreateSystemDefaultDevice()!
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
-    let updateAttractorBase = library.makeFunction(name: "updateFireworksBlowBase")!
-    self.attractorPipeline = try! device.makeComputePipelineState(function: updateAttractorBase)
+    let updateCellBase = library.makeFunction(name: "updatePolygonWallBase")!
+    self.cubePipeline = try! device.makeComputePipelineState(function: updateCellBase)
 
-    let updatelinesVertexes = library.makeFunction(name: "updateFireworksBlowVertexes")!
-    self.vertexPipeline = try! device.makeComputePipelineState(function: updatelinesVertexes)
+    let updateCellVertexes = library.makeFunction(name: "updatePolygonWallVertexes")!
+    self.vertexPipeline = try! device.makeComputePipelineState(function: updateCellVertexes)
   }
 
   var body: some View {
@@ -84,10 +80,25 @@ struct FireworksBlowView: View {
           return
         }
         rootEntity.components.set(modelComponent)
+        // Add components for gesture support
+        rootEntity.components.set(GestureComponent())
+        rootEntity.components.set(InputTargetComponent())
+        // Adjust collision box size to match actual content
+        let bounds = getBounds()
+        rootEntity.components.set(
+          CollisionComponent(
+            shapes: [
+              .generateBox(
+                width: bounds.extents.x * 4,
+                height: bounds.extents.y * 4,
+                depth: bounds.extents.z * 4)
+            ]
+          ))
+
         // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = 1
-        // rootEntity.position.z = -2
         // rootEntity.position.x = 1.6
+        rootEntity.position.z = -1
         content.add(rootEntity)
         self.mesh = mesh
 
@@ -98,6 +109,50 @@ struct FireworksBlowView: View {
       .onDisappear {
         stopTimer()
       }
+      .gesture(
+        DragGesture()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onDragChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
+      .gesture(
+        RotateGesture3D()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onRotateChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
+      .simultaneousGesture(
+        MagnifyGesture()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onScaleChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component: GestureComponent =
+              rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
     }
   }
 
@@ -107,15 +162,13 @@ struct FireworksBlowView: View {
 
     self.vertexBuffer = device.makeBuffer(
       length: MemoryLayout<VertexData>.stride * vertexCapacity, options: .storageModeShared)
-    self.vertexPrevBuffer = device.makeBuffer(
-      length: MemoryLayout<VertexData>.stride * vertexCapacity, options: .storageModeShared)
 
     timer = Timer.scheduledTimer(withTimeInterval: 1 / fps, repeats: true) { _ in
 
       DispatchQueue.main.async {
         if let vertexBuffer = self.vertexBuffer {
           self.updateCellBase()
-          self.updateMesh(vertexBuffer: vertexBuffer, prevBuffer: self.vertexPrevBuffer!)
+          self.updateMesh(vertexBuffer: vertexBuffer)
 
           // swap buffers
           self.pingPongBuffer!.swap()
@@ -138,7 +191,7 @@ struct FireworksBlowView: View {
   func getModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
     let resource = try MeshResource(from: mesh)
 
-    var unlitMaterial = UnlitMaterial(color: .yellow)
+    var unlitMaterial = UnlitMaterial(color: .white)
     unlitMaterial.faceCulling = .none
 
     return ModelComponent(mesh: resource, materials: [unlitMaterial])
@@ -150,21 +203,22 @@ struct FireworksBlowView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let cellCount: Int = 100000
-  let cellSegment: Int = 4
-
-  var vertexPerCell: Int {
-    return cellSegment + 1
-  }
-  var indicePerCell: Int {
-    return cellSegment * 2
-  }
+  let cellCount: Int = 600
 
   var vertexCapacity: Int {
-    return cellCount * vertexPerCell
+    return cellCount * 4
   }
-  var indiceCapacity: Int {
-    return cellCount * indicePerCell
+
+  var cubeFrame: [Int] = [
+    0, 1, 1, 2, 2, 3, 3, 0,
+  ]
+
+  var shapeIndiceCount: Int {
+    return cubeFrame.count
+  }
+
+  var indexCount: Int {
+    return cellCount * shapeIndiceCount
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
@@ -175,13 +229,15 @@ struct FireworksBlowView: View {
     let contents = buffer.currentBuffer.contents()
 
     let cubes = contents.bindMemory(to: CellBase.self, capacity: cellCount)
+    var acc = 0.1
+    var acc2 = -0.1
     for i in 0..<cellCount {
+      acc += 0.02
+      acc2 += 0.002
       cubes[i] = CellBase(
-        position: randomPosition(r: 0.0) + SIMD3<Float>(0, 0.0, -1),
-        step: 0,
-        velocity: normalize(randomPosition(r: 1)) * 0.1 + SIMD3<Float>(0, 1, 0),
-        lifeValue: 0,
-        bounceChance: 0.1
+        position: SIMD3(0, 0, 0),
+        size: Float(acc),
+        rotate: Float(acc2)
       )
     }
 
@@ -195,7 +251,7 @@ struct FireworksBlowView: View {
   func createMesh() throws -> LowLevelMesh {
     var desc = VertexData.descriptor
     desc.vertexCapacity = vertexCapacity
-    desc.indexCapacity = indiceCapacity
+    desc.indexCapacity = indexCount
 
     let mesh = try LowLevelMesh(descriptor: desc)
 
@@ -205,14 +261,8 @@ struct FireworksBlowView: View {
       let indices = rawIndices.bindMemory(to: UInt32.self)
 
       for i in 0..<cellCount {
-        for j in 0..<indicePerCell {
-          let is_even = j % 2 == 0
-          let half = j / 2
-          if is_even {
-            indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half)
-          } else {
-            indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half + 1)
-          }
+        for j in 0..<shapeIndiceCount {
+          indices[i * shapeIndiceCount + j] = UInt32(cubeFrame[j]) + UInt32(i * 8)
         }
       }
 
@@ -220,7 +270,7 @@ struct FireworksBlowView: View {
 
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
-        indexCount: indiceCapacity,
+        indexCount: indexCount,
         topology: .lineStrip,
         bounds: getBounds()
       )
@@ -230,13 +280,11 @@ struct FireworksBlowView: View {
   }
 
   @State private var viewStartTime: Date = Date()
-  @State private var frameDelta: Float = 0.0
 
-  private func getMovingParams() -> MovingCubesParams {
+  private func getMovingParams() -> MovingCellParams {
     let delta = -Float(viewStartTime.timeIntervalSinceNow)
-    let dt = delta - frameDelta
-    frameDelta = delta
-    return MovingCubesParams(vertexPerCell: Int32(vertexPerCell), dt: 0.8 * dt, timestamp: delta)
+    return MovingCellParams(
+      width: 0.003, dt: 0.02, timestamp: delta)
   }
 
   func updateCellBase() {
@@ -248,7 +296,7 @@ struct FireworksBlowView: View {
       return
     }
 
-    computeEncoder.setComputePipelineState(attractorPipeline)
+    computeEncoder.setComputePipelineState(cubePipeline)
 
     // idx 0: pingPongBuffer
     computeEncoder.setBuffer(
@@ -259,10 +307,10 @@ struct FireworksBlowView: View {
 
     var params = getMovingParams()
     // idx 2: params buffer
-    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 2)
+    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCellParams>.size, index: 2)
 
     let threadsPerGrid = MTLSize(width: cellCount, height: 1, depth: 1)
-    let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
+    let threadsPerThreadgroup = MTLSize(width: 16, height: 1, depth: 1)
     computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
 
     computeEncoder.endEncoding()
@@ -270,7 +318,7 @@ struct FireworksBlowView: View {
     commandBuffer.commit()
   }
 
-  func updateMesh(vertexBuffer: MTLBuffer, prevBuffer: MTLBuffer) {
+  func updateMesh(vertexBuffer: MTLBuffer) {
     guard let mesh = mesh,
       let pingPongBuffer = pingPongBuffer,
       let commandBuffer = commandQueue.makeCommandBuffer(),
@@ -284,8 +332,6 @@ struct FireworksBlowView: View {
     mesh.withUnsafeMutableBytes(bufferIndex: 0) { rawBytes in
       vertexBuffer.contents().copyMemory(
         from: rawBytes.baseAddress!, byteCount: rawBytes.count)
-      prevBuffer.contents().copyMemory(
-        from: rawBytes.baseAddress!, byteCount: rawBytes.count)
     }
 
     computeEncoder.setComputePipelineState(vertexPipeline)
@@ -296,12 +342,10 @@ struct FireworksBlowView: View {
 
     // idx 1: vertexBuffer
     computeEncoder.setBuffer(vertexBuffer, offset: 0, index: 1)
-    // idx 2: prevBuffer
-    computeEncoder.setBuffer(prevBuffer, offset: 0, index: 2)
 
     var params = getMovingParams()
-    // idx 3: params buffer
-    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 3)
+    // idx 2: params buffer
+    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCellParams>.size, index: 2)
 
     let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
     let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
@@ -322,7 +366,7 @@ struct FireworksBlowView: View {
     // apply entity with mesh data
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
-        indexCount: indiceCapacity,
+        indexCount: indexCount,
         topology: .line,
         bounds: getBounds()
       )

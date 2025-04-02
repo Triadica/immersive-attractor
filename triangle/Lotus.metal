@@ -53,7 +53,7 @@ static float3 mobiusTransformation(float3 pt, float t) {
   return float3(xd, yd, zd);
 }
 
-kernel void updateMobiusBubblesVertexes(
+kernel void updateLotusVertexes(
     device CellBase *codeBaseList [[buffer(0)]],
     device VertexData *outputVertices [[buffer(1)]],
     constant MovingAttractorLineParams &params [[buffer(2)]],
@@ -61,14 +61,14 @@ kernel void updateMobiusBubblesVertexes(
 
   float3 p = codeBaseList[id].position;
   float seed = codeBaseList[id].seed;
-  float t = params.timestamp * 0.1 - seed;
+  float t = -params.timestamp * 0.2 - seed;
   // float t = 0;
-  float3 position = mobiusTransformation(p, t);
+  float3 position = mobiusTransformation(p.xzy * 0.8, t);
   // float3 position = p;
 
-  position = position.xzy * 0.1;
-  position.z -= 2.0;
-  position.y = -position.y;
+  position = position.xzy * 0.5;
+  position.z -= 1.0;
+  position.y = -position.y - 0.3;
 
   outputVertices[id].position = position;
 }

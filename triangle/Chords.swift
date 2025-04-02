@@ -3,8 +3,9 @@ import RealityKit
 import SwiftUI
 
 private struct MovingCubesParams {
-  var vertexPerCell: Int32
+  var width: Float
   var dt: Float
+  var timestamp: Float = 0
 }
 
 private struct VertexData {
@@ -35,10 +36,12 @@ private struct VertexData {
 /// placement of a cube
 private struct CellBase {
   var position: SIMD3<Float>
-  var velocity: SIMD3<Float> = .zero
+  var center: SIMD3<Float>
+  var radius: Float
+  var angle: Float
 }
 
-struct CornerBouncingView: View {
+struct ChordsView: View {
   let rootEntity: Entity = Entity()
   @State var mesh: LowLevelMesh?
 
@@ -49,25 +52,23 @@ struct CornerBouncingView: View {
 
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
-  let attractorPipeline: MTLComputePipelineState
+  let cubePipeline: MTLComputePipelineState
   let vertexPipeline: MTLComputePipelineState
 
   @State var pingPongBuffer: PingPongBuffer?
   /// The vertex buffer for the mesh
   @State var vertexBuffer: MTLBuffer?
-  /// to track previous state of vertex buffer
-  @State var vertexPrevBuffer: MTLBuffer?
 
   init() {
     self.device = MTLCreateSystemDefaultDevice()!
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
-    let updateAttractorBase = library.makeFunction(name: "updateCornerBouncingBase")!
-    self.attractorPipeline = try! device.makeComputePipelineState(function: updateAttractorBase)
+    let updateCellBase = library.makeFunction(name: "updateChordsBase")!
+    self.cubePipeline = try! device.makeComputePipelineState(function: updateCellBase)
 
-    let updatelinesVertexes = library.makeFunction(name: "updateCornerBouncingVertexes")!
-    self.vertexPipeline = try! device.makeComputePipelineState(function: updatelinesVertexes)
+    let updateCubeVertexes = library.makeFunction(name: "updateChordsVertexes")!
+    self.vertexPipeline = try! device.makeComputePipelineState(function: updateCubeVertexes)
   }
 
   var body: some View {
@@ -76,14 +77,29 @@ struct CornerBouncingView: View {
         guard let mesh = try? createMesh(),
           let modelComponent = try? getModelComponent(mesh: mesh)
         else {
-          print("failed to create mesh or model component")
+          print("Failed to create mesh or model component")
           return
         }
         rootEntity.components.set(modelComponent)
+        // Add components for gesture support
+        rootEntity.components.set(GestureComponent())
+        rootEntity.components.set(InputTargetComponent())
+        // Adjust collision box size to match actual content
+        let bounds = getBounds()
+        rootEntity.components.set(
+          CollisionComponent(
+            shapes: [
+              .generateBox(
+                width: bounds.extents.x * 4,
+                height: bounds.extents.y * 4,
+                depth: bounds.extents.z * 4)
+            ]
+          ))
+
         // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = 1
-        // rootEntity.position.z = -2
         // rootEntity.position.x = 1.6
+        rootEntity.position.z = -1
         content.add(rootEntity)
         self.mesh = mesh
 
@@ -94,6 +110,50 @@ struct CornerBouncingView: View {
       .onDisappear {
         stopTimer()
       }
+      .gesture(
+        DragGesture()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onDragChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
+      .gesture(
+        RotateGesture3D()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onRotateChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
+      .simultaneousGesture(
+        MagnifyGesture()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onScaleChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component: GestureComponent =
+              rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
     }
   }
 
@@ -103,15 +163,13 @@ struct CornerBouncingView: View {
 
     self.vertexBuffer = device.makeBuffer(
       length: MemoryLayout<VertexData>.stride * vertexCapacity, options: .storageModeShared)
-    self.vertexPrevBuffer = device.makeBuffer(
-      length: MemoryLayout<VertexData>.stride * vertexCapacity, options: .storageModeShared)
 
     timer = Timer.scheduledTimer(withTimeInterval: 1 / fps, repeats: true) { _ in
 
       DispatchQueue.main.async {
         if let vertexBuffer = self.vertexBuffer {
           self.updateCellBase()
-          self.updateMesh(vertexBuffer: vertexBuffer, prevBuffer: self.vertexPrevBuffer!)
+          self.updateMesh(vertexBuffer: vertexBuffer)
 
           // swap buffers
           self.pingPongBuffer!.swap()
@@ -146,21 +204,32 @@ struct CornerBouncingView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let cellCount: Int = 130000
-  let cellSegment: Int = 4
+  let cellCount: Int = 600
 
-  var vertexPerCell: Int {
-    return cellSegment + 1
-  }
-  var indicePerCell: Int {
-    return cellSegment * 2
-  }
+  let segmentCount: Int = 20
 
   var vertexCapacity: Int {
-    return cellCount * vertexPerCell
+    return (segmentCount + 1) * cellCount
   }
-  var indiceCapacity: Int {
-    return cellCount * indicePerCell
+
+  var shapeIndiceCount: Int {
+    return segmentCount * 2
+  }
+
+  var indexCount: Int {
+    return shapeIndiceCount * cellCount
+  }
+
+  let PHI: Float = 1.618033988749895
+  let PI: Float = 3.141592653589793
+
+  func fiboGridN(n: Float, total: Float) -> SIMD3<Float> {
+    let z = (2 * n - 1) / total - 1
+    let t = sqrt(1 - z * z)
+    let t2 = 2 * PI * PHI * n
+    let x = t * cos(t2)
+    let y = t * sin(t2)
+    return [x, y, z]
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
@@ -169,12 +238,16 @@ struct CornerBouncingView: View {
 
     // 使用 contents() 前检查 buffer 是否有效
     let contents = buffer.currentBuffer.contents()
+    let p0 = SIMD3<Float>(x: 0, y: 0.5, z: 0)
 
-    let cubes = contents.bindMemory(to: CellBase.self, capacity: cellCount)
+    let cells = contents.bindMemory(to: CellBase.self, capacity: cellCount)
     for i in 0..<cellCount {
-      cubes[i] = CellBase(
-        position: randomPosition(r: 0.0) + SIMD3<Float>(0, 8, 0),
-        velocity: normalize(randomPosition(r: 1)) * 0.08 + SIMD3<Float>(0, 0, 0)
+      let point = fiboGridN(n: Float(i), total: Float(cellCount))
+      cells[i] = CellBase(
+        position: [point.x, point.z, point.y] * 0.5 + p0,
+        center: point,
+        radius: 0.1,
+        angle: 0.0
       )
     }
 
@@ -188,7 +261,7 @@ struct CornerBouncingView: View {
   func createMesh() throws -> LowLevelMesh {
     var desc = VertexData.descriptor
     desc.vertexCapacity = vertexCapacity
-    desc.indexCapacity = indiceCapacity
+    desc.indexCapacity = indexCount
 
     let mesh = try LowLevelMesh(descriptor: desc)
 
@@ -198,13 +271,13 @@ struct CornerBouncingView: View {
       let indices = rawIndices.bindMemory(to: UInt32.self)
 
       for i in 0..<cellCount {
-        for j in 0..<indicePerCell {
-          let is_even = j % 2 == 0
-          let half = j / 2
-          if is_even {
-            indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half)
+        for j in 0..<shapeIndiceCount {
+          let isEven = j % 2 == 0
+          let idx = i * shapeIndiceCount + j
+          indices[idx] = UInt32(i * (segmentCount + 1)) + UInt32(j / 2)
+          if isEven {
           } else {
-            indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half + 1)
+            indices[idx] += 1
           }
         }
       }
@@ -213,7 +286,7 @@ struct CornerBouncingView: View {
 
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
-        indexCount: indiceCapacity,
+        indexCount: indexCount,
         topology: .lineStrip,
         bounds: getBounds()
       )
@@ -222,8 +295,11 @@ struct CornerBouncingView: View {
     return mesh
   }
 
+  @State private var viewStartTime: Date = Date()
+
   private func getMovingParams() -> MovingCubesParams {
-    return MovingCubesParams(vertexPerCell: Int32(vertexPerCell), dt: 0.006)
+    let delta = -Float(viewStartTime.timeIntervalSinceNow)
+    return MovingCubesParams(width: 0.003, dt: 0.02, timestamp: delta)
   }
 
   func updateCellBase() {
@@ -235,7 +311,7 @@ struct CornerBouncingView: View {
       return
     }
 
-    computeEncoder.setComputePipelineState(attractorPipeline)
+    computeEncoder.setComputePipelineState(cubePipeline)
 
     // idx 0: pingPongBuffer
     computeEncoder.setBuffer(
@@ -257,7 +333,7 @@ struct CornerBouncingView: View {
     commandBuffer.commit()
   }
 
-  func updateMesh(vertexBuffer: MTLBuffer, prevBuffer: MTLBuffer) {
+  func updateMesh(vertexBuffer: MTLBuffer) {
     guard let mesh = mesh,
       let pingPongBuffer = pingPongBuffer,
       let commandBuffer = commandQueue.makeCommandBuffer(),
@@ -271,8 +347,6 @@ struct CornerBouncingView: View {
     mesh.withUnsafeMutableBytes(bufferIndex: 0) { rawBytes in
       vertexBuffer.contents().copyMemory(
         from: rawBytes.baseAddress!, byteCount: rawBytes.count)
-      prevBuffer.contents().copyMemory(
-        from: rawBytes.baseAddress!, byteCount: rawBytes.count)
     }
 
     computeEncoder.setComputePipelineState(vertexPipeline)
@@ -283,12 +357,10 @@ struct CornerBouncingView: View {
 
     // idx 1: vertexBuffer
     computeEncoder.setBuffer(vertexBuffer, offset: 0, index: 1)
-    // idx 2: prevBuffer
-    computeEncoder.setBuffer(prevBuffer, offset: 0, index: 2)
 
     var params = getMovingParams()
-    // idx 3: params buffer
-    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 3)
+    // idx 2: params buffer
+    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 2)
 
     let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
     let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
@@ -309,7 +381,7 @@ struct CornerBouncingView: View {
     // apply entity with mesh data
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
-        indexCount: indiceCapacity,
+        indexCount: indexCount,
         topology: .line,
         bounds: getBounds()
       )

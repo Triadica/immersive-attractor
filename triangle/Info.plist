@@ -11,5 +11,7 @@
 		<key>UISceneConfigurations</key>
 		<dict/>
 	</dict>
+	<key>NSHandsTrackingUsageDescription</key>
+	<string>Need hands tracking for gesture interactions</string>
 </dict>
 </plist>

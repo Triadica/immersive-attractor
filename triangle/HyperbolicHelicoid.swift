@@ -2,9 +2,10 @@ import Metal
 import RealityKit
 import SwiftUI
 
-private struct MovingCubesParams {
-  var vertexPerCell: Int32
+private struct MovingCellParams {
+  var width: Float
   var dt: Float
+  var timestamp: Float = 0
 }
 
 private struct VertexData {
@@ -33,14 +34,11 @@ private struct VertexData {
 }
 
 /// placement of a cube
-private struct CubeBase {
-  var position: SIMD3<Float>
-  var size: Float
-  var velocity: SIMD3<Float> = .zero
-  var rotate: Float
+private struct CellBase {
+  var xy: SIMD2<Float>
 }
 
-struct SphereBouncingView: View {
+struct HyperbolicHelicoidView: View {
   let rootEntity: Entity = Entity()
   @State var mesh: LowLevelMesh?
 
@@ -51,25 +49,20 @@ struct SphereBouncingView: View {
 
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
-  let attractorPipeline: MTLComputePipelineState
   let vertexPipeline: MTLComputePipelineState
 
   @State var pingPongBuffer: PingPongBuffer?
   /// The vertex buffer for the mesh
   @State var vertexBuffer: MTLBuffer?
-  /// to track previous state of vertex buffer
-  @State var vertexPrevBuffer: MTLBuffer?
 
   init() {
     self.device = MTLCreateSystemDefaultDevice()!
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
-    let updateAttractorBase = library.makeFunction(name: "updateSphereBouncingBase")!
-    self.attractorPipeline = try! device.makeComputePipelineState(function: updateAttractorBase)
 
-    let updatelinesVertexes = library.makeFunction(name: "updateSphereBouncingVertexes")!
-    self.vertexPipeline = try! device.makeComputePipelineState(function: updatelinesVertexes)
+    let updateCellVertexes = library.makeFunction(name: "updateHyperbolicHelicoidVertexes")!
+    self.vertexPipeline = try! device.makeComputePipelineState(function: updateCellVertexes)
   }
 
   var body: some View {
@@ -81,12 +74,53 @@ struct SphereBouncingView: View {
           print("Failed to create mesh or model component")
           return
         }
+
+        // let pointLight = PointLight()
+        // pointLight.position.z = 2.0
+        // pointLight.light.color = .white
+        // pointLight.light.intensity = 1000
+
+        let spotLight = SpotLight()
+        spotLight.light.color = .white
+        spotLight.light.intensity = 221000
+        spotLight.light.innerAngleInDegrees = 40
+        spotLight.light.outerAngleInDegrees = 80
+        spotLight.light.attenuationRadius = 10
+        spotLight.position = [1, 1, 1]
+        spotLight
+          .look(
+            at: [0, 0, 0],
+            from: [1, 1, 1],
+            upVector: [0, 4, 0],
+            relativeTo: nil
+          )
+        let orangeLightComponent = DirectionalLightComponent(
+          color: .orange, intensity: 10_000
+        )
+
         rootEntity.components.set(modelComponent)
+        // Add components for gesture support
+        rootEntity.components.set(GestureComponent())
+        rootEntity.components.set(InputTargetComponent())
+        rootEntity.components.set(orangeLightComponent)
+        // Adjust collision box size to match actual content
+        let bounds = getBounds()
+        rootEntity.components.set(
+          CollisionComponent(
+            shapes: [
+              .generateBox(
+                width: bounds.extents.x * 4,
+                height: bounds.extents.y * 4,
+                depth: bounds.extents.z * 4)
+            ]
+          ))
+
         // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = 1
-        // rootEntity.position.z = -2
         // rootEntity.position.x = 1.6
+        rootEntity.position.z = -1
         content.add(rootEntity)
+        content.add(spotLight)
         self.mesh = mesh
 
       }
@@ -96,6 +130,50 @@ struct SphereBouncingView: View {
       .onDisappear {
         stopTimer()
       }
+      .gesture(
+        DragGesture()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onDragChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
+      .gesture(
+        RotateGesture3D()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onRotateChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
+      .simultaneousGesture(
+        MagnifyGesture()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onScaleChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component: GestureComponent =
+              rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
     }
   }
 
@@ -105,15 +183,12 @@ struct SphereBouncingView: View {
 
     self.vertexBuffer = device.makeBuffer(
       length: MemoryLayout<VertexData>.stride * vertexCapacity, options: .storageModeShared)
-    self.vertexPrevBuffer = device.makeBuffer(
-      length: MemoryLayout<VertexData>.stride * vertexCapacity, options: .storageModeShared)
 
     timer = Timer.scheduledTimer(withTimeInterval: 1 / fps, repeats: true) { _ in
 
       DispatchQueue.main.async {
         if let vertexBuffer = self.vertexBuffer {
-          self.updateCubeBase()
-          self.updateMesh(vertexBuffer: vertexBuffer, prevBuffer: self.vertexPrevBuffer!)
+          self.updateMesh(vertexBuffer: vertexBuffer)
 
           // swap buffers
           self.pingPongBuffer!.swap()
@@ -136,10 +211,26 @@ struct SphereBouncingView: View {
   func getModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
     let resource = try MeshResource(from: mesh)
 
-    var unlitMaterial = UnlitMaterial(color: .yellow)
-    unlitMaterial.faceCulling = .none
+    // var unlitMaterial = UnlitMaterial(color: .white)
+    // unlitMaterial.faceCulling = .none
 
-    return ModelComponent(mesh: resource, materials: [unlitMaterial])
+    var material = PhysicallyBasedMaterial()
+    material.baseColor.tint = .yellow
+    material.roughness = PhysicallyBasedMaterial.Roughness(
+      floatLiteral: 0.7
+    )
+    material.metallic = PhysicallyBasedMaterial.Metallic(
+      floatLiteral: 0.3
+    )
+    material.faceCulling = .none
+    // let sheenTint = PhysicallyBasedMaterial.Color(
+    //   red: 0.8, green: 0.8, blue: 0.8, alpha: 1.0
+    // )
+    // material.sheen = PhysicallyBasedMaterial.SheenColor(
+    //   tint: sheenTint
+    // )
+
+    return ModelComponent(mesh: resource, materials: [material])
   }
 
   /// Create a bounding box for the mesh
@@ -148,38 +239,37 @@ struct SphereBouncingView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let cellCount: Int = 50000
-  let cellSegment: Int = 16
+  let gridSize: Int = 800
 
-  var vertexPerCell: Int {
-    return cellSegment + 1
-  }
-  var indicePerCell: Int {
-    return cellSegment * 2
+  var cellCount: Int {
+    return gridSize * gridSize
   }
 
   var vertexCapacity: Int {
-    return cellCount * vertexPerCell
+    return cellCount
   }
-  var indiceCapacity: Int {
-    return cellCount * indicePerCell
+
+  var indexCount: Int {
+    return (gridSize - 1) * (gridSize - 1) * 6
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
-    let bufferSize = MemoryLayout<CubeBase>.stride * cellCount
+    let bufferSize = MemoryLayout<CellBase>.stride * cellCount
     let buffer = PingPongBuffer(device: device, length: bufferSize)
 
     // 使用 contents() 前检查 buffer 是否有效
     let contents = buffer.currentBuffer.contents()
 
-    let cubes = contents.bindMemory(to: CubeBase.self, capacity: cellCount)
-    for i in 0..<cellCount {
-      cubes[i] = CubeBase(
-        position: randomPosition(r: 0.0) + SIMD3<Float>(0, 0, 0.6),
-        size: Float.random(in: 0.1..<1.4),
-        velocity: normalize(randomPosition(r: 1)) * 0.2 + SIMD3<Float>(1, 0, 0),
-        rotate: 0
-      )
+    let cubes = contents.bindMemory(to: CellBase.self, capacity: cellCount)
+    for i in 0..<gridSize {
+      for j in 0..<gridSize {
+        let iv = Float(i) / Float(gridSize) - 0.5
+        let jv = Float(j) / Float(gridSize) - 0.5
+
+        cubes[i * gridSize + j] = CellBase(
+          xy: SIMD2<Float>(iv, jv) * 20
+        )
+      }
     }
 
     // copy data from current buffer to next buffer
@@ -192,7 +282,7 @@ struct SphereBouncingView: View {
   func createMesh() throws -> LowLevelMesh {
     var desc = VertexData.descriptor
     desc.vertexCapacity = vertexCapacity
-    desc.indexCapacity = indiceCapacity
+    desc.indexCapacity = indexCount
 
     let mesh = try LowLevelMesh(descriptor: desc)
 
@@ -201,15 +291,15 @@ struct SphereBouncingView: View {
     mesh.withUnsafeMutableIndices { rawIndices in
       let indices = rawIndices.bindMemory(to: UInt32.self)
 
-      for i in 0..<cellCount {
-        for j in 0..<indicePerCell {
-          let is_even = j % 2 == 0
-          let half = j / 2
-          if is_even {
-            indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half)
-          } else {
-            indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half + 1)
-          }
+      for i in 0..<(gridSize - 1) {
+        for j in 0..<(gridSize - 1) {
+          let idx = (i * (gridSize - 1) + j) * 6
+          indices[idx] = UInt32(i * gridSize + j)
+          indices[idx + 1] = UInt32(i * gridSize + j + 1)
+          indices[idx + 2] = UInt32((i + 1) * gridSize + j + 1)
+          indices[idx + 3] = UInt32(i * gridSize + j)
+          indices[idx + 4] = UInt32((i + 1) * gridSize + j + 1)
+          indices[idx + 5] = UInt32((i + 1) * gridSize + j)
         }
       }
 
@@ -217,7 +307,7 @@ struct SphereBouncingView: View {
 
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
-        indexCount: indiceCapacity,
+        indexCount: indexCount,
         topology: .lineStrip,
         bounds: getBounds()
       )
@@ -226,42 +316,15 @@ struct SphereBouncingView: View {
     return mesh
   }
 
-  private func getMovingParams() -> MovingCubesParams {
-    return MovingCubesParams(vertexPerCell: Int32(vertexPerCell), dt: 0.006)
+  @State private var viewStartTime: Date = Date()
+
+  private func getMovingParams() -> MovingCellParams {
+    let delta = -Float(viewStartTime.timeIntervalSinceNow)
+    return MovingCellParams(
+      width: 0.003, dt: 0.02, timestamp: delta)
   }
 
-  func updateCubeBase() {
-    guard let pingPongBuffer = pingPongBuffer,
-      let commandBuffer = commandQueue.makeCommandBuffer(),
-      let computeEncoder = commandBuffer.makeComputeCommandEncoder()
-    else {
-      print("updateMesh: failed to get mesh or pingPongBuffer or commandBuffer or computeEncoder")
-      return
-    }
-
-    computeEncoder.setComputePipelineState(attractorPipeline)
-
-    // idx 0: pingPongBuffer
-    computeEncoder.setBuffer(
-      pingPongBuffer.currentBuffer, offset: 0, index: 0)
-
-    // idx 1: vertexBuffer
-    computeEncoder.setBuffer(pingPongBuffer.nextBuffer, offset: 0, index: 1)
-
-    var params = getMovingParams()
-    // idx 2: params buffer
-    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 2)
-
-    let threadsPerGrid = MTLSize(width: cellCount, height: 1, depth: 1)
-    let threadsPerThreadgroup = MTLSize(width: 16, height: 1, depth: 1)
-    computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
-
-    computeEncoder.endEncoding()
-
-    commandBuffer.commit()
-  }
-
-  func updateMesh(vertexBuffer: MTLBuffer, prevBuffer: MTLBuffer) {
+  func updateMesh(vertexBuffer: MTLBuffer) {
     guard let mesh = mesh,
       let pingPongBuffer = pingPongBuffer,
       let commandBuffer = commandQueue.makeCommandBuffer(),
@@ -275,8 +338,6 @@ struct SphereBouncingView: View {
     mesh.withUnsafeMutableBytes(bufferIndex: 0) { rawBytes in
       vertexBuffer.contents().copyMemory(
         from: rawBytes.baseAddress!, byteCount: rawBytes.count)
-      prevBuffer.contents().copyMemory(
-        from: rawBytes.baseAddress!, byteCount: rawBytes.count)
     }
 
     computeEncoder.setComputePipelineState(vertexPipeline)
@@ -287,12 +348,10 @@ struct SphereBouncingView: View {
 
     // idx 1: vertexBuffer
     computeEncoder.setBuffer(vertexBuffer, offset: 0, index: 1)
-    // idx 2: prevBuffer
-    computeEncoder.setBuffer(prevBuffer, offset: 0, index: 2)
 
     var params = getMovingParams()
-    // idx 3: params buffer
-    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 3)
+    // idx 2: params buffer
+    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCellParams>.size, index: 2)
 
     let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
     let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
@@ -313,8 +372,8 @@ struct SphereBouncingView: View {
     // apply entity with mesh data
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
-        indexCount: indiceCapacity,
-        topology: .line,
+        indexCount: indexCount,
+        topology: .triangle,
         bounds: getBounds()
       )
     ])

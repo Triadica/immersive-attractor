@@ -2,7 +2,7 @@ import Metal
 import RealityKit
 import SwiftUI
 
-private struct MovingCellParams {
+private struct MovingCubesParams {
   var vertexPerCell: Int32
   var dt: Float
   var timestamp: Float = 0
@@ -35,11 +35,12 @@ private struct VertexData {
 
 /// placement of a cube
 private struct CellBase {
-  var position: SIMD3<Float> = .zero
-  var index: Float
+  var original: SIMD3<Float>
+  var position: SIMD3<Float>
+  var velocity: Float = 0
 }
 
-struct HopfFibrationLayerView: View {
+struct MobiusTrailView: View {
   let rootEntity: Entity = Entity()
   @State var mesh: LowLevelMesh?
 
@@ -64,10 +65,10 @@ struct HopfFibrationLayerView: View {
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
-    let updateAttractorBase = library.makeFunction(name: "updateHopfFibrationLayerBase")!
+    let updateAttractorBase = library.makeFunction(name: "updateMobiusTrailBase")!
     self.attractorPipeline = try! device.makeComputePipelineState(function: updateAttractorBase)
 
-    let updatelinesVertexes = library.makeFunction(name: "updateHopfFibrationLayerVertexes")!
+    let updatelinesVertexes = library.makeFunction(name: "updateMobiusTrailVertexes")!
     self.vertexPipeline = try! device.makeComputePipelineState(function: updatelinesVertexes)
   }
 
@@ -81,6 +82,21 @@ struct HopfFibrationLayerView: View {
           return
         }
         rootEntity.components.set(modelComponent)
+        // Add components for gesture support
+        rootEntity.components.set(GestureComponent())
+        rootEntity.components.set(InputTargetComponent())
+        // Adjust collision box size to match actual content
+        let bounds = getBounds()
+        rootEntity.components.set(
+          CollisionComponent(
+            shapes: [
+              .generateBox(
+                width: bounds.extents.x * 4,
+                height: bounds.extents.y * 4,
+                depth: bounds.extents.z * 4)
+            ]
+          ))
+
         // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = 1
         // rootEntity.position.z = -2
@@ -95,6 +111,50 @@ struct HopfFibrationLayerView: View {
       .onDisappear {
         stopTimer()
       }
+      .gesture(
+        DragGesture()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onDragChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
+      .gesture(
+        RotateGesture3D()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onRotateChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
+      .simultaneousGesture(
+        MagnifyGesture()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onScaleChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component: GestureComponent =
+              rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
     }
   }
 
@@ -111,7 +171,7 @@ struct HopfFibrationLayerView: View {
 
       DispatchQueue.main.async {
         if let vertexBuffer = self.vertexBuffer {
-          self.updateCellBase()
+          self.updateCubeBase()
           self.updateMesh(vertexBuffer: vertexBuffer, prevBuffer: self.vertexPrevBuffer!)
 
           // swap buffers
@@ -135,7 +195,7 @@ struct HopfFibrationLayerView: View {
   func getModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
     let resource = try MeshResource(from: mesh)
 
-    var unlitMaterial = UnlitMaterial(color: .systemPink)
+    var unlitMaterial = UnlitMaterial(color: .yellow)
     unlitMaterial.faceCulling = .none
 
     return ModelComponent(mesh: resource, materials: [unlitMaterial])
@@ -147,11 +207,15 @@ struct HopfFibrationLayerView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let cellCount: Int = 800
-  let cellSegment: Int = 800
+  let gridSize: Int = 30
+
+  var cellCount: Int {
+    return gridSize * gridSize * gridSize
+  }
+  let cellSegment: Int = 40
 
   var vertexPerCell: Int {
-    return cellSegment
+    return cellSegment + 1
   }
   var indicePerCell: Int {
     return cellSegment * 2
@@ -164,15 +228,6 @@ struct HopfFibrationLayerView: View {
     return cellCount * indicePerCell
   }
 
-  func fibonacciGrid(n: Float, total: Float) -> SIMD3<Float> {
-    let z = (2.0 * n - 1.0) / total - 1.0
-    let t = sqrt(1.0 - z * z)
-    let t2 = 2.0 * 3.14159265359 * 1.61803398875 * n
-    let x = t * cos(t2)
-    let y = t * sin(t2)
-    return SIMD3(x, y, z)
-  }
-
   func createPingPongBuffer() -> PingPongBuffer {
     let bufferSize = MemoryLayout<CellBase>.stride * cellCount
     let buffer = PingPongBuffer(device: device, length: bufferSize)
@@ -181,20 +236,23 @@ struct HopfFibrationLayerView: View {
     let contents = buffer.currentBuffer.contents()
 
     let cells = contents.bindMemory(to: CellBase.self, capacity: cellCount)
-    for i in 0..<cellCount {
-      let angle = Float(i) * 0.06
-      let radius: Float = 1.0
-      var height = (Float(i) / Float(cellCount) - 0.5) * 3
-      height = round(height * 2) / 2
-      let pos = SIMD3<Float>(
-        radius * sin(angle),
-        height,
-        radius * cos(angle)
-      )
-      cells[i] = CellBase(
-        position: pos,
-        index: Float(i)
-      )
+
+    // create points in 3D grid, each point is a group of vertexes
+    for xi in 0..<gridSize {
+      for yi in 0..<gridSize {
+        for zi in 0..<gridSize {
+          let i = xi * gridSize * gridSize + yi * gridSize + zi
+          let x = Float(xi) / Float(gridSize) * 2 - 1
+          let y = Float(yi) / Float(gridSize) * 2 - 1
+          let z = Float(zi) / Float(gridSize) * 2 - 1
+          let pos = SIMD3<Float>(x, y, z) * 0.2
+          cells[i] = CellBase(
+            original: pos,
+            position: pos,
+            velocity: Float.random(in: 0.08...0.4)
+          )
+        }
+      }
     }
 
     // copy data from current buffer to next buffer
@@ -222,8 +280,6 @@ struct HopfFibrationLayerView: View {
           let half = j / 2
           if is_even {
             indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half)
-          } else if j == indicePerCell - 1 {
-            indices[i * indicePerCell + j] = UInt32(i * vertexPerCell)
           } else {
             indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half + 1)
           }
@@ -246,14 +302,16 @@ struct HopfFibrationLayerView: View {
   @State private var viewStartTime: Date = Date()
   @State private var frameDelta: Float = 0.0
 
-  private func getMovingParams() -> MovingCellParams {
+  private func getMovingParams() -> MovingCubesParams {
     let delta = -Float(viewStartTime.timeIntervalSinceNow)
     let dt = delta - frameDelta
     frameDelta = delta
-    return MovingCellParams(vertexPerCell: Int32(vertexPerCell), dt: 0.8 * dt, timestamp: delta)
+    return MovingCubesParams(
+      vertexPerCell: Int32(vertexPerCell), dt: 0.006,
+      timestamp: delta)
   }
 
-  func updateCellBase() {
+  func updateCubeBase() {
     guard let pingPongBuffer = pingPongBuffer,
       let commandBuffer = commandQueue.makeCommandBuffer(),
       let computeEncoder = commandBuffer.makeComputeCommandEncoder()
@@ -273,7 +331,7 @@ struct HopfFibrationLayerView: View {
 
     var params = getMovingParams()
     // idx 2: params buffer
-    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCellParams>.size, index: 2)
+    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 2)
 
     let threadsPerGrid = MTLSize(width: cellCount, height: 1, depth: 1)
     let threadsPerThreadgroup = MTLSize(width: 16, height: 1, depth: 1)
@@ -311,11 +369,11 @@ struct HopfFibrationLayerView: View {
     // idx 1: vertexBuffer
     computeEncoder.setBuffer(vertexBuffer, offset: 0, index: 1)
     // idx 2: prevBuffer
-    // computeEncoder.setBuffer(prevBuffer, offset: 0, index: 2)
+    computeEncoder.setBuffer(prevBuffer, offset: 0, index: 2)
 
     var params = getMovingParams()
     // idx 3: params buffer
-    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCellParams>.size, index: 2)
+    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 3)
 
     let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
     let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)

@@ -2,22 +2,17 @@ import Metal
 import RealityKit
 import SwiftUI
 
-private struct MovingCubesParams {
-  var width: Float
+private struct MovingCellParams {
   var dt: Float
   var timestamp: Float = 0
 }
 
 private struct VertexData {
   var position: SIMD3<Float> = .zero
-  // var normal: SIMD3<Float> = .zero
-  // var uv: SIMD2<Float> = .zero
 
   @MainActor static var vertexAttributes: [LowLevelMesh.Attribute] = [
     .init(
       semantic: .position, format: .float3, offset: MemoryLayout<Self>.offset(of: \.position)!)
-    // .init(semantic: .normal, format: .float3, offset: MemoryLayout<Self>.offset(of: \.normal)!),
-    // .init(semantic: .uv0, format: .float2, offset: MemoryLayout<Self>.offset(of: \.uv)!),
   ]
 
   @MainActor static var vertexLayouts: [LowLevelMesh.Layout] = [
@@ -35,13 +30,11 @@ private struct VertexData {
 
 /// placement of a cube
 private struct CellBase {
-  var position: SIMD3<Float>
-  var center: SIMD3<Float>
-  var radius: Float
-  var angle: Float
+  var position: SIMD3<Float> = .zero
+  var seed: Float = 0
 }
 
-struct ChordsView: View {
+struct MobiusBubblesView: View {
   let rootEntity: Entity = Entity()
   @State var mesh: LowLevelMesh?
 
@@ -52,23 +45,23 @@ struct ChordsView: View {
 
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
-  let cubePipeline: MTLComputePipelineState
+
   let vertexPipeline: MTLComputePipelineState
 
   @State var pingPongBuffer: PingPongBuffer?
   /// The vertex buffer for the mesh
   @State var vertexBuffer: MTLBuffer?
+  /// to track previous state of vertex buffer
+  @State var vertexPrevBuffer: MTLBuffer?
 
   init() {
     self.device = MTLCreateSystemDefaultDevice()!
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
-    let updateCellBase = library.makeFunction(name: "updateChordsBase")!
-    self.cubePipeline = try! device.makeComputePipelineState(function: updateCellBase)
 
-    let updateCubeVertexes = library.makeFunction(name: "updateChordsVertexes")!
-    self.vertexPipeline = try! device.makeComputePipelineState(function: updateCubeVertexes)
+    let updateVertexes = library.makeFunction(name: "updateMobiusBubblesVertexes")!
+    self.vertexPipeline = try! device.makeComputePipelineState(function: updateVertexes)
   }
 
   var body: some View {
@@ -81,10 +74,25 @@ struct ChordsView: View {
           return
         }
         rootEntity.components.set(modelComponent)
+        // Add components for gesture support
+        rootEntity.components.set(GestureComponent())
+        rootEntity.components.set(InputTargetComponent())
+        // Adjust collision box size to match actual content
+        let bounds = getBounds()
+        rootEntity.components.set(
+          CollisionComponent(
+            shapes: [
+              .generateBox(
+                width: bounds.extents.x * 4,
+                height: bounds.extents.y * 4,
+                depth: bounds.extents.z * 4)
+            ]
+          ))
+
         // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = 1
+        // rootEntity.position.z = -2
         // rootEntity.position.x = 1.6
-        rootEntity.position.z = -1
         content.add(rootEntity)
         self.mesh = mesh
 
@@ -95,6 +103,50 @@ struct ChordsView: View {
       .onDisappear {
         stopTimer()
       }
+      .gesture(
+        DragGesture()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onDragChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
+      .gesture(
+        RotateGesture3D()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onRotateChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
+      .simultaneousGesture(
+        MagnifyGesture()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onScaleChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component: GestureComponent =
+              rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
     }
   }
 
@@ -109,11 +161,8 @@ struct ChordsView: View {
 
       DispatchQueue.main.async {
         if let vertexBuffer = self.vertexBuffer {
-          self.updateCellBase()
           self.updateMesh(vertexBuffer: vertexBuffer)
-
-          // swap buffers
-          self.pingPongBuffer!.swap()
+          // no need to swap buffers
         } else {
           print("[ERR] vertex buffer is not initialized")
         }
@@ -133,7 +182,7 @@ struct ChordsView: View {
   func getModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
     let resource = try MeshResource(from: mesh)
 
-    var unlitMaterial = UnlitMaterial(color: .yellow)
+    var unlitMaterial = UnlitMaterial(color: .cyan)
     unlitMaterial.faceCulling = .none
 
     return ModelComponent(mesh: resource, materials: [unlitMaterial])
@@ -141,36 +190,26 @@ struct ChordsView: View {
 
   /// Create a bounding box for the mesh
   func getBounds() -> BoundingBox {
-    let radius: Float = 2
+    let radius: Float = 10
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let cellCount: Int = 600
+  var sphereVertexes: [SIMD3<Float>] {
+    makeSphereWithIterate(times: 3)
+  }
 
-  let segmentCount: Int = 20
+  let sphereCount: Int = 400
+
+  var cellCount: Int {
+    return sphereVertexes.count * sphereCount
+  }
 
   var vertexCapacity: Int {
-    return (segmentCount + 1) * cellCount
+    return cellCount
   }
 
-  var shapeIndiceCount: Int {
-    return segmentCount * 2
-  }
-
-  var indexCount: Int {
-    return shapeIndiceCount * cellCount
-  }
-
-  let PHI: Float = 1.618033988749895
-  let PI: Float = 3.141592653589793
-
-  func fiboGridN(n: Float, total: Float) -> SIMD3<Float> {
-    let z = (2 * n - 1) / total - 1
-    let t = sqrt(1 - z * z)
-    let t2 = 2 * PI * PHI * n
-    let x = t * cos(t2)
-    let y = t * sin(t2)
-    return [x, y, z]
+  var indiceCapacity: Int {
+    return cellCount
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
@@ -179,17 +218,20 @@ struct ChordsView: View {
 
     // 使用 contents() 前检查 buffer 是否有效
     let contents = buffer.currentBuffer.contents()
-    let p0 = SIMD3<Float>(x: 0, y: 0.5, z: 0)
 
     let cells = contents.bindMemory(to: CellBase.self, capacity: cellCount)
-    for i in 0..<cellCount {
-      let point = fiboGridN(n: Float(i), total: Float(cellCount))
-      cells[i] = CellBase(
-        position: [point.x, point.z, point.y] * 0.5 + p0,
-        center: point,
-        radius: 0.1,
-        angle: 0.0
-      )
+    let shape = sphereVertexes
+
+    for i in 0..<sphereCount {
+      let center = randomPosition(r: 12)
+      let radius = Float.random(in: 0.1...4)
+      let seed = Float.random(in: 0...10)
+      for j in 0..<shape.count {
+        let idx = i * shape.count + j
+        let p = center + shape[j] * radius
+        cells[idx].position = p
+        cells[idx].seed = seed
+      }
     }
 
     // copy data from current buffer to next buffer
@@ -202,7 +244,7 @@ struct ChordsView: View {
   func createMesh() throws -> LowLevelMesh {
     var desc = VertexData.descriptor
     desc.vertexCapacity = vertexCapacity
-    desc.indexCapacity = indexCount
+    desc.indexCapacity = indiceCapacity
 
     let mesh = try LowLevelMesh(descriptor: desc)
 
@@ -212,22 +254,13 @@ struct ChordsView: View {
       let indices = rawIndices.bindMemory(to: UInt32.self)
 
       for i in 0..<cellCount {
-        for j in 0..<shapeIndiceCount {
-          let isEven = j % 2 == 0
-          let idx = i * shapeIndiceCount + j
-          indices[idx] = UInt32(i * (segmentCount + 1)) + UInt32(j / 2)
-          if isEven {
-          } else {
-            indices[idx] += 1
-          }
-        }
+        indices[i] = UInt32(i)
       }
-
     }
 
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
-        indexCount: indexCount,
+        indexCount: indiceCapacity,
         topology: .lineStrip,
         bounds: getBounds()
       )
@@ -237,41 +270,13 @@ struct ChordsView: View {
   }
 
   @State private var viewStartTime: Date = Date()
+  @State private var frameDelta: Float = 0.0
 
-  private func getMovingParams() -> MovingCubesParams {
+  private func getMovingParams() -> MovingCellParams {
     let delta = -Float(viewStartTime.timeIntervalSinceNow)
-    return MovingCubesParams(width: 0.003, dt: 0.02, timestamp: delta)
-  }
-
-  func updateCellBase() {
-    guard let pingPongBuffer = pingPongBuffer,
-      let commandBuffer = commandQueue.makeCommandBuffer(),
-      let computeEncoder = commandBuffer.makeComputeCommandEncoder()
-    else {
-      print("updateMesh: failed to get mesh or pingPongBuffer or commandBuffer or computeEncoder")
-      return
-    }
-
-    computeEncoder.setComputePipelineState(cubePipeline)
-
-    // idx 0: pingPongBuffer
-    computeEncoder.setBuffer(
-      pingPongBuffer.currentBuffer, offset: 0, index: 0)
-
-    // idx 1: vertexBuffer
-    computeEncoder.setBuffer(pingPongBuffer.nextBuffer, offset: 0, index: 1)
-
-    var params = getMovingParams()
-    // idx 2: params buffer
-    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 2)
-
-    let threadsPerGrid = MTLSize(width: cellCount, height: 1, depth: 1)
-    let threadsPerThreadgroup = MTLSize(width: 16, height: 1, depth: 1)
-    computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
-
-    computeEncoder.endEncoding()
-
-    commandBuffer.commit()
+    let dt = delta - frameDelta
+    frameDelta = delta
+    return MovingCellParams(dt: 0.8 * dt, timestamp: delta)
   }
 
   func updateMesh(vertexBuffer: MTLBuffer) {
@@ -300,8 +305,8 @@ struct ChordsView: View {
     computeEncoder.setBuffer(vertexBuffer, offset: 0, index: 1)
 
     var params = getMovingParams()
-    // idx 2: params buffer
-    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 2)
+    // idx 3: params buffer
+    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCellParams>.size, index: 2)
 
     let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
     let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
@@ -322,7 +327,7 @@ struct ChordsView: View {
     // apply entity with mesh data
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
-        indexCount: indexCount,
+        indexCount: indiceCapacity,
         topology: .line,
         bounds: getBounds()
       )

@@ -3,21 +3,16 @@ import RealityKit
 import SwiftUI
 
 private struct MovingCellParams {
-  var width: Float
   var dt: Float
   var timestamp: Float = 0
 }
 
 private struct VertexData {
   var position: SIMD3<Float> = .zero
-  // var normal: SIMD3<Float> = .zero
-  // var uv: SIMD2<Float> = .zero
 
   @MainActor static var vertexAttributes: [LowLevelMesh.Attribute] = [
     .init(
       semantic: .position, format: .float3, offset: MemoryLayout<Self>.offset(of: \.position)!)
-    // .init(semantic: .normal, format: .float3, offset: MemoryLayout<Self>.offset(of: \.normal)!),
-    // .init(semantic: .uv0, format: .float2, offset: MemoryLayout<Self>.offset(of: \.uv)!),
   ]
 
   @MainActor static var vertexLayouts: [LowLevelMesh.Layout] = [
@@ -35,12 +30,11 @@ private struct VertexData {
 
 /// placement of a cube
 private struct CellBase {
-  var position: SIMD3<Float>
-  var size: Float
-  var rotate: Float
+  var position: SIMD3<Float> = .zero
+  var seed: Float = 0
 }
 
-struct PolygonWallView: View {
+struct LotusView: View {
   let rootEntity: Entity = Entity()
   @State var mesh: LowLevelMesh?
 
@@ -51,23 +45,23 @@ struct PolygonWallView: View {
 
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
-  let cubePipeline: MTLComputePipelineState
+
   let vertexPipeline: MTLComputePipelineState
 
   @State var pingPongBuffer: PingPongBuffer?
   /// The vertex buffer for the mesh
   @State var vertexBuffer: MTLBuffer?
+  /// to track previous state of vertex buffer
+  @State var vertexPrevBuffer: MTLBuffer?
 
   init() {
     self.device = MTLCreateSystemDefaultDevice()!
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
-    let updateCellBase = library.makeFunction(name: "updatePolygonWallBase")!
-    self.cubePipeline = try! device.makeComputePipelineState(function: updateCellBase)
 
-    let updateCellVertexes = library.makeFunction(name: "updatePolygonWallVertexes")!
-    self.vertexPipeline = try! device.makeComputePipelineState(function: updateCellVertexes)
+    let updateVertexes = library.makeFunction(name: "updateLotusVertexes")!
+    self.vertexPipeline = try! device.makeComputePipelineState(function: updateVertexes)
   }
 
   var body: some View {
@@ -80,10 +74,25 @@ struct PolygonWallView: View {
           return
         }
         rootEntity.components.set(modelComponent)
+        // Add components for gesture support
+        rootEntity.components.set(GestureComponent())
+        rootEntity.components.set(InputTargetComponent())
+        // Adjust collision box size to match actual content
+        let bounds = getBounds()
+        rootEntity.components.set(
+          CollisionComponent(
+            shapes: [
+              .generateBox(
+                width: bounds.extents.x * 4,
+                height: bounds.extents.y * 4,
+                depth: bounds.extents.z * 4)
+            ]
+          ))
+
         // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = 1
+        // rootEntity.position.z = -2
         // rootEntity.position.x = 1.6
-        rootEntity.position.z = -1
         content.add(rootEntity)
         self.mesh = mesh
 
@@ -94,6 +103,50 @@ struct PolygonWallView: View {
       .onDisappear {
         stopTimer()
       }
+      .gesture(
+        DragGesture()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onDragChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
+      .gesture(
+        RotateGesture3D()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onRotateChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
+      .simultaneousGesture(
+        MagnifyGesture()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onScaleChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component: GestureComponent =
+              rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
     }
   }
 
@@ -108,11 +161,8 @@ struct PolygonWallView: View {
 
       DispatchQueue.main.async {
         if let vertexBuffer = self.vertexBuffer {
-          self.updateCellBase()
           self.updateMesh(vertexBuffer: vertexBuffer)
-
-          // swap buffers
-          self.pingPongBuffer!.swap()
+          // no need to swap buffers
         } else {
           print("[ERR] vertex buffer is not initialized")
         }
@@ -132,7 +182,7 @@ struct PolygonWallView: View {
   func getModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
     let resource = try MeshResource(from: mesh)
 
-    var unlitMaterial = UnlitMaterial(color: .white)
+    var unlitMaterial = UnlitMaterial(color: UIColor(red: 1, green: 0.7, blue: 0.7, alpha: 1.0))
     unlitMaterial.faceCulling = .none
 
     return ModelComponent(mesh: resource, materials: [unlitMaterial])
@@ -140,26 +190,38 @@ struct PolygonWallView: View {
 
   /// Create a bounding box for the mesh
   func getBounds() -> BoundingBox {
-    let radius: Float = 2
+    let radius: Float = 10
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let cellCount: Int = 600
+  let petalCount: Int = 60
+  var petalArea: Float {
+    Float(petalCount) * 1.5
+  }
+
+  let venationSize: Int = 32
+  let venationGap: Float = 0.04
+
+  let segmentCount: Int = 40
+
+  var verticesPerStrip: Int {
+    return segmentCount + 1
+  }
+
+  var cellCount: Int {
+    return petalCount * venationSize * verticesPerStrip
+  }
 
   var vertexCapacity: Int {
-    return cellCount * 4
+    return cellCount
   }
 
-  var cubeFrame: [Int] = [
-    0, 1, 1, 2, 2, 3, 3, 0,
-  ]
-
-  var shapeIndiceCount: Int {
-    return cubeFrame.count
+  var indicesPerStrip: Int {
+    return segmentCount * 2
   }
 
-  var indexCount: Int {
-    return cellCount * shapeIndiceCount
+  var indiceCapacity: Int {
+    return petalCount * venationSize * indicesPerStrip
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
@@ -169,17 +231,38 @@ struct PolygonWallView: View {
     // 使用 contents() 前检查 buffer 是否有效
     let contents = buffer.currentBuffer.contents()
 
-    let cubes = contents.bindMemory(to: CellBase.self, capacity: cellCount)
-    var acc = 0.1
-    var acc2 = -0.1
-    for i in 0..<cellCount {
-      acc += 0.02
-      acc2 += 0.002
-      cubes[i] = CellBase(
-        position: SIMD3(0, 0, 0),
-        size: Float(acc),
-        rotate: Float(acc2)
+    let cells = contents.bindMemory(to: CellBase.self, capacity: cellCount)
+
+    for petalIdx in 0..<petalCount {
+      let endPoint = fibonacciGrid(
+        n: Float(petalIdx),
+        total: Float(petalArea)
       )
+      let angle = atan2(endPoint.z, endPoint.x)
+      for venationIdx in 0..<venationSize {
+        let ve: Float = Float(venationIdx) - Float(venationSize) * 0.5
+        let venationAngle = angle + ve * venationGap
+        let r0: Float = 0.1
+        let yPart: SIMD3<Float> = SIMD3<Float>(0, endPoint.y * 0.2, 0)
+        let venationStart =
+          SIMD3<Float>(
+            r0 * cos(venationAngle),
+            0,
+            r0 * sin(venationAngle)
+          ) + yPart * 0.08
+        let p1 = venationStart * 5 + yPart * 0.4
+        let p2: SIMD3<Float> = venationStart * 5 + yPart * 0.4
+        for segmentIdx in 0...segmentCount {
+          let idx =
+            petalIdx * venationSize * (segmentCount + 1) + venationIdx * (segmentCount + 1)
+            + segmentIdx
+          let t = Float(segmentIdx) / Float(segmentCount)
+          // let venation = venationStart + (endPoint - venationStart) * t
+          let venation: SIMD3<Float> = bezierCurve(
+            p0: venationStart, p1: p1, p2: p2, p3: endPoint, t: t)
+          cells[idx].position = venation
+        }
+      }
     }
 
     // copy data from current buffer to next buffer
@@ -192,7 +275,7 @@ struct PolygonWallView: View {
   func createMesh() throws -> LowLevelMesh {
     var desc = VertexData.descriptor
     desc.vertexCapacity = vertexCapacity
-    desc.indexCapacity = indexCount
+    desc.indexCapacity = indiceCapacity
 
     let mesh = try LowLevelMesh(descriptor: desc)
 
@@ -201,17 +284,26 @@ struct PolygonWallView: View {
     mesh.withUnsafeMutableIndices { rawIndices in
       let indices = rawIndices.bindMemory(to: UInt32.self)
 
-      for i in 0..<cellCount {
-        for j in 0..<shapeIndiceCount {
-          indices[i * shapeIndiceCount + j] = UInt32(cubeFrame[j]) + UInt32(i * 8)
+      let size = petalCount * venationSize
+      for i in 0..<size {
+        for j in 0..<indicesPerStrip {
+          let idx = i * indicesPerStrip + j  // for indice location
+          let vertexIdxBase = i * verticesPerStrip  // for vertex location
+          let even = j % 2 == 0
+          let half = j / 2
+          if even {
+            indices[idx] = UInt32(vertexIdxBase + half)
+          } else {
+            indices[idx] = UInt32(vertexIdxBase + half + 1)
+          }
+
         }
       }
-
     }
 
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
-        indexCount: indexCount,
+        indexCount: indiceCapacity,
         topology: .lineStrip,
         bounds: getBounds()
       )
@@ -221,42 +313,13 @@ struct PolygonWallView: View {
   }
 
   @State private var viewStartTime: Date = Date()
+  @State private var frameDelta: Float = 0.0
 
   private func getMovingParams() -> MovingCellParams {
     let delta = -Float(viewStartTime.timeIntervalSinceNow)
-    return MovingCellParams(
-      width: 0.003, dt: 0.02, timestamp: delta)
-  }
-
-  func updateCellBase() {
-    guard let pingPongBuffer = pingPongBuffer,
-      let commandBuffer = commandQueue.makeCommandBuffer(),
-      let computeEncoder = commandBuffer.makeComputeCommandEncoder()
-    else {
-      print("updateMesh: failed to get mesh or pingPongBuffer or commandBuffer or computeEncoder")
-      return
-    }
-
-    computeEncoder.setComputePipelineState(cubePipeline)
-
-    // idx 0: pingPongBuffer
-    computeEncoder.setBuffer(
-      pingPongBuffer.currentBuffer, offset: 0, index: 0)
-
-    // idx 1: vertexBuffer
-    computeEncoder.setBuffer(pingPongBuffer.nextBuffer, offset: 0, index: 1)
-
-    var params = getMovingParams()
-    // idx 2: params buffer
-    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCellParams>.size, index: 2)
-
-    let threadsPerGrid = MTLSize(width: cellCount, height: 1, depth: 1)
-    let threadsPerThreadgroup = MTLSize(width: 16, height: 1, depth: 1)
-    computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
-
-    computeEncoder.endEncoding()
-
-    commandBuffer.commit()
+    let dt = delta - frameDelta
+    frameDelta = delta
+    return MovingCellParams(dt: 0.8 * dt, timestamp: delta)
   }
 
   func updateMesh(vertexBuffer: MTLBuffer) {
@@ -285,7 +348,7 @@ struct PolygonWallView: View {
     computeEncoder.setBuffer(vertexBuffer, offset: 0, index: 1)
 
     var params = getMovingParams()
-    // idx 2: params buffer
+    // idx 3: params buffer
     computeEncoder.setBytes(&params, length: MemoryLayout<MovingCellParams>.size, index: 2)
 
     let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
@@ -307,7 +370,7 @@ struct PolygonWallView: View {
     // apply entity with mesh data
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
-        indexCount: indexCount,
+        indexCount: indiceCapacity,
         topology: .line,
         bounds: getBounds()
       )

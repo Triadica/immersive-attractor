@@ -35,12 +35,13 @@ private struct VertexData {
 
 /// placement of a cube
 private struct CellBase {
-  var original: SIMD3<Float>
   var position: SIMD3<Float>
-  var velocity: Float = 0
+  var step: Float
+  var velocity: SIMD3<Float> = .zero
+  var lifeValue: Float
 }
 
-struct MobiusTrailView: View {
+struct FireworksView: View {
   let rootEntity: Entity = Entity()
   @State var mesh: LowLevelMesh?
 
@@ -65,10 +66,10 @@ struct MobiusTrailView: View {
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
-    let updateAttractorBase = library.makeFunction(name: "updateMobiusTrailBase")!
+    let updateAttractorBase = library.makeFunction(name: "updateFireworksBase")!
     self.attractorPipeline = try! device.makeComputePipelineState(function: updateAttractorBase)
 
-    let updatelinesVertexes = library.makeFunction(name: "updateMobiusTrailVertexes")!
+    let updatelinesVertexes = library.makeFunction(name: "updateFireworksVertexes")!
     self.vertexPipeline = try! device.makeComputePipelineState(function: updatelinesVertexes)
   }
 
@@ -81,7 +82,23 @@ struct MobiusTrailView: View {
           print("Failed to create mesh or model component")
           return
         }
+
         rootEntity.components.set(modelComponent)
+        // Add components for gesture support
+        rootEntity.components.set(GestureComponent())
+        rootEntity.components.set(InputTargetComponent())
+        // Adjust collision box size to match actual content
+        let bounds = getBounds()
+        rootEntity.components.set(
+          CollisionComponent(
+            shapes: [
+              .generateBox(
+                width: bounds.extents.x * 4,
+                height: bounds.extents.y * 4,
+                depth: bounds.extents.z * 4)
+            ]
+          ))
+
         // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = 1
         // rootEntity.position.z = -2
@@ -96,6 +113,50 @@ struct MobiusTrailView: View {
       .onDisappear {
         stopTimer()
       }
+      .gesture(
+        DragGesture()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onDragChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
+      .gesture(
+        RotateGesture3D()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onRotateChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
+      .simultaneousGesture(
+        MagnifyGesture()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onScaleChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component: GestureComponent =
+              rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
     }
   }
 
@@ -112,7 +173,7 @@ struct MobiusTrailView: View {
 
       DispatchQueue.main.async {
         if let vertexBuffer = self.vertexBuffer {
-          self.updateCubeBase()
+          self.updateCellBase()
           self.updateMesh(vertexBuffer: vertexBuffer, prevBuffer: self.vertexPrevBuffer!)
 
           // swap buffers
@@ -148,12 +209,8 @@ struct MobiusTrailView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let gridSize: Int = 30
-
-  var cellCount: Int {
-    return gridSize * gridSize * gridSize
-  }
-  let cellSegment: Int = 40
+  let cellCount: Int = 40000
+  let cellSegment: Int = 16
 
   var vertexPerCell: Int {
     return cellSegment + 1
@@ -176,24 +233,14 @@ struct MobiusTrailView: View {
     // 使用 contents() 前检查 buffer 是否有效
     let contents = buffer.currentBuffer.contents()
 
-    let cells = contents.bindMemory(to: CellBase.self, capacity: cellCount)
-
-    // create points in 3D grid, each point is a group of vertexes
-    for xi in 0..<gridSize {
-      for yi in 0..<gridSize {
-        for zi in 0..<gridSize {
-          let i = xi * gridSize * gridSize + yi * gridSize + zi
-          let x = Float(xi) / Float(gridSize) * 2 - 1
-          let y = Float(yi) / Float(gridSize) * 2 - 1
-          let z = Float(zi) / Float(gridSize) * 2 - 1
-          let pos = SIMD3<Float>(x, y, z) * 0.2
-          cells[i] = CellBase(
-            original: pos,
-            position: pos,
-            velocity: Float.random(in: 0.08...0.4)
-          )
-        }
-      }
+    let cubes = contents.bindMemory(to: CellBase.self, capacity: cellCount)
+    for i in 0..<cellCount {
+      cubes[i] = CellBase(
+        position: randomPosition(r: 0.0) + SIMD3<Float>(0, 0.0, -1),
+        step: 0,
+        velocity: normalize(randomPosition(r: 1)) * 0.1 + SIMD3<Float>(0, 1, 0),
+        lifeValue: 0
+      )
     }
 
     // copy data from current buffer to next buffer
@@ -247,12 +294,10 @@ struct MobiusTrailView: View {
     let delta = -Float(viewStartTime.timeIntervalSinceNow)
     let dt = delta - frameDelta
     frameDelta = delta
-    return MovingCubesParams(
-      vertexPerCell: Int32(vertexPerCell), dt: 0.006,
-      timestamp: delta)
+    return MovingCubesParams(vertexPerCell: Int32(vertexPerCell), dt: 0.8 * dt, timestamp: delta)
   }
 
-  func updateCubeBase() {
+  func updateCellBase() {
     guard let pingPongBuffer = pingPongBuffer,
       let commandBuffer = commandQueue.makeCommandBuffer(),
       let computeEncoder = commandBuffer.makeComputeCommandEncoder()

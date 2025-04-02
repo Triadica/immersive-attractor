@@ -36,10 +36,11 @@ private struct VertexData {
 private struct CubeBase {
   var position: SIMD3<Float>
   var size: Float
+  var velocity: SIMD3<Float> = .zero
   var rotate: Float
 }
 
-struct AttractorLineView: View {
+struct SphereBouncingView: View {
   let rootEntity: Entity = Entity()
   @State var mesh: LowLevelMesh?
 
@@ -64,10 +65,10 @@ struct AttractorLineView: View {
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
-    let updateAttractorBase = library.makeFunction(name: "updateAttractorLineBase")!
+    let updateAttractorBase = library.makeFunction(name: "updateSphereBouncingBase")!
     self.attractorPipeline = try! device.makeComputePipelineState(function: updateAttractorBase)
 
-    let updatelinesVertexes = library.makeFunction(name: "updateAttractorLineVertexes")!
+    let updatelinesVertexes = library.makeFunction(name: "updateSphereBouncingVertexes")!
     self.vertexPipeline = try! device.makeComputePipelineState(function: updatelinesVertexes)
   }
 
@@ -75,11 +76,27 @@ struct AttractorLineView: View {
     GeometryReader3D { proxy in
       RealityView { content in
         guard let mesh = try? createMesh(),
-              let modelComponent = try? getModelComponent(mesh: mesh) else {
+          let modelComponent = try? getModelComponent(mesh: mesh)
+        else {
           print("Failed to create mesh or model component")
           return
         }
         rootEntity.components.set(modelComponent)
+        // Add components for gesture support
+        rootEntity.components.set(GestureComponent())
+        rootEntity.components.set(InputTargetComponent())
+        // Adjust collision box size to match actual content
+        let bounds = getBounds()
+        rootEntity.components.set(
+          CollisionComponent(
+            shapes: [
+              .generateBox(
+                width: bounds.extents.x * 4,
+                height: bounds.extents.y * 4,
+                depth: bounds.extents.z * 4)
+            ]
+          ))
+
         // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = 1
         // rootEntity.position.z = -2
@@ -94,6 +111,50 @@ struct AttractorLineView: View {
       .onDisappear {
         stopTimer()
       }
+      .gesture(
+        DragGesture()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onDragChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
+      .gesture(
+        RotateGesture3D()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onRotateChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
+      .simultaneousGesture(
+        MagnifyGesture()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onScaleChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component: GestureComponent =
+              rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
     }
   }
 
@@ -147,7 +208,7 @@ struct AttractorLineView: View {
   }
 
   let cellCount: Int = 50000
-  let cellSegment: Int = 8
+  let cellSegment: Int = 16
 
   var vertexPerCell: Int {
     return cellSegment + 1
@@ -173,8 +234,9 @@ struct AttractorLineView: View {
     let cubes = contents.bindMemory(to: CubeBase.self, capacity: cellCount)
     for i in 0..<cellCount {
       cubes[i] = CubeBase(
-        position: randomPosition(r: 1),
+        position: randomPosition(r: 0.0) + SIMD3<Float>(0, 0, 0.6),
         size: Float.random(in: 0.1..<1.4),
+        velocity: normalize(randomPosition(r: 1)) * 0.2 + SIMD3<Float>(1, 0, 0),
         rotate: 0
       )
     }
@@ -224,7 +286,7 @@ struct AttractorLineView: View {
   }
 
   private func getMovingParams() -> MovingCubesParams {
-    return MovingCubesParams(vertexPerCell: Int32(vertexPerCell), dt: 0.008)
+    return MovingCubesParams(vertexPerCell: Int32(vertexPerCell), dt: 0.006)
   }
 
   func updateCubeBase() {

@@ -10,10 +10,14 @@ private struct MovingCellParams {
 
 private struct VertexData {
   var position: SIMD3<Float> = .zero
+  // var normal: SIMD3<Float> = .zero
+  // var uv: SIMD2<Float> = .zero
 
   @MainActor static var vertexAttributes: [LowLevelMesh.Attribute] = [
     .init(
       semantic: .position, format: .float3, offset: MemoryLayout<Self>.offset(of: \.position)!)
+    // .init(semantic: .normal, format: .float3, offset: MemoryLayout<Self>.offset(of: \.normal)!),
+    // .init(semantic: .uv0, format: .float2, offset: MemoryLayout<Self>.offset(of: \.uv)!),
   ]
 
   @MainActor static var vertexLayouts: [LowLevelMesh.Layout] = [
@@ -35,7 +39,7 @@ private struct CellBase {
   var index: Float
 }
 
-struct MobiusGirdView: View {
+struct HopfFibrationLayerView: View {
   let rootEntity: Entity = Entity()
   @State var mesh: LowLevelMesh?
 
@@ -46,7 +50,7 @@ struct MobiusGirdView: View {
 
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
-
+  let attractorPipeline: MTLComputePipelineState
   let vertexPipeline: MTLComputePipelineState
 
   @State var pingPongBuffer: PingPongBuffer?
@@ -60,8 +64,10 @@ struct MobiusGirdView: View {
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
+    let updateAttractorBase = library.makeFunction(name: "updateHopfFibrationLayerBase")!
+    self.attractorPipeline = try! device.makeComputePipelineState(function: updateAttractorBase)
 
-    let updatelinesVertexes = library.makeFunction(name: "updateMobiusGridVertexes")!
+    let updatelinesVertexes = library.makeFunction(name: "updateHopfFibrationLayerVertexes")!
     self.vertexPipeline = try! device.makeComputePipelineState(function: updatelinesVertexes)
   }
 
@@ -75,6 +81,21 @@ struct MobiusGirdView: View {
           return
         }
         rootEntity.components.set(modelComponent)
+        // Add components for gesture support
+        rootEntity.components.set(GestureComponent())
+        rootEntity.components.set(InputTargetComponent())
+        // Adjust collision box size to match actual content
+        let bounds = getBounds()
+        rootEntity.components.set(
+          CollisionComponent(
+            shapes: [
+              .generateBox(
+                width: bounds.extents.x * 4,
+                height: bounds.extents.y * 4,
+                depth: bounds.extents.z * 4)
+            ]
+          ))
+
         // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = 1
         // rootEntity.position.z = -2
@@ -89,6 +110,50 @@ struct MobiusGirdView: View {
       .onDisappear {
         stopTimer()
       }
+      .gesture(
+        DragGesture()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onDragChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
+      .gesture(
+        RotateGesture3D()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onRotateChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
+      .simultaneousGesture(
+        MagnifyGesture()
+          .targetedToEntity(rootEntity)
+          .onChanged { value in
+            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onScaleChange(value: value)
+            rootEntity.components[GestureComponent.self] = component
+          }
+          .onEnded { _ in
+            var component: GestureComponent =
+              rootEntity.components[GestureComponent.self] ?? GestureComponent()
+            component.onGestureEnded()
+            rootEntity.components[GestureComponent.self] = component
+          }
+      )
     }
   }
 
@@ -98,12 +163,15 @@ struct MobiusGirdView: View {
 
     self.vertexBuffer = device.makeBuffer(
       length: MemoryLayout<VertexData>.stride * vertexCapacity, options: .storageModeShared)
+    self.vertexPrevBuffer = device.makeBuffer(
+      length: MemoryLayout<VertexData>.stride * vertexCapacity, options: .storageModeShared)
 
     timer = Timer.scheduledTimer(withTimeInterval: 1 / fps, repeats: true) { _ in
 
       DispatchQueue.main.async {
         if let vertexBuffer = self.vertexBuffer {
-          self.updateMesh(vertexBuffer: vertexBuffer)
+          self.updateCellBase()
+          self.updateMesh(vertexBuffer: vertexBuffer, prevBuffer: self.vertexPrevBuffer!)
 
           // swap buffers
           self.pingPongBuffer!.swap()
@@ -126,7 +194,7 @@ struct MobiusGirdView: View {
   func getModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
     let resource = try MeshResource(from: mesh)
 
-    var unlitMaterial = UnlitMaterial(color: .cyan)
+    var unlitMaterial = UnlitMaterial(color: .systemPink)
     unlitMaterial.faceCulling = .none
 
     return ModelComponent(mesh: resource, materials: [unlitMaterial])
@@ -138,88 +206,45 @@ struct MobiusGirdView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let gridSize: Int = 24
-
-  let gridLength: Float = 1.0
-
-  var cellCount: Int {
-    return gridSize * gridSize * gridSize * 3
-  }
-
-  let cellSegment: Int = 12
+  let cellCount: Int = 800
+  let cellSegment: Int = 800
 
   var vertexPerCell: Int {
-    return cellSegment + 1
+    return cellSegment
   }
-  var vertexCapacity: Int {
-    return cellCount * vertexPerCell
-  }
-
   var indicePerCell: Int {
     return cellSegment * 2
+  }
+
+  var vertexCapacity: Int {
+    return cellCount * vertexPerCell
   }
   var indiceCapacity: Int {
     return cellCount * indicePerCell
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
-    let bufferSize = MemoryLayout<CellBase>.stride * vertexCapacity
+    let bufferSize = MemoryLayout<CellBase>.stride * cellCount
     let buffer = PingPongBuffer(device: device, length: bufferSize)
 
     // 使用 contents() 前检查 buffer 是否有效
     let contents = buffer.currentBuffer.contents()
 
-    let cells = contents.bindMemory(to: CellBase.self, capacity: vertexCapacity)
-
-    let mid = Float(gridSize) / 2
-    for xi in 0..<gridSize {
-      for yi in 0..<gridSize {
-        for zi in 0..<gridSize {
-
-          let x = Float(xi) - mid
-          let y = Float(yi) - mid
-          let z = Float(zi) - mid
-          let pos = SIMD3<Float>(x, y, z) * gridLength
-
-          let index = (xi * gridSize * gridSize + yi * gridSize + zi) * 3 * vertexPerCell
-          // create 3 branches in each direction
-
-          var cellIdx = index
-          for i in 0..<vertexPerCell {
-            var dx = Float(i) / Float(cellSegment) * gridLength
-            if xi + 1 == gridSize {
-              dx = 0
-            }
-            cells[cellIdx] = CellBase(
-              position: pos + SIMD3<Float>(dx, 0, 0),
-              index: Float(cellIdx)
-            )
-            cellIdx += 1
-          }
-          for i in 0..<vertexPerCell {
-            var dy = Float(i) / Float(cellSegment) * gridLength
-            if yi + 1 == gridSize {
-              dy = 0
-            }
-            cells[cellIdx] = CellBase(
-              position: pos + SIMD3<Float>(0, dy, 0),
-              index: Float(cellIdx)
-            )
-            cellIdx += 1
-          }
-          for i in 0..<vertexPerCell {
-            var dz = Float(i) / Float(cellSegment) * gridLength
-            if zi + 1 == gridSize {
-              dz = 0
-            }
-            cells[cellIdx] = CellBase(
-              position: pos + SIMD3<Float>(0, 0, dz),
-              index: Float(cellIdx)
-            )
-            cellIdx += 1
-          }
-        }
-      }
+    let cells = contents.bindMemory(to: CellBase.self, capacity: cellCount)
+    for i in 0..<cellCount {
+      let angle = Float(i) * 0.06
+      let radius: Float = 1.0
+      var height = (Float(i) / Float(cellCount) - 0.5) * 3
+      height = round(height * 2) / 2
+      let pos = SIMD3<Float>(
+        radius * sin(angle),
+        height,
+        radius * cos(angle)
+      )
+      cells[i] = CellBase(
+        position: pos,
+        index: Float(i)
+      )
     }
 
     // copy data from current buffer to next buffer
@@ -247,6 +272,8 @@ struct MobiusGirdView: View {
           let half = j / 2
           if is_even {
             indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half)
+          } else if j == indicePerCell - 1 {
+            indices[i * indicePerCell + j] = UInt32(i * vertexPerCell)
           } else {
             indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half + 1)
           }
@@ -276,7 +303,38 @@ struct MobiusGirdView: View {
     return MovingCellParams(vertexPerCell: Int32(vertexPerCell), dt: 0.8 * dt, timestamp: delta)
   }
 
-  func updateMesh(vertexBuffer: MTLBuffer) {
+  func updateCellBase() {
+    guard let pingPongBuffer = pingPongBuffer,
+      let commandBuffer = commandQueue.makeCommandBuffer(),
+      let computeEncoder = commandBuffer.makeComputeCommandEncoder()
+    else {
+      print("updateMesh: failed to get mesh or pingPongBuffer or commandBuffer or computeEncoder")
+      return
+    }
+
+    computeEncoder.setComputePipelineState(attractorPipeline)
+
+    // idx 0: pingPongBuffer
+    computeEncoder.setBuffer(
+      pingPongBuffer.currentBuffer, offset: 0, index: 0)
+
+    // idx 1: vertexBuffer
+    computeEncoder.setBuffer(pingPongBuffer.nextBuffer, offset: 0, index: 1)
+
+    var params = getMovingParams()
+    // idx 2: params buffer
+    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCellParams>.size, index: 2)
+
+    let threadsPerGrid = MTLSize(width: cellCount, height: 1, depth: 1)
+    let threadsPerThreadgroup = MTLSize(width: 16, height: 1, depth: 1)
+    computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
+
+    computeEncoder.endEncoding()
+
+    commandBuffer.commit()
+  }
+
+  func updateMesh(vertexBuffer: MTLBuffer, prevBuffer: MTLBuffer) {
     guard let mesh = mesh,
       let pingPongBuffer = pingPongBuffer,
       let commandBuffer = commandQueue.makeCommandBuffer(),
@@ -290,6 +348,8 @@ struct MobiusGirdView: View {
     mesh.withUnsafeMutableBytes(bufferIndex: 0) { rawBytes in
       vertexBuffer.contents().copyMemory(
         from: rawBytes.baseAddress!, byteCount: rawBytes.count)
+      prevBuffer.contents().copyMemory(
+        from: rawBytes.baseAddress!, byteCount: rawBytes.count)
     }
 
     computeEncoder.setComputePipelineState(vertexPipeline)
@@ -300,6 +360,8 @@ struct MobiusGirdView: View {
 
     // idx 1: vertexBuffer
     computeEncoder.setBuffer(vertexBuffer, offset: 0, index: 1)
+    // idx 2: prevBuffer
+    // computeEncoder.setBuffer(prevBuffer, offset: 0, index: 2)
 
     var params = getMovingParams()
     // idx 3: params buffer
