@@ -29,6 +29,7 @@ private enum VisibilityDemo: String {
   case fractalBranches = "Fractal Branches"
   case fractalUmbrella = "Fractal Umbrella"
   case fractalTree = "Fractal Tree"
+  case snowflake = "Snowflake"
 }
 
 @main
@@ -66,6 +67,7 @@ struct AttractorApp: App {
           Text("Fractal Branches").tag(VisibilityDemo.fractalBranches)
           Text("Fractal Umbrella").tag(VisibilityDemo.fractalUmbrella)
           Text("Fractal Tree").tag(VisibilityDemo.fractalTree)
+          Text("Snowflake").tag(VisibilityDemo.snowflake)
         }.pickerStyle(.wheel).padding(.bottom, 32).frame(
           width: 400,
           height: 600,
@@ -138,6 +140,8 @@ struct AttractorApp: App {
           FractalUmbrellaView()
         case .fractalTree:
           FractalTreeView()
+        case .snowflake:
+          SnowflakeView()
         }
       }
 
