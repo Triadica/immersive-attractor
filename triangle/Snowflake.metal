@@ -16,7 +16,9 @@ struct MovingCubesParams {
 struct SnowflakeBase {
   float3 position;
   float size;
+  float3 axis;
   float rotate;
+  float3 velocity;
 };
 
 /// divide by 6, each branch has 3 lines(6 vertexes), a main branch and 2 sub
@@ -66,12 +68,31 @@ kernel void updateSnowflakeBase(
     constant MovingCubesParams &params [[buffer(2)]],
     uint id [[thread_position_in_grid]]) {
   SnowflakeBase base = codeBaseList[id];
+  device SnowflakeBase &output = outputCodeBaseList[id];
 
-  if (base.position.y < -20.0) {
-    outputCodeBaseList[id].position.y = 20.0;
+  if (base.position.y < -10.0) {
+    output.position = base.position;
+    output.position.y = 10.0;
   } else {
-    outputCodeBaseList[id].position.y = base.position.y - 0.002 * base.size;
+    output.position = base.position + base.velocity * 0.2 * params.dt;
   }
+
+  output.rotate = base.rotate + 0.01;
+  output.axis = base.axis;
+  output.size = base.size;
+  output.velocity = base.velocity;
+}
+
+// Rodrigues' rotation formula
+static float3 rotate3D(float3 p, float3 axis, float angle) {
+  float3 axisN = normalize(axis);
+  float cosAngle = cos(angle);
+  float sinAngle = sin(angle);
+  float3 vAlongAxis = axisN * dot(axisN, p);
+  float3 vOnPlane = p - vAlongAxis;
+  float3 rotatedP =
+      vOnPlane * cosAngle + cross(axisN, vOnPlane) * sinAngle + vAlongAxis;
+  return rotatedP;
 }
 
 kernel void updateSnowflakeVertexes(
@@ -85,6 +106,8 @@ kernel void updateSnowflakeVertexes(
   // vertice
   uint verticeIdx = id % shapeVertexCount;
   float3 vertice = getBranchVertex(verticeIdx);
+
+  vertice = rotate3D(vertice, base.axis, base.rotate);
 
   float3 position = base.position + vertice * 0.1 * base.size;
 

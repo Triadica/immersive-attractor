@@ -9,14 +9,10 @@ private struct MovingSnowflakeParams {
 
 private struct VertexData {
   var position: SIMD3<Float> = .zero
-  // var normal: SIMD3<Float> = .zero
-  // var uv: SIMD2<Float> = .zero
 
   @MainActor static var vertexAttributes: [LowLevelMesh.Attribute] = [
     .init(
       semantic: .position, format: .float3, offset: MemoryLayout<Self>.offset(of: \.position)!)
-    // .init(semantic: .normal, format: .float3, offset: MemoryLayout<Self>.offset(of: \.normal)!),
-    // .init(semantic: .uv0, format: .float2, offset: MemoryLayout<Self>.offset(of: \.uv)!),
   ]
 
   @MainActor static var vertexLayouts: [LowLevelMesh.Layout] = [
@@ -36,7 +32,9 @@ private struct VertexData {
 private struct SnowflakeBase {
   var position: SIMD3<Float>
   var size: Float
+  var axis: SIMD3<Float> = .zero
   var rotate: Float
+  var velocity: SIMD3<Float> = .zero
 }
 
 struct SnowflakeView: View {
@@ -166,7 +164,7 @@ struct SnowflakeView: View {
 
       DispatchQueue.main.async {
         if let vertexBuffer = self.vertexBuffer {
-          self.updateCubeBase()
+          self.updateCellsBase()
           self.updateMesh(vertexBuffer: vertexBuffer)
 
           // swap buffers
@@ -191,7 +189,7 @@ struct SnowflakeView: View {
     let resource = try MeshResource(from: mesh)
 
     var unlitMaterial = UnlitMaterial(
-      color: UIColor(Color(red: 0.85, green: 0.95, blue: 0.98))
+      color: UIColor(Color(red: 0.85, green: 0.95, blue: 0.98, opacity: 0.4)),
     )
     unlitMaterial.faceCulling = .none
 
@@ -204,10 +202,12 @@ struct SnowflakeView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let cellCount: Int = 400
+  let cellCount: Int = 4000
+
+  let vertexesPerCell: Int = 36
 
   var vertexCapacity: Int {
-    return cellCount * 36
+    return cellCount * vertexesPerCell
   }
 
   let shapeIndiceCount: Int = 36
@@ -225,10 +225,15 @@ struct SnowflakeView: View {
 
     let cubes = contents.bindMemory(to: SnowflakeBase.self, capacity: cellCount)
     for i in 0..<cellCount {
+      var velocity = randomPosition(r: 0.3)
+      // velocity.y = Float.random(in: (-1.2)..<(-1.0))
+      velocity.y = -1.0
       cubes[i] = SnowflakeBase(
         position: randomPosition(r: 16),
-        size: Float.random(in: 0.1..<1.4),
-        rotate: 0
+        size: Float.random(in: 0.2..<0.4),
+        axis: normalize(randomPosition(r: 1)),
+        rotate: 0,
+        velocity: velocity,
       )
     }
 
@@ -272,7 +277,7 @@ struct SnowflakeView: View {
     return MovingSnowflakeParams(width: 0.003, dt: 0.02)
   }
 
-  func updateCubeBase() {
+  func updateCellsBase() {
     guard let pingPongBuffer = pingPongBuffer,
       let commandBuffer = commandQueue.makeCommandBuffer(),
       let computeEncoder = commandBuffer.makeComputeCommandEncoder()
