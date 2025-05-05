@@ -37,7 +37,7 @@ struct AttractorApp: App {
   @Environment(\.openImmersiveSpace) private var openImmersiveSpace
   @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
 
-  @State private var selectedDemo: VisibilityDemo = .fractalTree
+  @State private var selectedDemo: VisibilityDemo = .snowflake
 
   @State private var isImmersionActive = false
 

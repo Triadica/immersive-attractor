@@ -38,7 +38,6 @@
 		9A6F2A2F2D6B8B50007F336F /* HopfFibration.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A6F2A2E2D6B8B4D007F336F /* HopfFibration.metal */; };
 		9A6F2A322D6CE6C1007F336F /* HopfFibrationLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A6F2A312D6CE6C1007F336F /* HopfFibrationLayer.swift */; };
 		9A6F2A332D6CE6C1007F336F /* HopfFibrationLayer.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A6F2A302D6CE6C1007F336F /* HopfFibrationLayer.metal */; };
-		9A75D3E32C71D16900D27E97 /* RealityKitContent in Frameworks */ = {isa = PBXBuildFile; productRef = 9A75D3E22C71D16900D27E97 /* RealityKitContent */; };
 		9A75D3E52C71D16900D27E97 /* attractorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A75D3E42C71D16900D27E97 /* attractorApp.swift */; };
 		9A75D3EB2C71D16900D27E97 /* ImageBasedLighting.skybox in Resources */ = {isa = PBXBuildFile; fileRef = 9A75D3EA2C71D16900D27E97 /* ImageBasedLighting.skybox */; };
 		9A75D3ED2C71D16B00D27E97 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9A75D3EC2C71D16B00D27E97 /* Assets.xcassets */; };
@@ -133,7 +132,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				9A0B7DC52C84698E001245B3 /* RealityKit.framework in Frameworks */,
-				9A75D3E32C71D16900D27E97 /* RealityKitContent in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -272,7 +270,6 @@
 			);
 			name = triangle;
 			packageProductDependencies = (
-				9A75D3E22C71D16900D27E97 /* RealityKitContent */,
 			);
 			productName = triangle;
 			productReference = 9A75D3DD2C71D16900D27E97 /* triangle.app */;
@@ -677,13 +674,6 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		9A75D3E22C71D16900D27E97 /* RealityKitContent */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = RealityKitContent;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 9A75D3D52C71D16900D27E97 /* Project object */;
 }

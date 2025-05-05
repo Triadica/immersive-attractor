@@ -190,7 +190,9 @@ struct SnowflakeView: View {
   func getModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
     let resource = try MeshResource(from: mesh)
 
-    var unlitMaterial = UnlitMaterial(color: .yellow)
+    var unlitMaterial = UnlitMaterial(
+      color: UIColor(Color(red: 0.85, green: 0.95, blue: 0.98))
+    )
     unlitMaterial.faceCulling = .none
 
     return ModelComponent(mesh: resource, materials: [unlitMaterial])
@@ -202,45 +204,27 @@ struct SnowflakeView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let cubeCount: Int = 12000
+  let cellCount: Int = 400
 
   var vertexCapacity: Int {
-    return cubeCount * 8
+    return cellCount * 36
   }
 
-  /// Triangle indices for a cube
-  var cubeTriangles: [Int] = [
-    0, 1, 2, 0, 2, 3,
-    4, 5, 6, 4, 6, 7,
-    0, 1, 5, 0, 5, 4,
-    2, 3, 7, 2, 7, 6,
-    0, 3, 7, 0, 7, 4,
-    1, 2, 6, 1, 6, 5,
-  ]
-
-  var cubeFrame: [Int] = [
-    0, 1, 1, 2, 2, 3, 3, 0,
-    4, 5, 5, 6, 6, 7, 7, 4,
-    0, 4, 1, 5, 2, 6, 3, 7,
-  ]
-
-  var shapeIndiceCount: Int {
-    return cubeFrame.count
-  }
+  let shapeIndiceCount: Int = 36
 
   var indexCount: Int {
-    return cubeCount * shapeIndiceCount
+    return cellCount * shapeIndiceCount
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
-    let bufferSize = MemoryLayout<SnowflakeBase>.stride * cubeCount
+    let bufferSize = MemoryLayout<SnowflakeBase>.stride * cellCount
     let buffer = PingPongBuffer(device: device, length: bufferSize)
 
     // 使用 contents() 前检查 buffer 是否有效
     let contents = buffer.currentBuffer.contents()
 
-    let cubes = contents.bindMemory(to: SnowflakeBase.self, capacity: cubeCount)
-    for i in 0..<cubeCount {
+    let cubes = contents.bindMemory(to: SnowflakeBase.self, capacity: cellCount)
+    for i in 0..<cellCount {
       cubes[i] = SnowflakeBase(
         position: randomPosition(r: 16),
         size: Float.random(in: 0.1..<1.4),
@@ -262,15 +246,13 @@ struct SnowflakeView: View {
 
     let mesh = try LowLevelMesh(descriptor: desc)
 
-    // vertexes are set from compute shader
+    // vertexes are set from vertex shader
 
     mesh.withUnsafeMutableIndices { rawIndices in
       let indices = rawIndices.bindMemory(to: UInt32.self)
 
-      for i in 0..<cubeCount {
-        for j in 0..<shapeIndiceCount {
-          indices[i * shapeIndiceCount + j] = UInt32(cubeFrame[j]) + UInt32(i * 8)
-        }
+      for i in 0..<(cellCount * shapeIndiceCount) {
+        indices[i] = UInt32(i)
       }
 
     }
@@ -312,7 +294,7 @@ struct SnowflakeView: View {
     // idx 2: params buffer
     computeEncoder.setBytes(&params, length: MemoryLayout<MovingSnowflakeParams>.size, index: 2)
 
-    let threadsPerGrid = MTLSize(width: cubeCount, height: 1, depth: 1)
+    let threadsPerGrid = MTLSize(width: cellCount, height: 1, depth: 1)
     let threadsPerThreadgroup = MTLSize(width: 16, height: 1, depth: 1)
     computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
 
