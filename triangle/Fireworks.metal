@@ -76,7 +76,7 @@ kernel void updateFireworksVertexes(
   uint cellInnerIdx = id % vertexPerCell;
 
   uint leadingIdx = cellIdx * vertexPerCell;
-  CellBase leadingBase = codeBaseList[leadingIdx];
+  // CellBase leadingBase = codeBaseList[leadingIdx];
   CellBase base = codeBaseList[cellIdx];
 
   if (cellInnerIdx == 0 || base.step <= 4) {

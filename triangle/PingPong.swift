@@ -22,4 +22,6 @@ class PingPongBuffer {
   func swap() {
     (currentBuffer, nextBuffer) = (nextBuffer, currentBuffer)
   }
+
+  
 }

@@ -51,7 +51,7 @@ kernel void updateNebulaBase(
     } else {
       // Calculate collision damping (energy loss)
       float collisionDamping = 0.99; // some loss of energy
-      float overlapDistance = 0.1 - distance;
+      // float overlapDistance = 0.1 - distance;
 
       // Apply repulsive force based on penetration depth
       // acceleration -= direction * overlapDistance * 10.0;

@@ -1,11 +1,19 @@
 {
-  "name": "xcode build server",
-  "version": "0.2",
-  "bspVersion": "2.0",
-  "languages": ["c", "cpp", "objective-c", "objective-cpp", "swift", "metal"],
-  "argv": ["/opt/homebrew/bin/xcode-build-server"],
-  "workspace": "/Users/chenyong/repo/triadica/immersive/immersive-attractors/triangle.xcodeproj/project.xcworkspace",
-  "build_root": "/Users/chenyong/Library/Developer/Xcode/DerivedData/triangle-byhkrgwrfjwdcodlkjebqrtzqvmn",
-  "scheme": "triangle",
-  "kind": "xcode"
+	"name": "xcode build server",
+	"version": "0.2",
+	"bspVersion": "2.0",
+	"languages": [
+		"c",
+		"cpp",
+		"objective-c",
+		"objective-cpp",
+		"swift"
+	],
+	"argv": [
+		"/opt/homebrew/bin/xcode-build-server"
+	],
+	"workspace": "/Users/chenyong/repo/immersive/immersive-attractors/triangle.xcodeproj/project.xcworkspace",
+	"build_root": "/Users/chenyong/Library/Developer/Xcode/DerivedData/triangle-dryznchufhubgghcfdjxueanbclp",
+	"scheme": "triangle",
+	"kind": "xcode"
 }
