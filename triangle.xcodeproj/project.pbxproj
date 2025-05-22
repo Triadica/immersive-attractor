@@ -10,6 +10,8 @@
 		9A0B7DC52C84698E001245B3 /* RealityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A0B7DC42C84698E001245B3 /* RealityKit.framework */; };
 		9A13D89B2DC3F13800EEA863 /* Snowflake.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A13D89A2DC3F13200EEA863 /* Snowflake.swift */; };
 		9A13D89D2DC3F14100EEA863 /* Snowflake.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A13D89C2DC3F13B00EEA863 /* Snowflake.metal */; };
+		9A13D8FF2DDE50E600EEA863 /* MobiusSpheres.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A13D8FE2DDE50DB00EEA863 /* MobiusSpheres.swift */; };
+		9A13D9012DDE50F100EEA863 /* MobiusSpheres.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A13D9002DDE50EB00EEA863 /* MobiusSpheres.metal */; };
 		9A1A94E82D54C0D500315602 /* PingPong.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1A94E72D54C0CB00315602 /* PingPong.swift */; };
 		9A1A94EA2D54C1A400315602 /* Iterate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1A94E92D54C19600315602 /* Iterate.swift */; };
 		9A1A94EC2D54C5C400315602 /* CubesMoving.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1A94EB2D54C5BF00315602 /* CubesMoving.swift */; };
@@ -73,6 +75,8 @@
 		9A0B7DC42C84698E001245B3 /* RealityKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = RealityKit.framework; path = System/Library/Frameworks/RealityKit.framework; sourceTree = SDKROOT; };
 		9A13D89A2DC3F13200EEA863 /* Snowflake.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snowflake.swift; sourceTree = "<group>"; };
 		9A13D89C2DC3F13B00EEA863 /* Snowflake.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Snowflake.metal; sourceTree = "<group>"; };
+		9A13D8FE2DDE50DB00EEA863 /* MobiusSpheres.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobiusSpheres.swift; sourceTree = "<group>"; };
+		9A13D9002DDE50EB00EEA863 /* MobiusSpheres.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = MobiusSpheres.metal; sourceTree = "<group>"; };
 		9A1A94E72D54C0CB00315602 /* PingPong.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingPong.swift; sourceTree = "<group>"; };
 		9A1A94E92D54C19600315602 /* Iterate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Iterate.swift; sourceTree = "<group>"; };
 		9A1A94EB2D54C5BF00315602 /* CubesMoving.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CubesMoving.swift; sourceTree = "<group>"; };
@@ -176,6 +180,8 @@
 		9A75D3DF2C71D16900D27E97 /* triangle */ = {
 			isa = PBXGroup;
 			children = (
+				9A13D9002DDE50EB00EEA863 /* MobiusSpheres.metal */,
+				9A13D8FE2DDE50DB00EEA863 /* MobiusSpheres.swift */,
 				9A13D89C2DC3F13B00EEA863 /* Snowflake.metal */,
 				9A13D89A2DC3F13200EEA863 /* Snowflake.swift */,
 				9A92D37E2D95D0330021FFCE /* FractalTree.swift */,
@@ -366,6 +372,7 @@
 				9A1A94EE2D54C5DC00315602 /* CubesMoving.metal in Sources */,
 				9AD4CB772D588FDA00E55977 /* AttractorLine.swift in Sources */,
 				9A13D89B2DC3F13800EEA863 /* Snowflake.swift in Sources */,
+				9A13D8FF2DDE50E600EEA863 /* MobiusSpheres.swift in Sources */,
 				9A53854B2D5D0C1A0040CF72 /* PolygonWall.swift in Sources */,
 				9A6F2A322D6CE6C1007F336F /* HopfFibrationLayer.swift in Sources */,
 				9A6F2A332D6CE6C1007F336F /* HopfFibrationLayer.metal in Sources */,
@@ -384,6 +391,7 @@
 				9A5385432D5A6B8C0040CF72 /* SphereBouncing.swift in Sources */,
 				9A9BADF72D7459B0009C0510 /* MobiusTrail.swift in Sources */,
 				9A5385472D5BCC540040CF72 /* CornerBouncing.swift in Sources */,
+				9A13D9012DDE50F100EEA863 /* MobiusSpheres.metal in Sources */,
 				9A5385412D5A47230040CF72 /* RadicalLine.metal in Sources */,
 				9A5385452D5A6BA40040CF72 /* SphereBouncing.metal in Sources */,
 				9A45F3A52D7C5B210042486A /* Nebula.metal in Sources */,
