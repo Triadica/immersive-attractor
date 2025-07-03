@@ -16,7 +16,6 @@ struct MovingAttractorLineParams {
 
 struct CubeBase {
   float3 position;
-  float3 velocity;
 };
 
 static float2 bifurcation(float a, float x, float y) {
@@ -38,14 +37,14 @@ kernel void updateBifurcationBase(
   CubeBase base = codeBaseList[id];
   float3 position = base.position;
 
-  float a = position.y * 0.5;
-  float x = position.x * 1;
-  float y = position.z * 1;
+  float a = position.y * 0.1;
+  float x = position.x * 0.2;
+  float y = position.z * 0.2;
 
   float2 positionNext = bifurcation(a, x, y);
 
-  outputCodeBaseList[id].position.x = positionNext.x * 1.0;
-  outputCodeBaseList[id].position.z = positionNext.y * 1.0;
+  outputCodeBaseList[id].position.x = positionNext.x * 5.0;
+  outputCodeBaseList[id].position.z = positionNext.y * 5.0;
 }
 
 kernel void updateBifurcationVertexes(
@@ -61,9 +60,9 @@ kernel void updateBifurcationVertexes(
   CubeBase base = codeBaseList[cellIdx];
 
   if (cellInnerIdx == 0) {
-    outputVertices[id].position = base.position * 0.4 + float3(0.0, -0.5, -0.5);
+    outputVertices[id].position = base.position * 0.1 + float3(0.0, -0.5, -0.5);
   } else {
     outputVertices[id].position =
-        base.position * 0.4 + float3(0.002, -0.5, -0.5);
+        base.position * 0.1 + float3(0.002, -0.5, -0.5);
   }
 }

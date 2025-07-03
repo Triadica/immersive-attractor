@@ -36,7 +36,6 @@ private struct VertexData {
 /// placement of a cube
 private struct CellBase {
   var position: SIMD3<Float> = .zero
-  var velocity: SIMD3<Float> = .zero
 }
 
 struct BifurcationView: View {
@@ -206,7 +205,7 @@ struct BifurcationView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let cellCount: Int = 1000000
+  let cellCount: Int = 1200000
   let cellSegment: Int = 1
 
   var vertexPerCell: Int {
@@ -234,9 +233,7 @@ struct BifurcationView: View {
       to: CellBase.self, capacity: cellCount)
     for i in 0..<cellCount {
       cubes[i] = CellBase(
-        position: randomPointInSphere2(radius: 10.0),
-        velocity: randomPointInSphere2(radius: 0.04)
-        // velocity:
+        position: randomPointInSphere2(radius: 22.0),
       )
     }
 
