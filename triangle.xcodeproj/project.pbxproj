@@ -49,6 +49,9 @@
 		9A92D37D2D95B8890021FFCE /* FractalUmbrella.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A92D37C2D95B8720021FFCE /* FractalUmbrella.swift */; };
 		9A92D37F2D95D0380021FFCE /* FractalTree.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A92D37E2D95D0330021FFCE /* FractalTree.swift */; };
 		9A92D3812D986ACA0021FFCE /* GestureComponent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A92D3802D986ACA0021FFCE /* GestureComponent.swift */; };
+		9A9A3E072E159D0400330D1B /* RealityKitContent in Frameworks */ = {isa = PBXBuildFile; productRef = 9A9A3E062E159D0400330D1B /* RealityKitContent */; };
+		9A9A3E0A2E159D3500330D1B /* Bifurcation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A9A3E092E159D3500330D1B /* Bifurcation.swift */; };
+		9A9A3E0B2E159D3500330D1B /* Bifurcation.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A9A3E082E159D3500330D1B /* Bifurcation.metal */; };
 		9A9BADF52D74599E009C0510 /* MobiusTrail.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A9BADF42D745992009C0510 /* MobiusTrail.metal */; };
 		9A9BADF72D7459B0009C0510 /* MobiusTrail.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A9BADF62D7459A2009C0510 /* MobiusTrail.swift */; };
 		9A9BADF92D7490E5009C0510 /* MobiusBubbles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A9BADF82D7490D7009C0510 /* MobiusBubbles.swift */; };
@@ -118,6 +121,9 @@
 		9A92D37C2D95B8720021FFCE /* FractalUmbrella.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FractalUmbrella.swift; sourceTree = "<group>"; };
 		9A92D37E2D95D0330021FFCE /* FractalTree.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FractalTree.swift; sourceTree = "<group>"; };
 		9A92D3802D986ACA0021FFCE /* GestureComponent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureComponent.swift; sourceTree = "<group>"; };
+		9A9A3E042E159CE100330D1B /* RealityFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = RealityFoundation.framework; path = System/Library/Frameworks/RealityFoundation.framework; sourceTree = SDKROOT; };
+		9A9A3E082E159D3500330D1B /* Bifurcation.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Bifurcation.metal; sourceTree = "<group>"; };
+		9A9A3E092E159D3500330D1B /* Bifurcation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bifurcation.swift; sourceTree = "<group>"; };
 		9A9BADF42D745992009C0510 /* MobiusTrail.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = MobiusTrail.metal; sourceTree = "<group>"; };
 		9A9BADF62D7459A2009C0510 /* MobiusTrail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobiusTrail.swift; sourceTree = "<group>"; };
 		9A9BADF82D7490D7009C0510 /* MobiusBubbles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobiusBubbles.swift; sourceTree = "<group>"; };
@@ -135,6 +141,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9A9A3E072E159D0400330D1B /* RealityKitContent in Frameworks */,
 				9A0B7DC52C84698E001245B3 /* RealityKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -152,6 +159,7 @@
 		9A0B7DC32C84698E001245B3 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				9A9A3E042E159CE100330D1B /* RealityFoundation.framework */,
 				9A0B7DC42C84698E001245B3 /* RealityKit.framework */,
 			);
 			name = Frameworks;
@@ -180,6 +188,8 @@
 		9A75D3DF2C71D16900D27E97 /* triangle */ = {
 			isa = PBXGroup;
 			children = (
+				9A9A3E082E159D3500330D1B /* Bifurcation.metal */,
+				9A9A3E092E159D3500330D1B /* Bifurcation.swift */,
 				9A13D9002DDE50EB00EEA863 /* MobiusSpheres.metal */,
 				9A13D8FE2DDE50DB00EEA863 /* MobiusSpheres.swift */,
 				9A13D89C2DC3F13B00EEA863 /* Snowflake.metal */,
@@ -276,6 +286,7 @@
 			);
 			name = triangle;
 			packageProductDependencies = (
+				9A9A3E062E159D0400330D1B /* RealityKitContent */,
 			);
 			productName = triangle;
 			productReference = 9A75D3DD2C71D16900D27E97 /* triangle.app */;
@@ -389,6 +400,8 @@
 				9A5385532D61E40F0040CF72 /* Chords.swift in Sources */,
 				9A92D3792D9473820021FFCE /* FractalBranches.swift in Sources */,
 				9A5385432D5A6B8C0040CF72 /* SphereBouncing.swift in Sources */,
+				9A9A3E0A2E159D3500330D1B /* Bifurcation.swift in Sources */,
+				9A9A3E0B2E159D3500330D1B /* Bifurcation.metal in Sources */,
 				9A9BADF72D7459B0009C0510 /* MobiusTrail.swift in Sources */,
 				9A5385472D5BCC540040CF72 /* CornerBouncing.swift in Sources */,
 				9A13D9012DDE50F100EEA863 /* MobiusSpheres.metal in Sources */,
@@ -682,6 +695,13 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		9A9A3E062E159D0400330D1B /* RealityKitContent */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RealityKitContent;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 9A75D3D52C71D16900D27E97 /* Project object */;
 }
