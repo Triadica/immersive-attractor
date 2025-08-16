@@ -40,7 +40,7 @@ struct AttractorApp: App {
   @Environment(\.openImmersiveSpace) private var openImmersiveSpace
   @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
 
-  @State private var selectedDemo: VisibilityDemo = .bifurcation
+  @State private var selectedDemo: VisibilityDemo = .nest
 
   @State private var isImmersionActive = false
 

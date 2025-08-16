@@ -36,7 +36,7 @@ private struct VertexData {
 private struct NestBase {
   var position: SIMD3<Float>
   var size: Float
-  var rotate: Float
+  var noiseValue: Float  // 0~1之间的值，控制线段长度
 }
 
 struct NestView: View {
@@ -56,6 +56,13 @@ struct NestView: View {
   @State var pingPongBuffer: PingPongBuffer?
   /// The vertex buffer for the mesh
   @State var vertexBuffer: MTLBuffer?
+
+  // 网格参数：每个维度从-5到5，间隔0.5米
+  // 为了性能考虑，使用20x20x20的网格密度
+  // 每个立方体中心点有7条线段（3条轴向 + 4条对角线）穿过中心
+  let gridDensity: Int = 20  // 进一步降低到20以提高性能
+  let gridSpacing: Float = 0.5  // 相应调整间距
+  let gridMin: Float = -5.0
 
   init() {
     self.device = MTLCreateSystemDefaultDevice()!
@@ -198,34 +205,34 @@ struct NestView: View {
 
   /// Create a bounding box for the mesh
   func getBounds() -> BoundingBox {
-    let radius: Float = 2
+    let radius: Float = 6  // 扩大边界框以容纳新的网格范围
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let nestCount: Int = 12000
-
-  var vertexCapacity: Int {
-    return nestCount * 8
+  var nestCount: Int {
+    return gridDensity * gridDensity * gridDensity  // 20^3 = 8,000
   }
 
-  /// Triangle indices for a nest
-  var nestTriangles: [Int] = [
-    0, 1, 2, 0, 2, 3,
-    4, 5, 6, 4, 6, 7,
-    0, 1, 5, 0, 5, 4,
-    2, 3, 7, 2, 7, 6,
-    0, 3, 7, 0, 7, 4,
-    1, 2, 6, 1, 6, 5,
-  ]
+  var vertexCapacity: Int {
+    return nestCount * 14  // 每个立方体7条线段，每条线段2个顶点
+  }
 
-  var nestFrame: [Int] = [
-    0, 1, 1, 2, 2, 3, 3, 0,
-    4, 5, 5, 6, 6, 7, 7, 4,
-    0, 4, 1, 5, 2, 6, 3, 7,
+  /// Line indices for a cube with 7 lines (3 axis + 4 diagonals through center)
+  /// Each line has 2 vertices, so 14 vertices total per cube
+  var nestLines: [Int] = [
+    // 3 axis lines through center
+    0, 1,  // X axis: left to right
+    2, 3,  // Y axis: bottom to top
+    4, 5,  // Z axis: back to front
+    // 4 diagonal lines through center
+    6, 7,  // diagonal 1
+    8, 9,  // diagonal 2
+    10, 11,  // diagonal 3
+    12, 13,  // diagonal 4
   ]
 
   var shapeIndiceCount: Int {
-    return nestFrame.count
+    return nestLines.count  // 14 indices for 7 lines
   }
 
   var indexCount: Int {
@@ -240,12 +247,25 @@ struct NestView: View {
     let contents = buffer.currentBuffer.contents()
 
     let nests = contents.bindMemory(to: NestBase.self, capacity: nestCount)
-    for i in 0..<nestCount {
-      nests[i] = NestBase(
-        position: randomPosition(r: 16),
-        size: Float.random(in: 0.1..<1.4),
-        rotate: 0
-      )
+
+    // 生成网格分布的中心点
+    var index = 0
+    for x in 0..<gridDensity {
+      for y in 0..<gridDensity {
+        for z in 0..<gridDensity {
+          let position = SIMD3<Float>(
+            gridMin + Float(x) * gridSpacing,
+            gridMin + Float(y) * gridSpacing,
+            gridMin + Float(z) * gridSpacing
+          )
+          nests[index] = NestBase(
+            position: position,
+            size: 0.05,  // 统一的小尺寸
+            noiseValue: 0.0  // 初始值，会在Metal shader中计算
+          )
+          index += 1
+        }
+      }
     }
 
     // copy data from current buffer to next buffer
@@ -269,7 +289,7 @@ struct NestView: View {
 
       for i in 0..<nestCount {
         for j in 0..<shapeIndiceCount {
-          indices[i * shapeIndiceCount + j] = UInt32(nestFrame[j]) + UInt32(i * 8)
+          indices[i * shapeIndiceCount + j] = UInt32(nestLines[j]) + UInt32(i * 14)
         }
       }
 
@@ -278,7 +298,7 @@ struct NestView: View {
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
         indexCount: indexCount,
-        topology: .lineStrip,
+        topology: .line,  // 使用线条而不是线带
         bounds: getBounds()
       )
     ])
@@ -351,7 +371,7 @@ struct NestView: View {
     computeEncoder.setBytes(&params, length: MemoryLayout<MovingNestParams>.size, index: 2)
 
     let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
-    let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
+    let threadsPerThreadgroup = MTLSize(width: 32, height: 1, depth: 1)  // 减小线程组大小以适应更大的工作量
     computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
 
     computeEncoder.endEncoding()
