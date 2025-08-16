@@ -2,10 +2,9 @@ import Metal
 import RealityKit
 import SwiftUI
 
-private struct MovingCubesParams {
-  var vertexPerCell: Int32
+private struct MovingNestParams {
+  var width: Float
   var dt: Float
-  var timestamp: Float = 0
 }
 
 private struct VertexData {
@@ -33,14 +32,14 @@ private struct VertexData {
   }
 }
 
-/// placement of a cube
-private struct CellBase {
-  var original: SIMD3<Float>
+/// placement of a nest
+private struct NestBase {
   var position: SIMD3<Float>
-  var velocity: Float = 0
+  var size: Float
+  var rotate: Float
 }
 
-struct MobiusTrailView: View {
+struct NestView: View {
   let rootEntity: Entity = Entity()
   @State var mesh: LowLevelMesh?
 
@@ -51,25 +50,23 @@ struct MobiusTrailView: View {
 
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
-  let attractorPipeline: MTLComputePipelineState
+  let nestPipeline: MTLComputePipelineState
   let vertexPipeline: MTLComputePipelineState
 
   @State var pingPongBuffer: PingPongBuffer?
   /// The vertex buffer for the mesh
   @State var vertexBuffer: MTLBuffer?
-  /// to track previous state of vertex buffer
-  @State var vertexPrevBuffer: MTLBuffer?
 
   init() {
     self.device = MTLCreateSystemDefaultDevice()!
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
-    let updateAttractorBase = library.makeFunction(name: "updateMobiusTrailBase")!
-    self.attractorPipeline = try! device.makeComputePipelineState(function: updateAttractorBase)
+    let updateNestBase = library.makeFunction(name: "updateNestBase")!
+    self.nestPipeline = try! device.makeComputePipelineState(function: updateNestBase)
 
-    let updatelinesVertexes = library.makeFunction(name: "updateMobiusTrailVertexes")!
-    self.vertexPipeline = try! device.makeComputePipelineState(function: updatelinesVertexes)
+    let updateNestVertexes = library.makeFunction(name: "updateNestVertexes")!
+    self.vertexPipeline = try! device.makeComputePipelineState(function: updateNestVertexes)
   }
 
   var body: some View {
@@ -78,7 +75,7 @@ struct MobiusTrailView: View {
         guard let mesh = try? createMesh(),
           let modelComponent = try? getModelComponent(mesh: mesh)
         else {
-          print("Failed to create mesh or model component")
+          print("failed to create mesh or model component")
           return
         }
         rootEntity.components.set(modelComponent)
@@ -99,8 +96,8 @@ struct MobiusTrailView: View {
 
         // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = 1
-        // rootEntity.position.z = -2
         // rootEntity.position.x = 1.6
+        rootEntity.position.z = -1
         content.add(rootEntity)
         self.mesh = mesh
 
@@ -164,15 +161,13 @@ struct MobiusTrailView: View {
 
     self.vertexBuffer = device.makeBuffer(
       length: MemoryLayout<VertexData>.stride * vertexCapacity, options: .storageModeShared)
-    self.vertexPrevBuffer = device.makeBuffer(
-      length: MemoryLayout<VertexData>.stride * vertexCapacity, options: .storageModeShared)
 
     timer = Timer.scheduledTimer(withTimeInterval: 1 / fps, repeats: true) { _ in
 
       DispatchQueue.main.async {
         if let vertexBuffer = self.vertexBuffer {
-          self.updateCubeBase()
-          self.updateMesh(vertexBuffer: vertexBuffer, prevBuffer: self.vertexPrevBuffer!)
+          self.updateNestBase()
+          self.updateMesh(vertexBuffer: vertexBuffer)
 
           // swap buffers
           self.pingPongBuffer!.swap()
@@ -207,52 +202,50 @@ struct MobiusTrailView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let gridSize: Int = 30
-
-  var cellCount: Int {
-    return gridSize * gridSize * gridSize
-  }
-  let cellSegment: Int = 40
-
-  var vertexPerCell: Int {
-    return cellSegment + 1
-  }
-  var indicePerCell: Int {
-    return cellSegment * 2
-  }
+  let nestCount: Int = 12000
 
   var vertexCapacity: Int {
-    return cellCount * vertexPerCell
+    return nestCount * 8
   }
-  var indiceCapacity: Int {
-    return cellCount * indicePerCell
+
+  /// Triangle indices for a nest
+  var nestTriangles: [Int] = [
+    0, 1, 2, 0, 2, 3,
+    4, 5, 6, 4, 6, 7,
+    0, 1, 5, 0, 5, 4,
+    2, 3, 7, 2, 7, 6,
+    0, 3, 7, 0, 7, 4,
+    1, 2, 6, 1, 6, 5,
+  ]
+
+  var nestFrame: [Int] = [
+    0, 1, 1, 2, 2, 3, 3, 0,
+    4, 5, 5, 6, 6, 7, 7, 4,
+    0, 4, 1, 5, 2, 6, 3, 7,
+  ]
+
+  var shapeIndiceCount: Int {
+    return nestFrame.count
+  }
+
+  var indexCount: Int {
+    return nestCount * shapeIndiceCount
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
-    let bufferSize = MemoryLayout<CellBase>.stride * cellCount
+    let bufferSize = MemoryLayout<NestBase>.stride * nestCount
     let buffer = PingPongBuffer(device: device, length: bufferSize)
 
     // 使用 contents() 前检查 buffer 是否有效
     let contents = buffer.currentBuffer.contents()
 
-    let cells = contents.bindMemory(to: CellBase.self, capacity: cellCount)
-
-    // create points in 3D grid, each point is a group of vertexes
-    for xi in 0..<gridSize {
-      for yi in 0..<gridSize {
-        for zi in 0..<gridSize {
-          let i = xi * gridSize * gridSize + yi * gridSize + zi
-          let x = Float(xi) / Float(gridSize) * 2 - 1
-          let y = Float(yi) / Float(gridSize) * 2 - 1
-          let z = Float(zi) / Float(gridSize) * 2 - 1
-          let pos = SIMD3<Float>(x, y, z) * 0.2
-          cells[i] = CellBase(
-            original: pos,
-            position: pos,
-            velocity: Float.random(in: 0.08...0.4)
-          )
-        }
-      }
+    let nests = contents.bindMemory(to: NestBase.self, capacity: nestCount)
+    for i in 0..<nestCount {
+      nests[i] = NestBase(
+        position: randomPosition(r: 16),
+        size: Float.random(in: 0.1..<1.4),
+        rotate: 0
+      )
     }
 
     // copy data from current buffer to next buffer
@@ -265,7 +258,7 @@ struct MobiusTrailView: View {
   func createMesh() throws -> LowLevelMesh {
     var desc = VertexData.descriptor
     desc.vertexCapacity = vertexCapacity
-    desc.indexCapacity = indiceCapacity
+    desc.indexCapacity = indexCount
 
     let mesh = try LowLevelMesh(descriptor: desc)
 
@@ -274,15 +267,9 @@ struct MobiusTrailView: View {
     mesh.withUnsafeMutableIndices { rawIndices in
       let indices = rawIndices.bindMemory(to: UInt32.self)
 
-      for i in 0..<cellCount {
-        for j in 0..<indicePerCell {
-          let is_even = j % 2 == 0
-          let half = j / 2
-          if is_even {
-            indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half)
-          } else {
-            indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half + 1)
-          }
+      for i in 0..<nestCount {
+        for j in 0..<shapeIndiceCount {
+          indices[i * shapeIndiceCount + j] = UInt32(nestFrame[j]) + UInt32(i * 8)
         }
       }
 
@@ -290,7 +277,7 @@ struct MobiusTrailView: View {
 
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
-        indexCount: indiceCapacity,
+        indexCount: indexCount,
         topology: .lineStrip,
         bounds: getBounds()
       )
@@ -299,19 +286,11 @@ struct MobiusTrailView: View {
     return mesh
   }
 
-  @State private var viewStartTime: Date = Date()
-  @State private var frameDelta: Float = 0.0
-
-  private func getMovingParams() -> MovingCubesParams {
-    let delta = -Float(viewStartTime.timeIntervalSinceNow)
-    // let dt = delta - frameDelta
-    frameDelta = delta
-    return MovingCubesParams(
-      vertexPerCell: Int32(vertexPerCell), dt: 0.006,
-      timestamp: delta)
+  private func getMovingParams() -> MovingNestParams {
+    return MovingNestParams(width: 0.003, dt: 0.02)
   }
 
-  func updateCubeBase() {
+  func updateNestBase() {
     guard let pingPongBuffer = pingPongBuffer,
       let commandBuffer = commandQueue.makeCommandBuffer(),
       let computeEncoder = commandBuffer.makeComputeCommandEncoder()
@@ -320,7 +299,7 @@ struct MobiusTrailView: View {
       return
     }
 
-    computeEncoder.setComputePipelineState(attractorPipeline)
+    computeEncoder.setComputePipelineState(nestPipeline)
 
     // idx 0: pingPongBuffer
     computeEncoder.setBuffer(
@@ -331,9 +310,9 @@ struct MobiusTrailView: View {
 
     var params = getMovingParams()
     // idx 2: params buffer
-    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 2)
+    computeEncoder.setBytes(&params, length: MemoryLayout<MovingNestParams>.size, index: 2)
 
-    let threadsPerGrid = MTLSize(width: cellCount, height: 1, depth: 1)
+    let threadsPerGrid = MTLSize(width: nestCount, height: 1, depth: 1)
     let threadsPerThreadgroup = MTLSize(width: 16, height: 1, depth: 1)
     computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
 
@@ -342,7 +321,7 @@ struct MobiusTrailView: View {
     commandBuffer.commit()
   }
 
-  func updateMesh(vertexBuffer: MTLBuffer, prevBuffer: MTLBuffer) {
+  func updateMesh(vertexBuffer: MTLBuffer) {
     guard let mesh = mesh,
       let pingPongBuffer = pingPongBuffer,
       let commandBuffer = commandQueue.makeCommandBuffer(),
@@ -356,8 +335,6 @@ struct MobiusTrailView: View {
     mesh.withUnsafeMutableBytes(bufferIndex: 0) { rawBytes in
       vertexBuffer.contents().copyMemory(
         from: rawBytes.baseAddress!, byteCount: rawBytes.count)
-      prevBuffer.contents().copyMemory(
-        from: rawBytes.baseAddress!, byteCount: rawBytes.count)
     }
 
     computeEncoder.setComputePipelineState(vertexPipeline)
@@ -368,12 +345,10 @@ struct MobiusTrailView: View {
 
     // idx 1: vertexBuffer
     computeEncoder.setBuffer(vertexBuffer, offset: 0, index: 1)
-    // idx 2: prevBuffer
-    computeEncoder.setBuffer(prevBuffer, offset: 0, index: 2)
 
     var params = getMovingParams()
-    // idx 3: params buffer
-    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 3)
+    // idx 2: params buffer
+    computeEncoder.setBytes(&params, length: MemoryLayout<MovingNestParams>.size, index: 2)
 
     let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
     let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
@@ -394,10 +369,16 @@ struct MobiusTrailView: View {
     // apply entity with mesh data
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
-        indexCount: indiceCapacity,
+        indexCount: indexCount,
         topology: .line,
         bounds: getBounds()
       )
     ])
   }
 }
+//
+//  nest.swift
+//  triangle
+//
+//  Created by chen on 2025/8/16.
+//
