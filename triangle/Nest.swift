@@ -5,6 +5,7 @@ import SwiftUI
 private struct MovingNestParams {
   var width: Float
   var dt: Float
+  var timestamp: Float
 }
 
 private struct VertexData {
@@ -306,8 +307,14 @@ struct NestView: View {
     return mesh
   }
 
+  @State private var viewStartTime: Date = Date()
+  @State private var frameDelta: Float = 0.0
+
   private func getMovingParams() -> MovingNestParams {
-    return MovingNestParams(width: 0.003, dt: 0.02)
+    let delta = -Float(viewStartTime.timeIntervalSinceNow)
+    let dt = delta - frameDelta
+    frameDelta = delta
+    return MovingNestParams(width: 0.03, dt: 0.8 * dt, timestamp: delta)
   }
 
   func updateNestBase() {
@@ -396,9 +403,3 @@ struct NestView: View {
     ])
   }
 }
-//
-//  nest.swift
-//  triangle
-//
-//  Created by chen on 2025/8/16.
-//
