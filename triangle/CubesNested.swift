@@ -5,6 +5,7 @@ import SwiftUI
 private struct MovingCubesParams {
   var width: Float
   var dt: Float
+  var time: Float
 }
 
 private struct VertexData {
@@ -34,9 +35,10 @@ private struct VertexData {
 
 /// placement of a cube
 private struct CubeBase {
-  var position: SIMD3<Float>
+  var center: SIMD3<Float>
   var size: Float
-  var rotate: Float
+  var rotationAxis: SIMD3<Float>
+  var rotationSpeed: Float
 }
 
 struct CubesNestedView: View {
@@ -56,16 +58,17 @@ struct CubesNestedView: View {
   @State var pingPongBuffer: PingPongBuffer?
   /// The vertex buffer for the mesh
   @State var vertexBuffer: MTLBuffer?
+  @State var startTime: Date = Date()
 
   init() {
     self.device = MTLCreateSystemDefaultDevice()!
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
-    let updateCubeBase = library.makeFunction(name: "updateCubeBase")!
+    let updateCubeBase = library.makeFunction(name: "updateCubeNestedBase")!
     self.cubePipeline = try! device.makeComputePipelineState(function: updateCubeBase)
 
-    let updateCubeVertexes = library.makeFunction(name: "updateCubeVertexes")!
+    let updateCubeVertexes = library.makeFunction(name: "updateCubeNestedVertexes")!
     self.vertexPipeline = try! device.makeComputePipelineState(function: updateCubeVertexes)
   }
 
@@ -156,6 +159,7 @@ struct CubesNestedView: View {
   }
 
   func startTimer() {
+    self.startTime = Date()  // 重置开始时间
     self.mesh = try! createMesh()  // recreate mesh when start timer
     self.pingPongBuffer = createPingPongBuffer()
 
@@ -198,11 +202,11 @@ struct CubesNestedView: View {
 
   /// Create a bounding box for the mesh
   func getBounds() -> BoundingBox {
-    let radius: Float = 2
+    let radius: Float = 8  // 增加边界框大小以容纳16个嵌套立方体
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let cubeCount: Int = 12000
+  let cubeCount: Int = 16
 
   var vertexCapacity: Int {
     return cubeCount * 8
@@ -240,11 +244,46 @@ struct CubesNestedView: View {
     let contents = buffer.currentBuffer.contents()
 
     let cubes = contents.bindMemory(to: CubeBase.self, capacity: cubeCount)
+
+    // 中心点 [0, 0, -1]
+    let center = SIMD3<Float>(0, 0, 0)
+
+    let baseRadius: Float = 0.01
+    let scaleFactor: Float = sqrt(3.0)
+
+    // 预定义不同的旋转轴和速度
+    let rotationAxes: [SIMD3<Float>] = [
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+    ]
+
+    let rotationSpeeds: [Float] = [
+      0.5, -0.3, 0.7, -0.4, 0.6, -0.8,
+      0.2, -0.9, 0.4, -0.1, 0.8, -0.6,
+      0.3, -0.5, 0.9, -0.2,
+    ]
+
     for i in 0..<cubeCount {
+      let radius = baseRadius * pow(scaleFactor, Float(i))
       cubes[i] = CubeBase(
-        position: randomPosition(r: 16),
-        size: Float.random(in: 0.1..<1.4),
-        rotate: 0
+        center: center,
+        size: radius * 2,  // 立方体边长
+        rotationAxis: normalize(rotationAxes[i]),
+        rotationSpeed: rotationSpeeds[i]
       )
     }
 
@@ -287,7 +326,8 @@ struct CubesNestedView: View {
   }
 
   private func getMovingParams() -> MovingCubesParams {
-    return MovingCubesParams(width: 0.003, dt: 0.02)
+    let currentTime = Date().timeIntervalSince(startTime)
+    return MovingCubesParams(width: 0.003, dt: 0.02, time: Float(currentTime))
   }
 
   func updateCubeBase() {
