@@ -62,6 +62,8 @@
 		9A9BADFF2D78C70C009C0510 /* Lotus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A9BADFE2D78C70C009C0510 /* Lotus.swift */; };
 		9AC67CF62D6F8F9700071E59 /* MobiusGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AC67CF52D6F8F8F00071E59 /* MobiusGrid.swift */; };
 		9AC67CF82D6F8F9E00071E59 /* MobiusGrid.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9AC67CF72D6F8F9B00071E59 /* MobiusGrid.metal */; };
+		9AD002EC2E51EC680074380A /* CubesNested.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AD002EB2E51EC640074380A /* CubesNested.swift */; };
+		9AD002EE2E51EC750074380A /* CubesNested.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9AD002ED2E51EC6E0074380A /* CubesNested.metal */; };
 		9AD4CB772D588FDA00E55977 /* AttractorLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AD4CB762D588FCF00E55977 /* AttractorLine.swift */; };
 		9AD4CB792D588FE600E55977 /* AttractorLine.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9AD4CB782D588FDE00E55977 /* AttractorLine.metal */; };
 /* End PBXBuildFile section */
@@ -136,6 +138,8 @@
 		9A9BADFE2D78C70C009C0510 /* Lotus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Lotus.swift; sourceTree = "<group>"; };
 		9AC67CF52D6F8F8F00071E59 /* MobiusGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobiusGrid.swift; sourceTree = "<group>"; };
 		9AC67CF72D6F8F9B00071E59 /* MobiusGrid.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = MobiusGrid.metal; sourceTree = "<group>"; };
+		9AD002EB2E51EC640074380A /* CubesNested.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CubesNested.swift; sourceTree = "<group>"; };
+		9AD002ED2E51EC6E0074380A /* CubesNested.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = CubesNested.metal; sourceTree = "<group>"; };
 		9AD4CB762D588FCF00E55977 /* AttractorLine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttractorLine.swift; sourceTree = "<group>"; };
 		9AD4CB782D588FDE00E55977 /* AttractorLine.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = AttractorLine.metal; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -192,6 +196,8 @@
 		9A75D3DF2C71D16900D27E97 /* triangle */ = {
 			isa = PBXGroup;
 			children = (
+				9AD002ED2E51EC6E0074380A /* CubesNested.metal */,
+				9AD002EB2E51EC640074380A /* CubesNested.swift */,
 				9A4774B12E509EBC0078AA8D /* Nest.metal */,
 				9A4774AF2E509EB20078AA8D /* Nest.swift */,
 				9A9A3E082E159D3500330D1B /* Bifurcation.metal */,
@@ -381,6 +387,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				9A5385552D61E4190040CF72 /* Chords.metal in Sources */,
+				9AD002EC2E51EC680074380A /* CubesNested.swift in Sources */,
+				9AD002EE2E51EC750074380A /* CubesNested.metal in Sources */,
 				9A9BADF52D74599E009C0510 /* MobiusTrail.metal in Sources */,
 				9A53854F2D5FBAAE0040CF72 /* HyperbolicHelicoid.swift in Sources */,
 				9A92D3812D986ACA0021FFCE /* GestureComponent.swift in Sources */,
