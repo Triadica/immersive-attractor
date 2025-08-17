@@ -20,109 +20,83 @@ struct NestBase {
   float noiseValue; // 0~1之间的值，控制线段长度
 };
 
-// 4D Simplex噪声函数（包含时间维度）
-float4 mod289(float4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-
-float4 permute(float4 x) { return mod289(((x * 34.0) + 1.0) * x); }
-
-float4 taylorInvSqrt(float4 r) {
-  return 1.79284291400159 - 0.85373472095314 * r;
+// 4D 连续随机噪声实现（时间维度变化缓慢）
+float hash(float4 p) {
+  // 使用简单但有效的哈希函数，针对4个维度都产生随机值
+  p = fract(p * 0.3183099 + 0.1);
+  p *= 17.0;
+  return fract(p.x * p.y * p.z * p.w * (p.x + p.y + p.z + p.w));
 }
 
-float4 grad4(float j, float4 ip) {
-  const float4 ones = float4(1.0, 1.0, 1.0, -1.0);
-  float4 p, s;
+float noise4d(float4 p) {
+  // 获取整数部分和小数部分
+  float4 i = floor(p);
+  float4 f = fract(p);
 
-  p.xyz = floor(fract(float3(j) * ip.xyz) * 7.0) * ip.z - 1.0;
-  p.w = 1.5 - dot(abs(p.xyz), ones.xyz);
-  s = float4(step(0.0, p));
-  p.xyz = p.xyz + (s.xyz * 2.0 - 1.0) * s.www;
+  // 使用smoothstep进行插值以确保连续性
+  f = f * f * (3.0 - 2.0 * f);
 
-  return p;
+  // 计算4D超立方体的16个角的哈希值
+  float n0000 = hash(i + float4(0.0, 0.0, 0.0, 0.0));
+  float n1000 = hash(i + float4(1.0, 0.0, 0.0, 0.0));
+  float n0100 = hash(i + float4(0.0, 1.0, 0.0, 0.0));
+  float n1100 = hash(i + float4(1.0, 1.0, 0.0, 0.0));
+  float n0010 = hash(i + float4(0.0, 0.0, 1.0, 0.0));
+  float n1010 = hash(i + float4(1.0, 0.0, 1.0, 0.0));
+  float n0110 = hash(i + float4(0.0, 1.0, 1.0, 0.0));
+  float n1110 = hash(i + float4(1.0, 1.0, 1.0, 0.0));
+  float n0001 = hash(i + float4(0.0, 0.0, 0.0, 1.0));
+  float n1001 = hash(i + float4(1.0, 0.0, 0.0, 1.0));
+  float n0101 = hash(i + float4(0.0, 1.0, 0.0, 1.0));
+  float n1101 = hash(i + float4(1.0, 1.0, 0.0, 1.0));
+  float n0011 = hash(i + float4(0.0, 0.0, 1.0, 1.0));
+  float n1011 = hash(i + float4(1.0, 0.0, 1.0, 1.0));
+  float n0111 = hash(i + float4(0.0, 1.0, 1.0, 1.0));
+  float n1111 = hash(i + float4(1.0, 1.0, 1.0, 1.0));
+
+  // 4D线性插值 - 先在x方向插值
+  float nx000 = mix(n0000, n1000, f.x);
+  float nx100 = mix(n0100, n1100, f.x);
+  float nx010 = mix(n0010, n1010, f.x);
+  float nx110 = mix(n0110, n1110, f.x);
+  float nx001 = mix(n0001, n1001, f.x);
+  float nx101 = mix(n0101, n1101, f.x);
+  float nx011 = mix(n0011, n1011, f.x);
+  float nx111 = mix(n0111, n1111, f.x);
+
+  // 再在y方向插值
+  float nxy00 = mix(nx000, nx100, f.y);
+  float nxy10 = mix(nx010, nx110, f.y);
+  float nxy01 = mix(nx001, nx101, f.y);
+  float nxy11 = mix(nx011, nx111, f.y);
+
+  // 在z方向插值
+  float nxyz0 = mix(nxy00, nxy10, f.z);
+  float nxyz1 = mix(nxy01, nxy11, f.z);
+
+  // 最后在时间维度（w）插值
+  return mix(nxyz0, nxyz1, f.w);
 }
 
-float noise4d(float4 v) {
-  const float2 C = float2(0.138196601125011, 0.276393202250021);
-
-  // First corner
-  float4 i = floor(v + dot(v, float4(0.309016994374947451)));
-  float4 x0 = v - i + dot(i, C.xxxx);
-
-  // Other corners
-  float4 i0;
-  float3 isX = step(x0.yzw, x0.xxx);
-  float3 isYZ = step(x0.zww, x0.yyz);
-  i0.x = isX.x + isX.y + isX.z;
-  i0.yzw = 1.0 - isX;
-  i0.y += isYZ.x + isYZ.y;
-  i0.zw += 1.0 - isYZ.xy;
-  i0.z += isYZ.z;
-  i0.w += 1.0 - isYZ.z;
-
-  // i0 now contains the unique values 0,1,2,3 in each channel
-  float4 i3 = clamp(i0, 0.0, 1.0);
-  float4 i2 = clamp(i0 - 1.0, 0.0, 1.0);
-  float4 i1 = clamp(i0 - 2.0, 0.0, 1.0);
-
-  float4 x1 = x0 - i1 + C.xxxx;
-  float4 x2 = x0 - i2 + 2.0 * C.xxxx;
-  float4 x3 = x0 - i3 + 3.0 * C.xxxx;
-  float4 x4 = x0 - 1.0 + 4.0 * C.xxxx;
-
-  // Permutations
-  i = mod289(i);
-  float j0 = permute(permute(permute(permute(i.w) + i.z) + i.y) + i.x).x;
-  float4 j1 = permute(
-      permute(
-          permute(
-              permute(i.w + float4(i1.w, i2.w, i3.w, 1.0)) + i.z +
-              float4(i1.z, i2.z, i3.z, 1.0)) +
-          i.y + float4(i1.y, i2.y, i3.y, 1.0)) +
-      i.x + float4(i1.x, i2.x, i3.x, 1.0));
-
-  // Gradients: 7x7x6 points over a cube, mapped onto a 4-cross polytope
-  float4 ip = float4(1.0 / 294.0, 1.0 / 49.0, 1.0 / 7.0, 0.0);
-
-  float4 p0 = grad4(j0, ip);
-  float4 p1 = grad4(j1.x, ip);
-  float4 p2 = grad4(j1.y, ip);
-  float4 p3 = grad4(j1.z, ip);
-  float4 p4 = grad4(j1.w, ip);
-
-  // Normalise gradients
-  float4 norm =
-      taylorInvSqrt(float4(dot(p0, p0), dot(p1, p1), dot(p2, p2), dot(p3, p3)));
-  p0 *= norm.x;
-  p1 *= norm.y;
-  p2 *= norm.z;
-  p3 *= norm.w;
-  p4 *= taylorInvSqrt(dot(p4, p4));
-
-  // Mix contributions from the five corners
-  float3 m0 = max(0.6 - float3(dot(x0, x0), dot(x1, x1), dot(x2, x2)), 0.0);
-  float2 m1 = max(0.6 - float2(dot(x3, x3), dot(x4, x4)), 0.0);
-  m0 = m0 * m0;
-  m1 = m1 * m1;
-
-  return 49.0 * (dot(m0 * m0, float3(dot(p0, x0), dot(p1, x1), dot(p2, x2))) +
-                 dot(m1 * m1, float2(dot(p3, x3), dot(p4, x4))));
-}
-
-// 分层Simplex噪声函数，提供更丰富的变化
+// 分层噪声函数，为时间维度设置较慢的变化频率
 float fractalNoise(float4 p) {
   float result = 0.0;
   float amplitude = 1.0;
-  float frequency = 1.0;
+  float maxValue = 0.0;
 
-  // 3个八度的Simplex噪声叠加
+  // 3个八度的噪声叠加，时间维度使用较低的频率
   for (int i = 0; i < 3; i++) {
-    result += amplitude * noise4d(p * frequency);
+    float4 freq = float4(
+        1.0, 1.0, 1.0, 0.8); // 时间维度频率提高到0.8，保持缓慢但可见的变化
+    freq *= pow(2.0, float(i));
+
+    result += amplitude * noise4d(p * freq);
+    maxValue += amplitude;
     amplitude *= 0.5;
-    frequency *= 2.0;
   }
 
-  // 将噪声值从 [-1, 1] 映射到 [0, 1]
-  return (result + 1.0) * 0.5;
+  // 归一化到 [0, 1] 范围
+  return result / maxValue;
 }
 // 定义立方体中心的7条线段的14个顶点
 // 3条轴向线段 + 4条对角线段
@@ -163,14 +137,15 @@ kernel void updateNestBase(
 
   // 使用4D噪声（3D位置 + 1D时间）
   // 调整空间频率以在米级尺度上产生明显变化
-  float spatialFreq = 100.0; // 每0.1米一个噪声周期
-  float timeFreq = 1.;       // 时间变化频率（缓慢变化）
+  float spatialFreq = 0.1;
+  // 提高时间变化频率，因为fractalNoise内部已经有时间缓慢控制
+  float timeFreq = 0.5;
 
   float4 noisePos = float4(
       base.position.x * spatialFreq,
       base.position.y * spatialFreq,
       base.position.z * spatialFreq,
-      params.dt * params.timestamp);
+      params.timestamp * timeFreq);
 
   outputNestBaseList[id].noiseValue = fractalNoise(noisePos);
 }
@@ -192,7 +167,7 @@ kernel void updateNestVertexes(
   // 这样当noiseValue=1时，线段从中心延伸0.25米，刚好填满网格空间
   // 当noiseValue=0时，线段长度为0（不显示）
   float maxLineLength = 0.25; // 网格间距的一半
-  float lineLength = base.noiseValue * maxLineLength * 0.25;
+  float lineLength = base.noiseValue * maxLineLength;
 
   // 计算最终位置：中心位置 + 顶点偏移 * 线段长度
   float3 position = base.position + vertice * lineLength;
