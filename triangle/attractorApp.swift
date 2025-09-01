@@ -32,6 +32,8 @@ private enum VisibilityDemo: String {
   case snowflake = "Snowflake"
   case mobiusSpheres = "Mobius Spheres"
   case bifurcation = "Bifurcation"
+  case nest = "Nest"
+  case cubesNested = "Cubes Nested"
 }
 
 @main
@@ -39,7 +41,7 @@ struct AttractorApp: App {
   @Environment(\.openImmersiveSpace) private var openImmersiveSpace
   @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
 
-  @State private var selectedDemo: VisibilityDemo = .bifurcation
+  @State private var selectedDemo: VisibilityDemo = .cubesNested
 
   @State private var isImmersionActive = false
 
@@ -72,6 +74,8 @@ struct AttractorApp: App {
           Text("Snowflake").tag(VisibilityDemo.snowflake)
           Text("Mobius Spheres").tag(VisibilityDemo.mobiusSpheres)
           Text("Bifurcation").tag(VisibilityDemo.bifurcation)
+          Text("Nest").tag(VisibilityDemo.nest)
+          Text("Cubes Nested").tag(VisibilityDemo.cubesNested)
         }.pickerStyle(.wheel).padding(.bottom, 32).frame(
           width: 400,
           height: 600,
@@ -150,6 +154,10 @@ struct AttractorApp: App {
           MobiusSpheresView()
         case .bifurcation:
           BifurcationView()
+        case .nest:
+          NestView()
+        case .cubesNested:
+          CubesNestedView()
         }
       }
 

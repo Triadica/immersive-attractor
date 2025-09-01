@@ -3,9 +3,9 @@ import RealityKit
 import SwiftUI
 
 private struct MovingCubesParams {
-  var vertexPerCell: Int32
+  var width: Float
   var dt: Float
-  var timestamp: Float = 0
+  var time: Float
 }
 
 private struct VertexData {
@@ -34,13 +34,14 @@ private struct VertexData {
 }
 
 /// placement of a cube
-private struct CellBase {
-  var original: SIMD3<Float>
-  var position: SIMD3<Float>
-  var velocity: Float = 0
+private struct CubeBase {
+  var center: SIMD3<Float>
+  var size: Float
+  var rotationAxis: SIMD3<Float>
+  var rotationSpeed: Float
 }
 
-struct MobiusTrailView: View {
+struct CubesNestedView: View {
   let rootEntity: Entity = Entity()
   @State var mesh: LowLevelMesh?
 
@@ -51,25 +52,24 @@ struct MobiusTrailView: View {
 
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
-  let attractorPipeline: MTLComputePipelineState
+  let cubePipeline: MTLComputePipelineState
   let vertexPipeline: MTLComputePipelineState
 
   @State var pingPongBuffer: PingPongBuffer?
   /// The vertex buffer for the mesh
   @State var vertexBuffer: MTLBuffer?
-  /// to track previous state of vertex buffer
-  @State var vertexPrevBuffer: MTLBuffer?
+  @State var startTime: Date = Date()
 
   init() {
     self.device = MTLCreateSystemDefaultDevice()!
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
-    let updateAttractorBase = library.makeFunction(name: "updateMobiusTrailBase")!
-    self.attractorPipeline = try! device.makeComputePipelineState(function: updateAttractorBase)
+    let updateCubeBase = library.makeFunction(name: "updateCubeNestedBase")!
+    self.cubePipeline = try! device.makeComputePipelineState(function: updateCubeBase)
 
-    let updatelinesVertexes = library.makeFunction(name: "updateMobiusTrailVertexes")!
-    self.vertexPipeline = try! device.makeComputePipelineState(function: updatelinesVertexes)
+    let updateCubeVertexes = library.makeFunction(name: "updateCubeNestedVertexes")!
+    self.vertexPipeline = try! device.makeComputePipelineState(function: updateCubeVertexes)
   }
 
   var body: some View {
@@ -78,7 +78,7 @@ struct MobiusTrailView: View {
         guard let mesh = try? createMesh(),
           let modelComponent = try? getModelComponent(mesh: mesh)
         else {
-          print("Failed to create mesh or model component")
+          print("failed to create mesh or model component")
           return
         }
         rootEntity.components.set(modelComponent)
@@ -99,8 +99,8 @@ struct MobiusTrailView: View {
 
         // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = 1
-        // rootEntity.position.z = -2
         // rootEntity.position.x = 1.6
+        rootEntity.position.z = -1
         content.add(rootEntity)
         self.mesh = mesh
 
@@ -159,12 +159,11 @@ struct MobiusTrailView: View {
   }
 
   func startTimer() {
+    self.startTime = Date()  // 重置开始时间
     self.mesh = try! createMesh()  // recreate mesh when start timer
     self.pingPongBuffer = createPingPongBuffer()
 
     self.vertexBuffer = device.makeBuffer(
-      length: MemoryLayout<VertexData>.stride * vertexCapacity, options: .storageModeShared)
-    self.vertexPrevBuffer = device.makeBuffer(
       length: MemoryLayout<VertexData>.stride * vertexCapacity, options: .storageModeShared)
 
     timer = Timer.scheduledTimer(withTimeInterval: 1 / fps, repeats: true) { _ in
@@ -172,7 +171,7 @@ struct MobiusTrailView: View {
       DispatchQueue.main.async {
         if let vertexBuffer = self.vertexBuffer {
           self.updateCubeBase()
-          self.updateMesh(vertexBuffer: vertexBuffer, prevBuffer: self.vertexPrevBuffer!)
+          self.updateMesh(vertexBuffer: vertexBuffer)
 
           // swap buffers
           self.pingPongBuffer!.swap()
@@ -203,56 +202,89 @@ struct MobiusTrailView: View {
 
   /// Create a bounding box for the mesh
   func getBounds() -> BoundingBox {
-    let radius: Float = 2
+    let radius: Float = 8  // 增加边界框大小以容纳16个嵌套立方体
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  let gridSize: Int = 30
-
-  var cellCount: Int {
-    return gridSize * gridSize * gridSize
-  }
-  let cellSegment: Int = 40
-
-  var vertexPerCell: Int {
-    return cellSegment + 1
-  }
-  var indicePerCell: Int {
-    return cellSegment * 2
-  }
+  let cubeCount: Int = 16
 
   var vertexCapacity: Int {
-    return cellCount * vertexPerCell
+    return cubeCount * 8
   }
-  var indiceCapacity: Int {
-    return cellCount * indicePerCell
+
+  /// Triangle indices for a cube
+  var cubeTriangles: [Int] = [
+    0, 1, 2, 0, 2, 3,
+    4, 5, 6, 4, 6, 7,
+    0, 1, 5, 0, 5, 4,
+    2, 3, 7, 2, 7, 6,
+    0, 3, 7, 0, 7, 4,
+    1, 2, 6, 1, 6, 5,
+  ]
+
+  var cubeFrame: [Int] = [
+    0, 1, 1, 2, 2, 3, 3, 0,
+    4, 5, 5, 6, 6, 7, 7, 4,
+    0, 4, 1, 5, 2, 6, 3, 7,
+  ]
+
+  var shapeIndiceCount: Int {
+    return cubeFrame.count
+  }
+
+  var indexCount: Int {
+    return cubeCount * shapeIndiceCount
   }
 
   func createPingPongBuffer() -> PingPongBuffer {
-    let bufferSize = MemoryLayout<CellBase>.stride * cellCount
+    let bufferSize = MemoryLayout<CubeBase>.stride * cubeCount
     let buffer = PingPongBuffer(device: device, length: bufferSize)
 
     // 使用 contents() 前检查 buffer 是否有效
     let contents = buffer.currentBuffer.contents()
 
-    let cells = contents.bindMemory(to: CellBase.self, capacity: cellCount)
+    let cubes = contents.bindMemory(to: CubeBase.self, capacity: cubeCount)
 
-    // create points in 3D grid, each point is a group of vertexes
-    for xi in 0..<gridSize {
-      for yi in 0..<gridSize {
-        for zi in 0..<gridSize {
-          let i = xi * gridSize * gridSize + yi * gridSize + zi
-          let x = Float(xi) / Float(gridSize) * 2 - 1
-          let y = Float(yi) / Float(gridSize) * 2 - 1
-          let z = Float(zi) / Float(gridSize) * 2 - 1
-          let pos = SIMD3<Float>(x, y, z) * 0.2
-          cells[i] = CellBase(
-            original: pos,
-            position: pos,
-            velocity: Float.random(in: 0.08...0.4)
-          )
-        }
-      }
+    // 中心点 [0, 0, -1]
+    let center = SIMD3<Float>(0, 0, 0)
+
+    let baseRadius: Float = 0.01
+    let scaleFactor: Float = sqrt(3.0)
+
+    // 预定义不同的旋转轴和速度
+    let rotationAxes: [SIMD3<Float>] = [
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+      SIMD3<Float>(.random(in: -1...1), .random(in: -1...1), .random(in: -1...1)),
+    ]
+
+    let rotationSpeeds: [Float] = [
+      0.5, -0.3, 0.7, -0.4, 0.6, -0.8,
+      0.2, -0.9, 0.4, -0.1, 0.8, -0.6,
+      0.3, -0.5, 0.9, -0.2,
+    ]
+
+    for i in 0..<cubeCount {
+      let radius = baseRadius * pow(scaleFactor, Float(i))
+      cubes[i] = CubeBase(
+        center: center,
+        size: radius * 2,  // 立方体边长
+        rotationAxis: normalize(rotationAxes[i]),
+        rotationSpeed: rotationSpeeds[i]
+      )
     }
 
     // copy data from current buffer to next buffer
@@ -265,7 +297,7 @@ struct MobiusTrailView: View {
   func createMesh() throws -> LowLevelMesh {
     var desc = VertexData.descriptor
     desc.vertexCapacity = vertexCapacity
-    desc.indexCapacity = indiceCapacity
+    desc.indexCapacity = indexCount
 
     let mesh = try LowLevelMesh(descriptor: desc)
 
@@ -274,15 +306,9 @@ struct MobiusTrailView: View {
     mesh.withUnsafeMutableIndices { rawIndices in
       let indices = rawIndices.bindMemory(to: UInt32.self)
 
-      for i in 0..<cellCount {
-        for j in 0..<indicePerCell {
-          let is_even = j % 2 == 0
-          let half = j / 2
-          if is_even {
-            indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half)
-          } else {
-            indices[i * indicePerCell + j] = UInt32(i * vertexPerCell + half + 1)
-          }
+      for i in 0..<cubeCount {
+        for j in 0..<shapeIndiceCount {
+          indices[i * shapeIndiceCount + j] = UInt32(cubeFrame[j]) + UInt32(i * 8)
         }
       }
 
@@ -290,7 +316,7 @@ struct MobiusTrailView: View {
 
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
-        indexCount: indiceCapacity,
+        indexCount: indexCount,
         topology: .lineStrip,
         bounds: getBounds()
       )
@@ -299,16 +325,9 @@ struct MobiusTrailView: View {
     return mesh
   }
 
-  @State private var viewStartTime: Date = Date()
-  @State private var frameDelta: Float = 0.0
-
   private func getMovingParams() -> MovingCubesParams {
-    let delta = -Float(viewStartTime.timeIntervalSinceNow)
-    // let dt = delta - frameDelta
-    frameDelta = delta
-    return MovingCubesParams(
-      vertexPerCell: Int32(vertexPerCell), dt: 0.006,
-      timestamp: delta)
+    let currentTime = Date().timeIntervalSince(startTime)
+    return MovingCubesParams(width: 0.003, dt: 0.02, time: Float(currentTime))
   }
 
   func updateCubeBase() {
@@ -320,7 +339,7 @@ struct MobiusTrailView: View {
       return
     }
 
-    computeEncoder.setComputePipelineState(attractorPipeline)
+    computeEncoder.setComputePipelineState(cubePipeline)
 
     // idx 0: pingPongBuffer
     computeEncoder.setBuffer(
@@ -333,7 +352,7 @@ struct MobiusTrailView: View {
     // idx 2: params buffer
     computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 2)
 
-    let threadsPerGrid = MTLSize(width: cellCount, height: 1, depth: 1)
+    let threadsPerGrid = MTLSize(width: cubeCount, height: 1, depth: 1)
     let threadsPerThreadgroup = MTLSize(width: 16, height: 1, depth: 1)
     computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
 
@@ -342,7 +361,7 @@ struct MobiusTrailView: View {
     commandBuffer.commit()
   }
 
-  func updateMesh(vertexBuffer: MTLBuffer, prevBuffer: MTLBuffer) {
+  func updateMesh(vertexBuffer: MTLBuffer) {
     guard let mesh = mesh,
       let pingPongBuffer = pingPongBuffer,
       let commandBuffer = commandQueue.makeCommandBuffer(),
@@ -356,8 +375,6 @@ struct MobiusTrailView: View {
     mesh.withUnsafeMutableBytes(bufferIndex: 0) { rawBytes in
       vertexBuffer.contents().copyMemory(
         from: rawBytes.baseAddress!, byteCount: rawBytes.count)
-      prevBuffer.contents().copyMemory(
-        from: rawBytes.baseAddress!, byteCount: rawBytes.count)
     }
 
     computeEncoder.setComputePipelineState(vertexPipeline)
@@ -368,12 +385,10 @@ struct MobiusTrailView: View {
 
     // idx 1: vertexBuffer
     computeEncoder.setBuffer(vertexBuffer, offset: 0, index: 1)
-    // idx 2: prevBuffer
-    computeEncoder.setBuffer(prevBuffer, offset: 0, index: 2)
 
     var params = getMovingParams()
-    // idx 3: params buffer
-    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 3)
+    // idx 2: params buffer
+    computeEncoder.setBytes(&params, length: MemoryLayout<MovingCubesParams>.size, index: 2)
 
     let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
     let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
@@ -394,7 +409,7 @@ struct MobiusTrailView: View {
     // apply entity with mesh data
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
-        indexCount: indiceCapacity,
+        indexCount: indexCount,
         topology: .line,
         bounds: getBounds()
       )

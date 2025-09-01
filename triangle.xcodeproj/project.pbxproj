@@ -20,6 +20,8 @@
 		9A3CD4232C8A1E9300E8710C /* MovingLorenz.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A3CD4212C8A1DE300E8710C /* MovingLorenz.swift */; };
 		9A45F3A32D7C5B130042486A /* Nebula.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A45F3A22D7C5B090042486A /* Nebula.swift */; };
 		9A45F3A52D7C5B210042486A /* Nebula.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A45F3A42D7C5B170042486A /* Nebula.metal */; };
+		9A4774B02E509EB50078AA8D /* Nest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A4774AF2E509EB20078AA8D /* Nest.swift */; };
+		9A4774B22E509EC40078AA8D /* Nest.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A4774B12E509EBC0078AA8D /* Nest.metal */; };
 		9A53853F2D5A47140040CF72 /* RadicalLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A53853E2D5A46B00040CF72 /* RadicalLine.swift */; };
 		9A5385412D5A47230040CF72 /* RadicalLine.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A5385402D5A47180040CF72 /* RadicalLine.metal */; };
 		9A5385432D5A6B8C0040CF72 /* SphereBouncing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A5385422D5A6B840040CF72 /* SphereBouncing.swift */; };
@@ -60,6 +62,8 @@
 		9A9BADFF2D78C70C009C0510 /* Lotus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A9BADFE2D78C70C009C0510 /* Lotus.swift */; };
 		9AC67CF62D6F8F9700071E59 /* MobiusGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AC67CF52D6F8F8F00071E59 /* MobiusGrid.swift */; };
 		9AC67CF82D6F8F9E00071E59 /* MobiusGrid.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9AC67CF72D6F8F9B00071E59 /* MobiusGrid.metal */; };
+		9AD002EC2E51EC680074380A /* CubesNested.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AD002EB2E51EC640074380A /* CubesNested.swift */; };
+		9AD002EE2E51EC750074380A /* CubesNested.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9AD002ED2E51EC6E0074380A /* CubesNested.metal */; };
 		9AD4CB772D588FDA00E55977 /* AttractorLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AD4CB762D588FCF00E55977 /* AttractorLine.swift */; };
 		9AD4CB792D588FE600E55977 /* AttractorLine.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9AD4CB782D588FDE00E55977 /* AttractorLine.metal */; };
 /* End PBXBuildFile section */
@@ -88,6 +92,8 @@
 		9A3CD4212C8A1DE300E8710C /* MovingLorenz.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovingLorenz.swift; sourceTree = "<group>"; };
 		9A45F3A22D7C5B090042486A /* Nebula.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Nebula.swift; sourceTree = "<group>"; };
 		9A45F3A42D7C5B170042486A /* Nebula.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Nebula.metal; sourceTree = "<group>"; };
+		9A4774AF2E509EB20078AA8D /* Nest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Nest.swift; sourceTree = "<group>"; };
+		9A4774B12E509EBC0078AA8D /* Nest.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Nest.metal; sourceTree = "<group>"; };
 		9A53853E2D5A46B00040CF72 /* RadicalLine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadicalLine.swift; sourceTree = "<group>"; };
 		9A5385402D5A47180040CF72 /* RadicalLine.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = RadicalLine.metal; sourceTree = "<group>"; };
 		9A5385422D5A6B840040CF72 /* SphereBouncing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SphereBouncing.swift; sourceTree = "<group>"; };
@@ -132,6 +138,8 @@
 		9A9BADFE2D78C70C009C0510 /* Lotus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Lotus.swift; sourceTree = "<group>"; };
 		9AC67CF52D6F8F8F00071E59 /* MobiusGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobiusGrid.swift; sourceTree = "<group>"; };
 		9AC67CF72D6F8F9B00071E59 /* MobiusGrid.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = MobiusGrid.metal; sourceTree = "<group>"; };
+		9AD002EB2E51EC640074380A /* CubesNested.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CubesNested.swift; sourceTree = "<group>"; };
+		9AD002ED2E51EC6E0074380A /* CubesNested.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = CubesNested.metal; sourceTree = "<group>"; };
 		9AD4CB762D588FCF00E55977 /* AttractorLine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttractorLine.swift; sourceTree = "<group>"; };
 		9AD4CB782D588FDE00E55977 /* AttractorLine.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = AttractorLine.metal; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -188,6 +196,10 @@
 		9A75D3DF2C71D16900D27E97 /* triangle */ = {
 			isa = PBXGroup;
 			children = (
+				9AD002ED2E51EC6E0074380A /* CubesNested.metal */,
+				9AD002EB2E51EC640074380A /* CubesNested.swift */,
+				9A4774B12E509EBC0078AA8D /* Nest.metal */,
+				9A4774AF2E509EB20078AA8D /* Nest.swift */,
 				9A9A3E082E159D3500330D1B /* Bifurcation.metal */,
 				9A9A3E092E159D3500330D1B /* Bifurcation.swift */,
 				9A13D9002DDE50EB00EEA863 /* MobiusSpheres.metal */,
@@ -375,11 +387,15 @@
 			buildActionMask = 2147483647;
 			files = (
 				9A5385552D61E4190040CF72 /* Chords.metal in Sources */,
+				9AD002EC2E51EC680074380A /* CubesNested.swift in Sources */,
+				9AD002EE2E51EC750074380A /* CubesNested.metal in Sources */,
 				9A9BADF52D74599E009C0510 /* MobiusTrail.metal in Sources */,
 				9A53854F2D5FBAAE0040CF72 /* HyperbolicHelicoid.swift in Sources */,
 				9A92D3812D986ACA0021FFCE /* GestureComponent.swift in Sources */,
 				9A6F2A2D2D6B8B4A007F336F /* HopfFibration.swift in Sources */,
+				9A4774B02E509EB50078AA8D /* Nest.swift in Sources */,
 				9AD4CB792D588FE600E55977 /* AttractorLine.metal in Sources */,
+				9A4774B22E509EC40078AA8D /* Nest.metal in Sources */,
 				9A1A94EE2D54C5DC00315602 /* CubesMoving.metal in Sources */,
 				9AD4CB772D588FDA00E55977 /* AttractorLine.swift in Sources */,
 				9A13D89B2DC3F13800EEA863 /* Snowflake.swift in Sources */,
