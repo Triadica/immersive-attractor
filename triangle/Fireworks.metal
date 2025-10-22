@@ -34,6 +34,7 @@ static float3 fiboGridN(float n, float total) {
   return float3(x, y, z);
 }
 
+
 kernel void updateFireworksBase(
     device CellBase *codeBaseList [[buffer(0)]],
     device CellBase *outputCodeBaseList [[buffer(1)]],

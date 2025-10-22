@@ -10,6 +10,7 @@ import SwiftUI
 private enum VisibilityDemo: String {
   case cubesMoving = "Cubes Moving"
   case attractorLine = "Attractor Line"
+  case sphereLine = "Sphere Line"
   case movingLorenz = "Moving Lorenz"
   case radicalLine = "Radical Line"
   case sphereBouncing = "Sphere Bouncing"
@@ -41,7 +42,7 @@ struct AttractorApp: App {
   @Environment(\.openImmersiveSpace) private var openImmersiveSpace
   @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
 
-  @State private var selectedDemo: VisibilityDemo = .cubesNested
+  @State private var selectedDemo: VisibilityDemo = .sphereLine
 
   @State private var isImmersionActive = false
 
@@ -76,6 +77,7 @@ struct AttractorApp: App {
           Text("Bifurcation").tag(VisibilityDemo.bifurcation)
           Text("Nest").tag(VisibilityDemo.nest)
           Text("Cubes Nested").tag(VisibilityDemo.cubesNested)
+          Text("Sphere Line").tag(VisibilityDemo.sphereLine)
         }.pickerStyle(.wheel).padding(.bottom, 32).frame(
           width: 400,
           height: 600,
@@ -110,6 +112,8 @@ struct AttractorApp: App {
           CubesMovingView()
         case .attractorLine:
           AttractorLineView()
+        case .sphereLine:
+          SphereLineView()
         case .movingLorenz:
           MovingLorenzView()
         case .radicalLine:
