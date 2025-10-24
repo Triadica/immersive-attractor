@@ -66,6 +66,8 @@
 		9AD002EE2E51EC750074380A /* CubesNested.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9AD002ED2E51EC6E0074380A /* CubesNested.metal */; };
 		9AD4CB772D588FDA00E55977 /* AttractorLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AD4CB762D588FCF00E55977 /* AttractorLine.swift */; };
 		9AD4CB792D588FE600E55977 /* AttractorLine.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9AD4CB782D588FDE00E55977 /* AttractorLine.metal */; };
+		704EED3E540445449598376D /* SphereLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAC4C4AE18C246919BAC42C5 /* SphereLine.swift */; };
+		41DCDA0ABEF64A18B479EC12 /* SphereLine.metal in Sources */ = {isa = PBXBuildFile; fileRef = 08046443592446F3B06D6A61 /* SphereLine.metal */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -142,6 +144,8 @@
 		9AD002ED2E51EC6E0074380A /* CubesNested.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = CubesNested.metal; sourceTree = "<group>"; };
 		9AD4CB762D588FCF00E55977 /* AttractorLine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttractorLine.swift; sourceTree = "<group>"; };
 		9AD4CB782D588FDE00E55977 /* AttractorLine.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = AttractorLine.metal; sourceTree = "<group>"; };
+		CAC4C4AE18C246919BAC42C5 /* SphereLine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SphereLine.swift; sourceTree = "<group>"; };
+		08046443592446F3B06D6A61 /* SphereLine.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = SphereLine.metal; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -253,6 +257,8 @@
 				9A53853E2D5A46B00040CF72 /* RadicalLine.swift */,
 				9A5385442D5A6B8F0040CF72 /* SphereBouncing.metal */,
 				9A5385422D5A6B840040CF72 /* SphereBouncing.swift */,
+				08046443592446F3B06D6A61 /* SphereLine.metal */,
+				CAC4C4AE18C246919BAC42C5 /* SphereLine.swift */,
 			);
 			path = triangle;
 			sourceTree = "<group>";
@@ -439,6 +445,8 @@
 				9A9BADFF2D78C70C009C0510 /* Lotus.swift in Sources */,
 				9A5385512D5FBAB50040CF72 /* HyperbolicHelicoid.metal in Sources */,
 				9A5385592D63ACA00040CF72 /* Fireworks.metal in Sources */,
+				704EED3E540445449598376D /* SphereLine.swift in Sources */,
+				41DCDA0ABEF64A18B479EC12 /* SphereLine.metal in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
