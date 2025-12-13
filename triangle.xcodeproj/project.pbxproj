@@ -68,6 +68,9 @@
 		9AD4CB792D588FE600E55977 /* AttractorLine.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9AD4CB782D588FDE00E55977 /* AttractorLine.metal */; };
 		704EED3E540445449598376D /* SphereLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAC4C4AE18C246919BAC42C5 /* SphereLine.swift */; };
 		41DCDA0ABEF64A18B479EC12 /* SphereLine.metal in Sources */ = {isa = PBXBuildFile; fileRef = 08046443592446F3B06D6A61 /* SphereLine.metal */; };
+		1154204F98684EE79BB8BFAA /* MeshRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1361A260DC5C4B26976706AA /* MeshRecorder.swift */; };
+		8AA8152E57044B39AAFF36AA /* RecordingControlPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEAB3439D7CF4434AB86B3AA /* RecordingControlPanel.swift */; };
+		9DFC2C2479524322BF74E8AA /* RecordingHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 717673FAB97A4508981EDCAA /* RecordingHelper.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -146,6 +149,9 @@
 		9AD4CB782D588FDE00E55977 /* AttractorLine.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = AttractorLine.metal; sourceTree = "<group>"; };
 		CAC4C4AE18C246919BAC42C5 /* SphereLine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SphereLine.swift; sourceTree = "<group>"; };
 		08046443592446F3B06D6A61 /* SphereLine.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = SphereLine.metal; sourceTree = "<group>"; };
+		1361A260DC5C4B26976706AA /* MeshRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshRecorder.swift; sourceTree = "<group>"; };
+		BEAB3439D7CF4434AB86B3AA /* RecordingControlPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingControlPanel.swift; sourceTree = "<group>"; };
+		717673FAB97A4508981EDCAA /* RecordingHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingHelper.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -259,6 +265,9 @@
 				9A5385422D5A6B840040CF72 /* SphereBouncing.swift */,
 				08046443592446F3B06D6A61 /* SphereLine.metal */,
 				CAC4C4AE18C246919BAC42C5 /* SphereLine.swift */,
+				1361A260DC5C4B26976706AA /* MeshRecorder.swift */,
+				BEAB3439D7CF4434AB86B3AA /* RecordingControlPanel.swift */,
+				717673FAB97A4508981EDCAA /* RecordingHelper.swift */,
 			);
 			path = triangle;
 			sourceTree = "<group>";
@@ -447,6 +456,9 @@
 				9A5385592D63ACA00040CF72 /* Fireworks.metal in Sources */,
 				704EED3E540445449598376D /* SphereLine.swift in Sources */,
 				41DCDA0ABEF64A18B479EC12 /* SphereLine.metal in Sources */,
+				1154204F98684EE79BB8BFAA /* MeshRecorder.swift in Sources */,
+				8AA8152E57044B39AAFF36AA /* RecordingControlPanel.swift in Sources */,
+				9DFC2C2479524322BF74E8AA /* RecordingHelper.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

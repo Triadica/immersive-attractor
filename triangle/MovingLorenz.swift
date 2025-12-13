@@ -180,19 +180,22 @@ struct MovingLorenzView: View {
     }
   }
 
-  
-    /// Create a bounding box for the mesh
+  /// Create a bounding box for the mesh
   func getBounds() -> BoundingBox {
     let radius: Float = 4
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
-  
+
   func startTimer() {
     self.mesh = try! createMesh()  // recreate mesh when start timer
     timer = Timer.scheduledTimer(withTimeInterval: 1 / fps, repeats: true) { _ in
 
       DispatchQueue.main.async {
         self.updateMesh()
+
+        // Record frame if recording is active
+        recordMeshIfActive(mesh: self.mesh, topology: .lines)
+
         self.updateTrigger.toggle()
       }
     }

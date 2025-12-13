@@ -184,6 +184,9 @@ struct SphereLineView: View {
           self.updateSphereLineBase()
           self.updateMesh(vertexBuffer: vertexBuffer, prevBuffer: self.vertexPrevBuffer!)
 
+          // Record frame if recording is active
+          recordMeshIfActive(mesh: self.mesh, topology: .lines)
+
           // swap buffers
           self.pingPongBuffer!.swap()
         } else {

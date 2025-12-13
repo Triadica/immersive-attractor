@@ -162,6 +162,9 @@ struct MobiusBubblesView: View {
       DispatchQueue.main.async {
         if let vertexBuffer = self.vertexBuffer {
           self.updateMesh(vertexBuffer: vertexBuffer)
+
+          // Record frame if recording is active
+          recordMeshIfActive(mesh: self.mesh, topology: .triangles)
           // no need to swap buffers
         } else {
           print("[ERR] vertex buffer is not initialized")

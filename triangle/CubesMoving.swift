@@ -169,6 +169,9 @@ struct CubesMovingView: View {
           self.updateCubeBase()
           self.updateMesh(vertexBuffer: vertexBuffer)
 
+          // Record frame if recording is active
+          recordMeshIfActive(mesh: self.mesh, topology: .triangles)
+
           // swap buffers
           self.pingPongBuffer!.swap()
         } else {

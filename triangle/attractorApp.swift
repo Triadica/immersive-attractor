@@ -100,6 +100,12 @@ struct AttractorApp: App {
           }.padding(.bottom, 32)
 
           Text("Selected demo: \(selectedDemo.rawValue)").padding(.top, 32)
+
+          // Recording control panel
+          if isImmersionActive {
+            Divider().padding(.vertical, 16)
+            RecordingControlPanel()
+          }
         }.frame(width: 400)
       }
 
