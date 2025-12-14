@@ -214,7 +214,7 @@ class MeshRecorder: ObservableObject {
     let exportDir = getExportDirectory()
     let usdaURL = exportDir.appendingPathComponent("\(filename).usda")
     let usdzURL = exportDir.appendingPathComponent("\(filename).usdz")
-    
+
     // Capture frames data for background processing
     let capturedFrames = self.frames
     let fps = self.targetFPS
@@ -347,7 +347,7 @@ class MeshRecorder: ObservableObject {
     let exportDir = getExportDirectory()
     let usdaURL = exportDir.appendingPathComponent("\(filename).usda")
     let usdzURL = exportDir.appendingPathComponent("\(filename).usdz")
-    
+
     // Capture frames data for background processing
     let capturedFrames = self.frames
     let fps = self.targetFPS
@@ -355,7 +355,8 @@ class MeshRecorder: ObservableObject {
     // Run heavy work on background thread
     return try await Task.detached(priority: .userInitiated) {
       // Generate point cloud USDA content on background thread
-      let usdaContent = Self.generatePointCloudUSDAContentStatic(frames: capturedFrames, targetFPS: fps)
+      let usdaContent = Self.generatePointCloudUSDAContentStatic(
+        frames: capturedFrames, targetFPS: fps)
       try usdaContent.write(to: usdaURL, atomically: true, encoding: .utf8)
 
       // Convert to USDZ
@@ -370,12 +371,14 @@ class MeshRecorder: ObservableObject {
   }
 
   /// Generate point cloud USDA content (static version for background thread)
-  nonisolated private static func generatePointCloudUSDAContentStatic(frames: [RecordedFrame], targetFPS: Double) -> String {
+  nonisolated private static func generatePointCloudUSDAContentStatic(
+    frames: [RecordedFrame], targetFPS: Double
+  ) -> String {
     // Pre-calculate capacity
     let estimatedSize = frames.count * (frames.first?.vertices.count ?? 0) * 50 + 5000
     var usda = ""
     usda.reserveCapacity(estimatedSize)
-    
+
     usda += """
       #usda 1.0
       (
@@ -488,11 +491,13 @@ class MeshRecorder: ObservableObject {
 
     return usda
   }
-  
+
   /// Generate USDA content with animation (static version for background thread)
-  nonisolated private static func generateUSDAContentStatic(frames: [RecordedFrame], targetFPS: Double) -> String {
+  nonisolated private static func generateUSDAContentStatic(
+    frames: [RecordedFrame], targetFPS: Double
+  ) -> String {
     guard let firstFrame = frames.first else { return "" }
-    
+
     // Pre-calculate capacity to avoid reallocations
     // Estimate: ~50 bytes per vertex per frame + overhead
     let estimatedSize = frames.count * firstFrame.vertices.count * 50 + 10000

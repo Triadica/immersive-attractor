@@ -42,7 +42,7 @@ struct AttractorApp: App {
   @Environment(\.openImmersiveSpace) private var openImmersiveSpace
   @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
 
-  @State private var selectedDemo: VisibilityDemo = .sphereLine
+  @State private var selectedDemo: VisibilityDemo = .cubesMoving
 
   @State private var isImmersionActive = false
 
@@ -78,7 +78,7 @@ struct AttractorApp: App {
           Text("Nest").tag(VisibilityDemo.nest)
           Text("Cubes Nested").tag(VisibilityDemo.cubesNested)
           Text("Sphere Line").tag(VisibilityDemo.sphereLine)
-        }.pickerStyle(.wheel).padding(.bottom, 32).frame(
+        }.pickerStyle(.inline).padding(.bottom, 32).frame(
           width: 400,
           height: 600,
           alignment: .center

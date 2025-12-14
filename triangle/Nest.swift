@@ -1,6 +1,7 @@
 import Metal
 import RealityKit
 import SwiftUI
+import simd
 
 private struct MovingNestParams {
   var width: Float
@@ -49,6 +50,9 @@ struct NestView: View {
   @State var timer: Timer?
   @State private var updateTrigger = false
 
+  // MARK: - Controller for gamepad input
+  let controllerHelper = ControllerHelper()
+
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
   let nestPipeline: MTLComputePipelineState
@@ -88,19 +92,28 @@ struct NestView: View {
         }
         rootEntity.components.set(modelComponent)
         // Add components for gesture support
-        rootEntity.components.set(GestureComponent())
-        rootEntity.components.set(InputTargetComponent())
+        // Controller: rootEntity.components.set(GestureComponent())
+        // Controller: rootEntity.components.set(InputTargetComponent())
         // Adjust collision box size to match actual content
-        let bounds = getBounds()
-        rootEntity.components.set(
-          CollisionComponent(
-            shapes: [
-              .generateBox(
-                width: bounds.extents.x * 4,
-                height: bounds.extents.y * 4,
-                depth: bounds.extents.z * 4)
-            ]
-          ))
+        // Controller: let bounds = getBounds()
+
+        // Controller: rootEntity.components.set(
+
+        // Controller: CollisionComponent(
+
+        // Controller: shapes: [
+
+        // Controller: .generateBox(
+
+        // Controller: width: bounds.extents.x * 4,
+
+        // Controller: height: bounds.extents.y * 4,
+
+        // Controller: depth: bounds.extents.z * 4)
+
+        // Controller: ]
+
+        // Controller: ))
 
         // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = 1
@@ -116,55 +129,56 @@ struct NestView: View {
       .onDisappear {
         stopTimer()
       }
-      .gesture(
-        DragGesture()
-          .targetedToEntity(rootEntity)
-          .onChanged { value in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onDragChange(value: value)
-            rootEntity.components[GestureComponent.self] = component
-          }
-          .onEnded { _ in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onGestureEnded()
-            rootEntity.components[GestureComponent.self] = component
-          }
-      )
-      .gesture(
-        RotateGesture3D()
-          .targetedToEntity(rootEntity)
-          .onChanged { value in
+      // Controller: .gesture(
+      // Controller: DragGesture()
+      // Controller: .targetedToEntity(rootEntity)
+      // Controller: .onChanged { value in
+      // Controller: var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+      // Controller: component.onDragChange(value: value)
+      // Controller: rootEntity.components[GestureComponent.self] = component
+      // Controller: }
+      // Controller: .onEnded { _ in
+      // Controller: var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+      // Controller: component.onGestureEnded()
+      // Controller: rootEntity.components[GestureComponent.self] = component
+      // Controller: }
+      // Controller: )
+      // Controller: .gesture(
+      // Controller: RotateGesture3D()
+      // Controller: .targetedToEntity(rootEntity)
+      // Controller: .onChanged { value in
 
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onRotateChange(value: value)
-            rootEntity.components[GestureComponent.self] = component
-          }
-          .onEnded { _ in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onGestureEnded()
-            rootEntity.components[GestureComponent.self] = component
-          }
-      )
-      .simultaneousGesture(
-        MagnifyGesture()
-          .targetedToEntity(rootEntity)
-          .onChanged { value in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onScaleChange(value: value)
-            rootEntity.components[GestureComponent.self] = component
-          }
-          .onEnded { _ in
-            var component: GestureComponent =
-              rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onGestureEnded()
-            rootEntity.components[GestureComponent.self] = component
-          }
-      )
+      // Controller: var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+      // Controller: component.onRotateChange(value: value)
+      // Controller: rootEntity.components[GestureComponent.self] = component
+      // Controller: }
+      // Controller: .onEnded { _ in
+      // Controller: var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+      // Controller: component.onGestureEnded()
+      // Controller: rootEntity.components[GestureComponent.self] = component
+      // Controller: }
+      // Controller: )
+      // Controller: .simultaneousGesture(
+      // Controller: MagnifyGesture()
+      // Controller: .targetedToEntity(rootEntity)
+      // Controller: .onChanged { value in
+      // Controller: var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
+      // Controller: component.onScaleChange(value: value)
+      // Controller: rootEntity.components[GestureComponent.self] = component
+      // Controller: }
+      // Controller: .onEnded { _ in
+      // Controller: var component: GestureComponent =
+      // Controller: rootEntity.components[GestureComponent.self] ?? GestureComponent()
+      // Controller: component.onGestureEnded()
+      // Controller: rootEntity.components[GestureComponent.self] = component
+      // Controller: }
+      // Controller: )
     }
   }
 
   func startTimer() {
-    self.mesh = try! createMesh()  // recreate mesh when start timer
+    self.mesh = try! createMesh()
+    controllerHelper.reset()  // Reset controller timing  // recreate mesh when start timer
     self.pingPongBuffer = createPingPongBuffer()
 
     self.vertexBuffer = device.makeBuffer(
@@ -182,6 +196,8 @@ struct NestView: View {
         } else {
           print("[ERR] vertex buffer is not initialized")
         }
+        // Update controller input
+        self.controllerHelper.updateEntityTransform(self.rootEntity)
         self.updateTrigger.toggle()
       }
     }

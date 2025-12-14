@@ -1,6 +1,7 @@
 import Metal
 import RealityKit
 import SwiftUI
+import simd
 
 private struct VertexData {
   var position: SIMD3<Float> = .zero
@@ -47,19 +48,28 @@ struct FractalBranchesView: View {
         }
         rootEntity.components.set(modelComponent)
         // Add components for gesture support
-        rootEntity.components.set(GestureComponent())
-        rootEntity.components.set(InputTargetComponent())
+        // Controller: rootEntity.components.set(GestureComponent())
+        // Controller: rootEntity.components.set(InputTargetComponent())
         // Adjust collision box size to match actual content
-        let bounds = getBounds()
-        rootEntity.components.set(
-          CollisionComponent(
-            shapes: [
-              .generateBox(
-                width: bounds.extents.x * 4,
-                height: bounds.extents.y * 4,
-                depth: bounds.extents.z * 4)
-            ]
-          ))
+        // Controller: let bounds = getBounds()
+
+        // Controller: rootEntity.components.set(
+
+        // Controller: CollisionComponent(
+
+        // Controller: shapes: [
+
+        // Controller: .generateBox(
+
+        // Controller: width: bounds.extents.x * 4,
+
+        // Controller: height: bounds.extents.y * 4,
+
+        // Controller: depth: bounds.extents.z * 4)
+
+        // Controller: ]
+
+        // Controller: ))
 
         // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = -0.5
