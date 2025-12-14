@@ -13,12 +13,18 @@ struct FlyingSwordsParams {
 };
 
 struct SwordBase {
-  float angle;     // Current angle in the circle (radians)
-  float radius;    // Distance from center in XY plane
-  float zOffset;   // Z offset (unused, all on same plane)
-  float tiltAngle; // Unused, direction calculated to target
-  int layer;       // Which layer (0, 1, 2, 3)
-  float speed;     // Rotation speed multiplier
+  float angle;        // Current angle in the circle (radians)
+  float radius;       // Distance from center in XY plane
+  float zOffset;      // Z offset (unused, all on same plane)
+  float tiltAngle;    // Unused, direction calculated to target
+  int layer;          // Which layer (0, 1, 2, 3)
+  float speed;        // Rotation speed multiplier
+  
+  // Launch state
+  float launchDelay;   // Random delay before launching (0~0.4s)
+  float launchSpeed;   // Speed toward target (2~4 m/s)
+  float launchTime;    // Time when launch was triggered (-1 = not launched)
+  float3 launchStartPos; // Position when launch started
 };
 
 // Sword dimensions (越王勾践剑 style - 1.5m total length)
@@ -129,51 +135,88 @@ float goldenPattern(float3 pos, float time, int swordIdx) {
   return mesh;
 }
 
+// Generate golden mesh pattern for blade
+float bladeGoldenMesh(float3 localPos, float time, int swordIdx) {
+  // Diamond/rhombus mesh pattern along blade
+  float bladeX = localPos.x; // Position along blade length
+  float bladeY = localPos.y; // Position across blade width
+  
+  // Create diamond mesh grid
+  float freq = 25.0; // Diamond frequency
+  float diagonal1 = sin((bladeX + bladeY) * freq);
+  float diagonal2 = sin((bladeX - bladeY) * freq);
+  
+  // Combine to create mesh intersections
+  float mesh = max(diagonal1, diagonal2);
+  mesh = smoothstep(0.7, 0.95, mesh); // Thin lines
+  
+  // Fade pattern near tip and edges
+  float tipFade = smoothstep(0.0, 0.3, bladeX); // Fade near tip
+  float edgeFade = 1.0 - smoothstep(0.02, 0.04, abs(bladeY)); // Stronger near center
+  
+  return mesh * tipFade * (0.5 + edgeFade * 0.5);
+}
+
 // Determine vertex color based on part of sword
 float3 getSwordColor(uint vertexIdx, float3 localPos, float time, int swordIdx) {
   // Base emerald green for blade
-  float3 bladeColor = float3(0.2, 1.0, 0.4);
+  float3 bladeBase = float3(0.15, 0.85, 0.35);
+  // Gold color for blade mesh pattern
+  float3 bladeGold = float3(0.9, 0.75, 0.25);
   
-  // Dark bronze/brown base for guard and handle
-  float3 guardBase = float3(0.25, 0.15, 0.08);
-  float3 handleBase = float3(0.18, 0.10, 0.05);
-  float3 pommelBase = float3(0.3, 0.18, 0.1);
+  // Deep teal/jade green for hilt parts (darker, more blue-green)
+  float3 guardBase = float3(0.05, 0.25, 0.2);   // Deep teal for guard
+  float3 handleBase = float3(0.03, 0.18, 0.15); // Darker teal for handle
+  float3 pommelBase = float3(0.06, 0.28, 0.22); // Slightly lighter for pommel
   
-  // Gold color for patterns
-  float3 goldColor = float3(1.0, 0.85, 0.3);
-  float3 brightGold = float3(1.0, 0.95, 0.5);
+  // Turquoise gold accent for hilt patterns
+  float3 hiltAccent = float3(0.4, 0.7, 0.5);    // Jade green highlight
+  float3 goldAccent = float3(0.7, 0.6, 0.25);   // Muted gold
   
   // Blade vertices (0-14)
   if (vertexIdx <= 14) {
-    return bladeColor;
+    // Add golden mesh pattern to blade
+    float meshPattern = bladeGoldenMesh(localPos, time, swordIdx);
+    return mix(bladeBase, bladeGold, meshPattern * 0.8);
   }
   // Guard vertices (15-22)
   else if (vertexIdx <= 22) {
     float pattern = goldenPattern(localPos, time, swordIdx);
-    // Add some decorative lines on guard
+    // Add decorative edge lines on guard
     float edgeGlow = smoothstep(0.03, 0.04, abs(localPos.y));
     pattern = max(pattern, 1.0 - edgeGlow);
-    return mix(guardBase, goldColor, pattern * 0.7);
+    // Geometric pattern
+    float geo = sin(localPos.y * 80.0) * sin(localPos.z * 80.0);
+    geo = smoothstep(0.3, 0.7, geo * 0.5 + 0.5);
+    pattern = max(pattern * 0.6, geo * 0.4);
+    return mix(guardBase, hiltAccent, pattern * 0.5);
   }
   // Handle vertices (23-30)
   else if (vertexIdx <= 30) {
-    float pattern = goldenPattern(localPos * 1.5, time, swordIdx);
-    // Spiral pattern along handle length
+    // Spiral wrap pattern along handle
     float handleX = -localPos.x - guardLength;
-    float spiral = sin(handleX * 40.0 + atan2(localPos.y, localPos.z) * 3.0 + time * 0.5);
-    spiral = smoothstep(0.2, 0.6, spiral * 0.5 + 0.5);
-    pattern = max(pattern, spiral * 0.8);
-    return mix(handleBase, brightGold, pattern * 0.6);
+    float spiral = sin(handleX * 50.0 + atan2(localPos.y, localPos.z) * 4.0);
+    spiral = smoothstep(0.4, 0.8, spiral * 0.5 + 0.5);
+    // Cross-hatch pattern
+    float crossA = sin(handleX * 30.0 + localPos.y * 100.0);
+    float crossB = sin(handleX * 30.0 - localPos.y * 100.0);
+    float cross = max(crossA, crossB);
+    cross = smoothstep(0.6, 0.9, cross * 0.5 + 0.5);
+    float pattern = max(spiral * 0.7, cross * 0.5);
+    return mix(handleBase, mix(hiltAccent, goldAccent, 0.3), pattern * 0.45);
   }
   // Pommel vertices (31-39)
   else {
-    float pattern = goldenPattern(localPos * 2.0, time, swordIdx);
-    // Radial pattern on pommel
+    // Radial sunburst pattern on pommel
     float angle = atan2(localPos.y, localPos.z);
-    float radial = sin(angle * 8.0 + time * 0.3);
-    radial = smoothstep(0.0, 0.5, radial * 0.5 + 0.5);
-    pattern = max(pattern, radial);
-    return mix(pommelBase, goldColor, pattern * 0.65);
+    float radial = sin(angle * 12.0);
+    radial = smoothstep(0.2, 0.7, radial * 0.5 + 0.5);
+    // Concentric rings
+    float dist = length(float2(localPos.y, localPos.z));
+    float rings = sin(dist * 150.0);
+    rings = smoothstep(0.5, 0.9, rings * 0.5 + 0.5);
+    float pattern = max(radial * 0.6, rings * 0.4);
+    return mix(pommelBase, hiltAccent, pattern * 0.5);
   }
 }
 
@@ -194,20 +237,159 @@ kernel void updateSwordVertexes(
   // Calculate color based on vertex position and part of sword
   float3 vertexColor = getSwordColor(vertexIdx, localPos, params.time, int(swordIdx));
 
-  // Rotate sword to point forward (-Z direction)
+  // Rotate sword to point forward (-Z direction) for circling mode
   // Swap: X -> -Z, Y -> Y, Z -> X
   float3 rotatedToForward = float3(localPos.z, localPos.y, -localPos.x);
 
   // Calculate current rotation angle based on time (very slow)
   float currentAngle = sword.angle + params.time * sword.speed;
 
-  // Position on the circle in XY plane (z=0 in local space)
+  // Default circling position on the XY plane
   float3 circlePos = float3(
-      cos(currentAngle) * sword.radius, sin(currentAngle) * sword.radius, 0.0);
+      cos(currentAngle) * sword.radius, 
+      sin(currentAngle) * sword.radius, 
+      0.0);
+  
+  float3 finalPos;
+  
+  // Check if sword is in launch mode
+  if (sword.launchTime >= 0.0) {
+    float timeSinceLaunch = params.time - sword.launchTime;
+    float effectiveTime = timeSinceLaunch - sword.launchDelay;
+    
+    if (effectiveTime > 0.0) {
+      // Sword is actively flying
+      // Target position: 12 meters forward from formation center (at z=-8, target at z=-20 world = -12 local)
+      // Add slight perturbation based on sword index for spread effect
+      float perturbX = sin(float(swordIdx) * 1.7) * 0.25;  // +/- 0.25m spread in X
+      float perturbY = cos(float(swordIdx) * 2.3) * 0.25;  // +/- 0.25m spread in Y
+      float3 targetPos = float3(perturbX, perturbY, -12.0);
+      
+      // Calculate direction from start to target
+      float3 startPos = sword.launchStartPos;
+      float3 direction = normalize(targetPos - startPos);
+      
+      // Move toward target
+      float distance = effectiveTime * sword.launchSpeed;
+      float3 newPos = startPos + direction * distance;
+      
+      // Rotate sword to point toward target (tip forward)
+      // The sword tip should point in the direction of travel
+      // localPos is with X=forward, so we need to rotate to align X with direction
+      float3 up = float3(0, 1, 0);
+      float3 right = normalize(cross(up, direction));
+      float3 adjustedUp = cross(direction, right);
+      
+      // Transform local position to world orientation
+      float3 rotatedPos = localPos.x * direction + localPos.y * adjustedUp + localPos.z * right;
+      
+      finalPos = newPos + rotatedPos;
+    } else {
+      // Still waiting for delay
+      finalPos = circlePos + rotatedToForward;
+    }
+  } else {
+    // Normal circling mode
+    finalPos = circlePos + rotatedToForward;
+  }
 
-  // Final position: circle position + rotated local position
-  float3 finalPos = circlePos + rotatedToForward;
+  outputVertices[id].position = finalPos;
+  outputVertices[id].color = vertexColor;
+}
 
+// Helper function to calculate sword position (shared between blade and hilt kernels)
+float3 calculateSwordPosition(SwordBase sword, float3 localPos, float time, int swordIdx) {
+  // Rotate sword to point forward (-Z direction) for circling mode
+  float3 rotatedToForward = float3(localPos.z, localPos.y, -localPos.x);
+  
+  // Calculate current rotation angle based on time
+  float currentAngle = sword.angle + time * sword.speed;
+  
+  // Default circling position on the XY plane
+  float3 circlePos = float3(
+      cos(currentAngle) * sword.radius, 
+      sin(currentAngle) * sword.radius, 
+      0.0);
+  
+  float3 finalPos;
+  
+  // Check if sword is in launch mode
+  if (sword.launchTime >= 0.0) {
+    float timeSinceLaunch = time - sword.launchTime;
+    float effectiveTime = timeSinceLaunch - sword.launchDelay;
+    
+    if (effectiveTime > 0.0) {
+      // Target position with smaller perturbation
+      float perturbX = sin(float(swordIdx) * 1.7) * 0.25;
+      float perturbY = cos(float(swordIdx) * 2.3) * 0.25;
+      float3 targetPos = float3(perturbX, perturbY, -12.0);
+      
+      float3 startPos = sword.launchStartPos;
+      float3 direction = normalize(targetPos - startPos);
+      
+      float distance = effectiveTime * sword.launchSpeed;
+      float3 newPos = startPos + direction * distance;
+      
+      // Rotate sword to point toward target
+      float3 up = float3(0, 1, 0);
+      float3 right = normalize(cross(up, direction));
+      float3 adjustedUp = cross(direction, right);
+      
+      float3 rotatedPos = localPos.x * direction + localPos.y * adjustedUp + localPos.z * right;
+      finalPos = newPos + rotatedPos;
+    } else {
+      finalPos = circlePos + rotatedToForward;
+    }
+  } else {
+    finalPos = circlePos + rotatedToForward;
+  }
+  
+  return finalPos;
+}
+
+// Kernel for blade vertices only (vertices 0-14)
+// 15 vertices per sword for the blade
+kernel void updateBladeVertexes(
+    device SwordBase *swordList [[buffer(0)]],
+    device VertexData *outputVertices [[buffer(1)]],
+    constant FlyingSwordsParams &params [[buffer(2)]],
+    uint id [[thread_position_in_grid]]) {
+
+  uint swordIdx = id / 15; // 15 vertices per sword blade
+  uint vertexIdx = id % 15;
+  
+  SwordBase sword = swordList[swordIdx];
+  float3 localPos = swordVertices[vertexIdx];
+  
+  float3 finalPos = calculateSwordPosition(sword, localPos, params.time, int(swordIdx));
+  
+  // Calculate blade color with golden mesh pattern
+  float3 vertexColor = getSwordColor(vertexIdx, localPos, params.time, int(swordIdx));
+  
+  outputVertices[id].position = finalPos;
+  outputVertices[id].color = vertexColor;
+}
+
+// Kernel for hilt vertices only (vertices 15-39)
+// 25 vertices per sword for the hilt (guard + handle + pommel)
+kernel void updateHiltVertexes(
+    device SwordBase *swordList [[buffer(0)]],
+    device VertexData *outputVertices [[buffer(1)]],
+    constant FlyingSwordsParams &params [[buffer(2)]],
+    uint id [[thread_position_in_grid]]) {
+
+  uint swordIdx = id / 25; // 25 vertices per sword hilt
+  uint vertexIdx = id % 25;
+  uint globalVertexIdx = vertexIdx + 15; // Offset by 15 to get to hilt vertices
+  
+  SwordBase sword = swordList[swordIdx];
+  float3 localPos = swordVertices[globalVertexIdx];
+  
+  float3 finalPos = calculateSwordPosition(sword, localPos, params.time, int(swordIdx));
+  
+  // Calculate golden pattern color for hilt
+  float3 vertexColor = getSwordColor(globalVertexIdx, localPos, params.time, int(swordIdx));
+  
   outputVertices[id].position = finalPos;
   outputVertices[id].color = vertexColor;
 }

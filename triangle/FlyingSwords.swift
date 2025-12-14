@@ -36,15 +36,25 @@ private struct VertexData {
 private struct SwordBase {
   var angle: Float  // Current angle in the circle (radians)
   var radius: Float  // Distance from center
-  var height: Float  // Height in Y axis
-  var tiltAngle: Float  // Tilt angle for the sword
-  var layer: Int32  // Which layer (0, 1, 2)
+  var height: Float  // Height in Y axis (unused)
+  var tiltAngle: Float  // Tilt angle for the sword (unused)
+  var layer: Int32  // Which layer (0, 1, 2, 3)
   var speed: Float  // Rotation speed multiplier
+  
+  // Launch state
+  var launchDelay: Float = 0.0     // Random delay before launching (0~0.4s)
+  var launchSpeed: Float = 3.0     // Speed toward target (2~4 m/s)
+  var launchTime: Float = -1.0     // Time when launch was triggered (-1 = not launched)
+  var launchStartPos: SIMD3<Float> = .zero  // Position when launch started
 }
 
 struct FlyingSwordsView: View {
   let rootEntity: Entity = Entity()
-  @State var mesh: LowLevelMesh?
+  let bladeEntity: Entity = Entity()
+  let hiltEntity: Entity = Entity()
+  
+  @State var bladeMesh: LowLevelMesh?
+  @State var hiltMesh: LowLevelMesh?
 
   let fps: Double = 120
 
@@ -52,41 +62,63 @@ struct FlyingSwordsView: View {
   @State private var updateTrigger = false
   @State private var time: Float = 0
 
+  // MARK: - Launch state
+  @State private var isLaunched: Bool = false
+  @State private var lastCrossPressed: Bool = false  // X button (cross) state
+  @State private var lastSquarePressed: Bool = false // Square button state
+
   // MARK: - Controller for gamepad input
   let controllerHelper = ControllerHelper()
 
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
-  let vertexPipeline: MTLComputePipelineState
+  let bladePipeline: MTLComputePipelineState
+  let hiltPipeline: MTLComputePipelineState
 
   @State var swordBuffer: MTLBuffer?
-  @State var vertexBuffer: MTLBuffer?
+  @State var bladeVertexBuffer: MTLBuffer?
+  @State var hiltVertexBuffer: MTLBuffer?
 
   init() {
     self.device = MTLCreateSystemDefaultDevice()!
     self.commandQueue = device.makeCommandQueue()!
 
     let library = device.makeDefaultLibrary()!
-    let updateSwordVertexes = library.makeFunction(name: "updateSwordVertexes")!
-    self.vertexPipeline = try! device.makeComputePipelineState(function: updateSwordVertexes)
+    let updateBladeVertexes = library.makeFunction(name: "updateBladeVertexes")!
+    let updateHiltVertexes = library.makeFunction(name: "updateHiltVertexes")!
+    self.bladePipeline = try! device.makeComputePipelineState(function: updateBladeVertexes)
+    self.hiltPipeline = try! device.makeComputePipelineState(function: updateHiltVertexes)
   }
 
   var body: some View {
     GeometryReader3D { proxy in
       RealityView { content in
-        guard let mesh = try? createMesh(),
-          let modelComponent = try? getModelComponent(mesh: mesh)
+        // Create blade mesh and entity
+        guard let bladeMesh = try? createBladeMesh(),
+          let bladeModelComponent = try? getBladeModelComponent(mesh: bladeMesh)
         else {
-          print("failed to create mesh or model component")
+          print("failed to create blade mesh or model component")
           return
         }
-        rootEntity.components.set(modelComponent)
+        bladeEntity.components.set(bladeModelComponent)
+        rootEntity.addChild(bladeEntity)
+        self.bladeMesh = bladeMesh
+        
+        // Create hilt mesh and entity
+        guard let hiltMesh = try? createHiltMesh(),
+          let hiltModelComponent = try? getHiltModelComponent(mesh: hiltMesh)
+        else {
+          print("failed to create hilt mesh or model component")
+          return
+        }
+        hiltEntity.components.set(hiltModelComponent)
+        rootEntity.addChild(hiltEntity)
+        self.hiltMesh = hiltMesh
 
         // Center point: at z=-8 plane, centered at eye level
         rootEntity.position.y = 1.0
         rootEntity.position.z = -8.0
         content.add(rootEntity)
-        self.mesh = mesh
 
       }
       .onAppear {
@@ -100,23 +132,33 @@ struct FlyingSwordsView: View {
   }
 
   func startTimer() {
-    self.mesh = try! createMesh()
+    self.bladeMesh = try! createBladeMesh()
+    self.hiltMesh = try! createHiltMesh()
     controllerHelper.reset()
     self.swordBuffer = createSwordBuffer()
     self.time = 0
 
-    self.vertexBuffer = device.makeBuffer(
-      length: MemoryLayout<VertexData>.stride * vertexCapacity, options: .storageModeShared)
+    self.bladeVertexBuffer = device.makeBuffer(
+      length: MemoryLayout<VertexData>.stride * bladeVertexCapacity, options: .storageModeShared)
+    self.hiltVertexBuffer = device.makeBuffer(
+      length: MemoryLayout<VertexData>.stride * hiltVertexCapacity, options: .storageModeShared)
 
     timer = Timer.scheduledTimer(withTimeInterval: 1 / fps, repeats: true) { _ in
 
       DispatchQueue.main.async {
-        if let vertexBuffer = self.vertexBuffer {
+        if let bladeVertexBuffer = self.bladeVertexBuffer,
+           let hiltVertexBuffer = self.hiltVertexBuffer {
           self.time += Float(1 / self.fps)
-          self.updateMesh(vertexBuffer: vertexBuffer)
+          
+          // Check controller buttons for launch/reset
+          self.checkControllerButtons()
+          
+          self.updateBladeMesh(vertexBuffer: bladeVertexBuffer)
+          self.updateHiltMesh(vertexBuffer: hiltVertexBuffer)
 
           // Record frame if recording is active
-          recordMeshIfActive(mesh: self.mesh, topology: .triangles)
+          // TODO: Need to combine both meshes for recording
+          // recordMeshIfActive(mesh: self.bladeMesh, topology: .triangles)
         } else {
           print("[ERR] vertex buffer is not initialized")
         }
@@ -126,24 +168,101 @@ struct FlyingSwordsView: View {
       }
     }
   }
+  
+  /// Check controller buttons and trigger launch/reset
+  func checkControllerButtons() {
+    let input = controllerHelper.gameManager.getTetrisInput()
+    
+    // X button (cross) - Launch swords
+    if input.buttonCross && !lastCrossPressed && !isLaunched {
+      launchSwords()
+    }
+    lastCrossPressed = input.buttonCross
+    
+    // Square button - Reset swords
+    if input.buttonSquare && !lastSquarePressed {
+      resetSwords()
+    }
+    lastSquarePressed = input.buttonSquare
+  }
+  
+  /// Launch all swords toward target with random delays
+  func launchSwords() {
+    guard let buffer = swordBuffer else { return }
+    
+    print("[FlyingSwords] Launching swords!")
+    isLaunched = true
+    
+    let contents = buffer.contents()
+    let swords = contents.bindMemory(to: SwordBase.self, capacity: swordCount)
+    
+    for i in 0..<swordCount {
+      // Random delay between 0 and 0.4 seconds
+      swords[i].launchDelay = Float.random(in: 0.0...0.4)
+      
+      // Random speed between 6 and 12 m/s (3x original speed)
+      swords[i].launchSpeed = Float.random(in: 6.0...12.0)
+      
+      // Record launch time
+      swords[i].launchTime = time
+      
+      // Calculate current position as launch start position
+      let currentAngle = swords[i].angle + time * swords[i].speed
+      let radius = swords[i].radius
+      swords[i].launchStartPos = SIMD3<Float>(
+        cos(currentAngle) * radius,
+        sin(currentAngle) * radius,
+        0.0
+      )
+    }
+  }
+  
+  /// Reset all swords to circling formation
+  func resetSwords() {
+    guard let buffer = swordBuffer else { return }
+    
+    print("[FlyingSwords] Resetting swords to formation")
+    isLaunched = false
+    
+    let contents = buffer.contents()
+    let swords = contents.bindMemory(to: SwordBase.self, capacity: swordCount)
+    
+    for i in 0..<swordCount {
+      // Reset launch state
+      swords[i].launchTime = -1.0
+      swords[i].launchDelay = 0.0
+      swords[i].launchStartPos = .zero
+    }
+  }
 
   func stopTimer() {
     timer?.invalidate()
     timer = nil
     swordBuffer = nil
-    mesh = nil
-    self.vertexBuffer = nil
+    bladeMesh = nil
+    hiltMesh = nil
+    self.bladeVertexBuffer = nil
+    self.hiltVertexBuffer = nil
   }
 
-  func getModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
+  func getBladeModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
     let resource = try MeshResource(from: mesh)
 
-    // Use vertex colors for the material
-    var material = UnlitMaterial()
-    material.color = .init(tint: .white)  // White tint to show vertex colors
-    material.faceCulling = .none
+    // Emerald green with slight gold tint for blade (to suggest golden mesh pattern)
+    var unlitMaterial = UnlitMaterial(color: UIColor(red: 0.25, green: 0.9, blue: 0.45, alpha: 1.0))
+    unlitMaterial.faceCulling = .none
 
-    return ModelComponent(mesh: resource, materials: [material])
+    return ModelComponent(mesh: resource, materials: [unlitMaterial])
+  }
+  
+  func getHiltModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
+    let resource = try MeshResource(from: mesh)
+
+    // Deep teal/jade green for hilt - darker green with blue undertones
+    var unlitMaterial = UnlitMaterial(color: UIColor(red: 0.08, green: 0.35, blue: 0.28, alpha: 1.0))
+    unlitMaterial.faceCulling = .none
+
+    return ModelComponent(mesh: resource, materials: [unlitMaterial])
   }
 
   func getBounds() -> BoundingBox {
@@ -151,29 +270,28 @@ struct FlyingSwordsView: View {
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
 
-  // 72 swords: 4 layers with varying counts (fewer inside, more outside)
-  // Layer 0: 12, Layer 1: 16, Layer 2: 20, Layer 3: 24 = 72 total
-  let swordCount: Int = 72
-  let swordsPerLayer: [Int] = [12, 16, 20, 24]
+  // 144 swords: 6 layers with varying counts (fewer inside, more outside)
+  // Layer 0: 16, Layer 1: 20, Layer 2: 24, Layer 3: 26, Layer 4: 28, Layer 5: 30 = 144 total
+  let swordCount: Int = 144
+  let swordsPerLayer: [Int] = [16, 20, 24, 26, 28, 30]
 
-  // Each sword now has 40 vertices for fully closed geometry (no holes)
+  // Blade: vertices 0-14 (15 vertices per sword)
+  let bladeVerticesPerSword: Int = 15
+  // Hilt: vertices 15-39 (25 vertices per sword: guard + handle + pommel)
+  let hiltVerticesPerSword: Int = 25
+  // Total vertices (for reference)
   let verticesPerSword: Int = 40
 
-  var vertexCapacity: Int {
-    return swordCount * verticesPerSword
+  var bladeVertexCapacity: Int {
+    return swordCount * bladeVerticesPerSword
+  }
+  
+  var hiltVertexCapacity: Int {
+    return swordCount * hiltVerticesPerSword
   }
 
-  // Triangles for detailed sword with fully closed surfaces
-  // Vertices layout:
-  //   0 = tip
-  //   1-4 = near-tip quad (top-left, top-right, bottom-left, bottom-right)
-  //   5-8 = mid-blade quad
-  //   9-14 = blade base (with ridges: top-left, top-ridge, top-right, bot-left, bot-ridge, bot-right)
-  //   15-22 = guard (8 vertices forming closed box)
-  //   23-30 = handle (8 vertices forming closed tapered box)
-  //   31-39 = pommel (9 vertices: 8 octagonal + 1 center)
-  var swordTriangles: [Int] = [
-    // === BLADE ===
+  // Triangles for blade only (vertices 0-14)
+  var bladeTriangles: [Int] = [
     // Tip to near-tip section
     0, 1, 2,  // top face
     0, 4, 3,  // bottom face
@@ -213,96 +331,99 @@ struct FlyingSwordsView: View {
     10, 12, 13,
     10, 13, 11,
     11, 13, 14,
-
+  ]
+  
+  // Triangles for hilt only (originally vertices 15-39, remapped to 0-24)
+  var hiltTriangles: [Int] = [
     // === GUARD (closed box) ===
-    // Guard vertices: 15-18 front face (TL, TR, BL, BR), 19-22 back face (TL, TR, BL, BR)
+    // Guard vertices: 0-3 front face (TL, TR, BL, BR), 4-7 back face (TL, TR, BL, BR)
+    // (original 15-22 -> 0-7)
     // Front face
-    15, 17, 16,
-    16, 17, 18,
+    0, 2, 1,
+    1, 2, 3,
     // Back face
-    19, 20, 21,
-    20, 22, 21,
+    4, 5, 6,
+    5, 7, 6,
     // Top face
-    15, 16, 19,
-    16, 20, 19,
+    0, 1, 4,
+    1, 5, 4,
     // Bottom face
-    17, 21, 18,
-    18, 21, 22,
+    2, 6, 3,
+    3, 6, 7,
     // Left face
-    15, 19, 17,
-    17, 19, 21,
+    0, 4, 2,
+    2, 4, 6,
     // Right face
-    16, 18, 20,
-    18, 22, 20,
-    // Connect blade base to guard front
-    9, 15, 10,
-    10, 15, 16,
-    10, 16, 11,
-    12, 17, 9,
-    9, 17, 15,
-    12, 13, 17,
-    13, 18, 17,
-    11, 16, 14,
-    14, 16, 18,
-    13, 14, 18,
+    1, 3, 5,
+    3, 7, 5,
 
     // === HANDLE (closed tapered box) ===
-    // Handle vertices: 23-26 front (connected to guard back), 27-30 back
+    // Handle vertices: 8-11 front (connected to guard back), 12-15 back
+    // (original 23-30 -> 8-15)
     // Connect guard back to handle front
-    19, 23, 20,
-    20, 23, 24,
-    21, 25, 19,
-    19, 25, 23,
-    22, 26, 21,
-    21, 26, 25,
-    20, 24, 22,
-    22, 24, 26,
+    4, 8, 5,
+    5, 8, 9,
+    6, 10, 4,
+    4, 10, 8,
+    7, 11, 6,
+    6, 11, 10,
+    5, 9, 7,
+    7, 9, 11,
     // Handle body - front to back
     // Top face
-    23, 27, 24,
-    24, 27, 28,
+    8, 12, 9,
+    9, 12, 13,
     // Bottom face
-    25, 26, 29,
-    26, 30, 29,
+    10, 11, 14,
+    11, 15, 14,
     // Left face
-    23, 25, 27,
-    25, 29, 27,
+    8, 10, 12,
+    10, 14, 12,
     // Right face
-    24, 28, 26,
-    26, 28, 30,
+    9, 13, 11,
+    11, 13, 15,
 
     // === POMMEL (octagonal end cap) ===
-    // Pommel vertices: 31-38 octagonal ring, 39 center
-    // Connect handle back to pommel ring (4 corners to 8 octagon vertices)
-    27, 31, 32,  // handle TL to pommel top
-    27, 32, 28,
-    28, 32, 33,  // handle TR to pommel right-top
-    28, 33, 34,
-    28, 34, 30,  // handle BR to pommel right-bottom
-    30, 34, 35,
-    30, 35, 36,
-    30, 36, 29,  // handle BL to pommel bottom
-    29, 36, 37,
-    29, 37, 38,
-    29, 38, 27,  // handle TL to pommel left
-    27, 38, 31,
-    // Octagonal end cap (center at 39, triangles from center to each edge)
-    31, 32, 39,
-    32, 33, 39,
-    33, 34, 39,
-    34, 35, 39,
-    35, 36, 39,
-    36, 37, 39,
-    37, 38, 39,
-    38, 31, 39,
+    // Pommel vertices: 16-23 octagonal ring, 24 center
+    // (original 31-39 -> 16-24)
+    // Connect handle back to pommel ring
+    12, 16, 17,
+    12, 17, 13,
+    13, 17, 18,
+    13, 18, 19,
+    13, 19, 15,
+    15, 19, 20,
+    15, 20, 21,
+    15, 21, 14,
+    14, 21, 22,
+    14, 22, 23,
+    14, 23, 12,
+    12, 23, 16,
+    // Octagonal end cap (center at 24)
+    16, 17, 24,
+    17, 18, 24,
+    18, 19, 24,
+    19, 20, 24,
+    20, 21, 24,
+    21, 22, 24,
+    22, 23, 24,
+    23, 16, 24,
   ]
 
-  var indicesPerSword: Int {
-    return swordTriangles.count
+  var bladeIndicesPerSword: Int {
+    return bladeTriangles.count
+  }
+  
+  var hiltIndicesPerSword: Int {
+    return hiltTriangles.count
   }
 
-  var indexCount: Int {
-    return swordCount * indicesPerSword
+  var bladeIndexCount: Int {
+    return swordCount * bladeIndicesPerSword
+  }
+  
+  var hiltIndexCount: Int {
+    return swordCount * hiltIndicesPerSword
   }
 
   func createSwordBuffer() -> MTLBuffer {
@@ -312,18 +433,18 @@ struct FlyingSwordsView: View {
     let contents = buffer.contents()
     let swords = contents.bindMemory(to: SwordBase.self, capacity: swordCount)
 
-    // Layer radii (distance from center in XY plane) - 4 concentric rings
-    // Inner circle starts at 2m radius
-    let layerRadii: [Float] = [2.0, 2.8, 3.6, 4.4]
+    // Layer radii (distance from center in XY plane) - 6 concentric rings
+    // Inner circle starts at 1.6m radius, spacing ~0.6m between layers
+    let layerRadii: [Float] = [1.6, 2.2, 2.8, 3.4, 4.0, 4.6]
 
     // All swords move at the same linear speed (0.15 m/s)
     // Angular speed = linear speed / radius
     let linearSpeed: Float = 0.15
     // Alternate direction for each layer
-    let directions: [Float] = [1.0, -1.0, 1.0, -1.0]
+    let directions: [Float] = [1.0, -1.0, 1.0, -1.0, 1.0, -1.0]
 
     var idx = 0
-    for layer in 0..<4 {
+    for layer in 0..<6 {
       let count = swordsPerLayer[layer]
       let angularSpeed = linearSpeed / layerRadii[layer] * directions[layer]
 
@@ -338,7 +459,11 @@ struct FlyingSwordsView: View {
           height: 0.0,  // All on same z plane
           tiltAngle: 0.0,  // Will be calculated in shader to point to target
           layer: Int32(layer),
-          speed: angularSpeed
+          speed: angularSpeed,
+          launchDelay: 0.0,
+          launchSpeed: 3.0,
+          launchTime: -1.0,  // Not launched
+          launchStartPos: .zero
         )
         idx += 1
       }
@@ -347,10 +472,10 @@ struct FlyingSwordsView: View {
     return buffer
   }
 
-  func createMesh() throws -> LowLevelMesh {
+  func createBladeMesh() throws -> LowLevelMesh {
     var desc = VertexData.descriptor
-    desc.vertexCapacity = vertexCapacity
-    desc.indexCapacity = indexCount
+    desc.vertexCapacity = bladeVertexCapacity
+    desc.indexCapacity = bladeIndexCount
 
     let mesh = try LowLevelMesh(descriptor: desc)
 
@@ -358,16 +483,45 @@ struct FlyingSwordsView: View {
       let indices = rawIndices.bindMemory(to: UInt32.self)
 
       for i in 0..<swordCount {
-        for j in 0..<indicesPerSword {
-          indices[i * indicesPerSword + j] =
-            UInt32(swordTriangles[j]) + UInt32(i * verticesPerSword)
+        for j in 0..<bladeIndicesPerSword {
+          indices[i * bladeIndicesPerSword + j] =
+            UInt32(bladeTriangles[j]) + UInt32(i * bladeVerticesPerSword)
         }
       }
     }
 
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
-        indexCount: indexCount,
+        indexCount: bladeIndexCount,
+        topology: .triangle,
+        bounds: getBounds()
+      )
+    ])
+
+    return mesh
+  }
+  
+  func createHiltMesh() throws -> LowLevelMesh {
+    var desc = VertexData.descriptor
+    desc.vertexCapacity = hiltVertexCapacity
+    desc.indexCapacity = hiltIndexCount
+
+    let mesh = try LowLevelMesh(descriptor: desc)
+
+    mesh.withUnsafeMutableIndices { rawIndices in
+      let indices = rawIndices.bindMemory(to: UInt32.self)
+
+      for i in 0..<swordCount {
+        for j in 0..<hiltIndicesPerSword {
+          indices[i * hiltIndicesPerSword + j] =
+            UInt32(hiltTriangles[j]) + UInt32(i * hiltVerticesPerSword)
+        }
+      }
+    }
+
+    mesh.parts.replaceAll([
+      LowLevelMesh.Part(
+        indexCount: hiltIndexCount,
         topology: .triangle,
         bounds: getBounds()
       )
@@ -380,13 +534,13 @@ struct FlyingSwordsView: View {
     return FlyingSwordsParams(time: time, dt: Float(1 / fps))
   }
 
-  func updateMesh(vertexBuffer: MTLBuffer) {
-    guard let mesh = mesh,
+  func updateBladeMesh(vertexBuffer: MTLBuffer) {
+    guard let mesh = bladeMesh,
       let swordBuffer = swordBuffer,
       let commandBuffer = commandQueue.makeCommandBuffer(),
       let computeEncoder = commandBuffer.makeComputeCommandEncoder()
     else {
-      print("updateMesh: failed to get mesh or swordBuffer or commandBuffer or computeEncoder")
+      print("updateBladeMesh: failed to get mesh or swordBuffer or commandBuffer or computeEncoder")
       return
     }
 
@@ -396,7 +550,7 @@ struct FlyingSwordsView: View {
         from: rawBytes.baseAddress!, byteCount: rawBytes.count)
     }
 
-    computeEncoder.setComputePipelineState(vertexPipeline)
+    computeEncoder.setComputePipelineState(bladePipeline)
 
     // idx 0: swordBuffer
     computeEncoder.setBuffer(swordBuffer, offset: 0, index: 0)
@@ -408,7 +562,7 @@ struct FlyingSwordsView: View {
     // idx 2: params buffer
     computeEncoder.setBytes(&params, length: MemoryLayout<FlyingSwordsParams>.size, index: 2)
 
-    let threadsPerGrid = MTLSize(width: vertexCapacity, height: 1, depth: 1)
+    let threadsPerGrid = MTLSize(width: bladeVertexCapacity, height: 1, depth: 1)
     let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
     computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
 
@@ -426,7 +580,60 @@ struct FlyingSwordsView: View {
 
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
-        indexCount: indexCount,
+        indexCount: bladeIndexCount,
+        topology: .triangle,
+        bounds: getBounds()
+      )
+    ])
+  }
+  
+  func updateHiltMesh(vertexBuffer: MTLBuffer) {
+    guard let mesh = hiltMesh,
+      let swordBuffer = swordBuffer,
+      let commandBuffer = commandQueue.makeCommandBuffer(),
+      let computeEncoder = commandBuffer.makeComputeCommandEncoder()
+    else {
+      print("updateHiltMesh: failed to get mesh or swordBuffer or commandBuffer or computeEncoder")
+      return
+    }
+
+    // Copy data from mesh to vertexBuffer
+    mesh.withUnsafeMutableBytes(bufferIndex: 0) { rawBytes in
+      vertexBuffer.contents().copyMemory(
+        from: rawBytes.baseAddress!, byteCount: rawBytes.count)
+    }
+
+    computeEncoder.setComputePipelineState(hiltPipeline)
+
+    // idx 0: swordBuffer
+    computeEncoder.setBuffer(swordBuffer, offset: 0, index: 0)
+
+    // idx 1: vertexBuffer
+    computeEncoder.setBuffer(vertexBuffer, offset: 0, index: 1)
+
+    var params = getParams()
+    // idx 2: params buffer
+    computeEncoder.setBytes(&params, length: MemoryLayout<FlyingSwordsParams>.size, index: 2)
+
+    let threadsPerGrid = MTLSize(width: hiltVertexCapacity, height: 1, depth: 1)
+    let threadsPerThreadgroup = MTLSize(width: 64, height: 1, depth: 1)
+    computeEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
+
+    computeEncoder.endEncoding()
+
+    // Copy data from vertexBuffer to mesh
+    let blitEncoder = commandBuffer.makeBlitCommandEncoder()!
+    blitEncoder.copy(
+      from: vertexBuffer, sourceOffset: 0,
+      to: mesh.replace(bufferIndex: 0, using: commandBuffer), destinationOffset: 0,
+      size: vertexBuffer.length)
+    blitEncoder.endEncoding()
+
+    commandBuffer.commit()
+
+    mesh.parts.replaceAll([
+      LowLevelMesh.Part(
+        indexCount: hiltIndexCount,
         topology: .triangle,
         bounds: getBounds()
       )
