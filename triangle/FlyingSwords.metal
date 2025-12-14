@@ -46,6 +46,9 @@ constant float handleWidthEnd = 0.02;     // 剑柄末端宽度
 constant float pommelRadius = 0.03;  // 剑首半径
 constant float pommelLength = 0.03;  // 剑首长度
 
+// Circle elevation above target height
+constant float circleYOffset = 4.0;
+
 // 40 vertices for detailed sword with fully closed geometry
 // Layout matches Swift swordTriangles indices:
 //   0 = tip
@@ -237,18 +240,28 @@ kernel void updateSwordVertexes(
   // Calculate color based on vertex position and part of sword
   float3 vertexColor = getSwordColor(vertexIdx, localPos, params.time, int(swordIdx));
 
-  // Rotate sword to point forward (-Z direction) for circling mode
-  // Swap: X -> -Z, Y -> Y, Z -> X
-  float3 rotatedToForward = float3(localPos.z, localPos.y, -localPos.x);
-
   // Calculate current rotation angle based on time (very slow)
   float currentAngle = sword.angle + params.time * sword.speed;
 
-  // Default circling position on the XY plane
+  // Default circling position on the XY plane (elevated by circleYOffset)
   float3 circlePos = float3(
       cos(currentAngle) * sword.radius, 
-      sin(currentAngle) * sword.radius, 
+      sin(currentAngle) * sword.radius + circleYOffset, 
       0.0);
+  
+  // Target position for aiming (center of target area)
+  float3 targetPos = float3(0.0, 0.0, -12.0);
+  
+  // Calculate direction from current circle position to target (for aiming while circling)
+  float3 aimDirection = normalize(targetPos - circlePos);
+  
+  // Create rotation matrix to point sword toward target
+  float3 up = float3(0, 1, 0);
+  float3 aimRight = normalize(cross(up, aimDirection));
+  float3 aimUp = cross(aimDirection, aimRight);
+  
+  // Transform local position: X axis (sword length) points toward target
+  float3 rotatedToTarget = localPos.x * aimDirection + localPos.y * aimUp + localPos.z * aimRight;
   
   float3 finalPos;
   
@@ -259,38 +272,34 @@ kernel void updateSwordVertexes(
     
     if (effectiveTime > 0.0) {
       // Sword is actively flying
-      // Target position: 12 meters forward from formation center (at z=-8, target at z=-20 world = -12 local)
-      // Add slight perturbation based on sword index for spread effect
-      float perturbX = sin(float(swordIdx) * 1.7) * 0.25;  // +/- 0.25m spread in X
-      float perturbY = cos(float(swordIdx) * 2.3) * 0.25;  // +/- 0.25m spread in Y
-      float3 targetPos = float3(perturbX, perturbY, -12.0);
+      // Target position with slight perturbation based on sword index for spread effect
+      float perturbX = sin(float(swordIdx) * 1.7) * 0.0625;  // +/- 0.0625m spread in X
+      float perturbY = cos(float(swordIdx) * 2.3) * 0.0625;  // +/- 0.0625m spread in Y
+      float3 flyTargetPos = float3(perturbX, perturbY, -12.0);
       
       // Calculate direction from start to target
       float3 startPos = sword.launchStartPos;
-      float3 direction = normalize(targetPos - startPos);
+      float3 direction = normalize(flyTargetPos - startPos);
       
       // Move toward target
       float distance = effectiveTime * sword.launchSpeed;
       float3 newPos = startPos + direction * distance;
       
       // Rotate sword to point toward target (tip forward)
-      // The sword tip should point in the direction of travel
-      // localPos is with X=forward, so we need to rotate to align X with direction
-      float3 up = float3(0, 1, 0);
-      float3 right = normalize(cross(up, direction));
-      float3 adjustedUp = cross(direction, right);
+      float3 flyRight = normalize(cross(up, direction));
+      float3 flyUp = cross(direction, flyRight);
       
       // Transform local position to world orientation
-      float3 rotatedPos = localPos.x * direction + localPos.y * adjustedUp + localPos.z * right;
+      float3 rotatedPos = localPos.x * direction + localPos.y * flyUp + localPos.z * flyRight;
       
       finalPos = newPos + rotatedPos;
     } else {
-      // Still waiting for delay
-      finalPos = circlePos + rotatedToForward;
+      // Still waiting for delay - aim toward target
+      finalPos = circlePos + rotatedToTarget;
     }
   } else {
-    // Normal circling mode
-    finalPos = circlePos + rotatedToForward;
+    // Normal circling mode - aim toward target
+    finalPos = circlePos + rotatedToTarget;
   }
 
   outputVertices[id].position = finalPos;
@@ -299,17 +308,28 @@ kernel void updateSwordVertexes(
 
 // Helper function to calculate sword position (shared between blade and hilt kernels)
 float3 calculateSwordPosition(SwordBase sword, float3 localPos, float time, int swordIdx) {
-  // Rotate sword to point forward (-Z direction) for circling mode
-  float3 rotatedToForward = float3(localPos.z, localPos.y, -localPos.x);
-  
   // Calculate current rotation angle based on time
   float currentAngle = sword.angle + time * sword.speed;
   
-  // Default circling position on the XY plane
+  // Default circling position on the XY plane (elevated by circleYOffset)
   float3 circlePos = float3(
       cos(currentAngle) * sword.radius, 
-      sin(currentAngle) * sword.radius, 
+      sin(currentAngle) * sword.radius + circleYOffset, 
       0.0);
+  
+  // Target position for aiming (center of target area)
+  float3 targetPos = float3(0.0, 0.0, -12.0);
+  
+  // Calculate direction from current circle position to target (for aiming while circling)
+  float3 aimDirection = normalize(targetPos - circlePos);
+  
+  // Create rotation matrix to point sword toward target
+  float3 up = float3(0, 1, 0);
+  float3 aimRight = normalize(cross(up, aimDirection));
+  float3 aimUp = cross(aimDirection, aimRight);
+  
+  // Transform local position: X axis (sword length) points toward target
+  float3 rotatedToTarget = localPos.x * aimDirection + localPos.y * aimUp + localPos.z * aimRight;
   
   float3 finalPos;
   
@@ -319,29 +339,30 @@ float3 calculateSwordPosition(SwordBase sword, float3 localPos, float time, int 
     float effectiveTime = timeSinceLaunch - sword.launchDelay;
     
     if (effectiveTime > 0.0) {
-      // Target position with smaller perturbation
-      float perturbX = sin(float(swordIdx) * 1.7) * 0.25;
-      float perturbY = cos(float(swordIdx) * 2.3) * 0.25;
-      float3 targetPos = float3(perturbX, perturbY, -12.0);
+      // Target position with minimal perturbation
+      float perturbX = sin(float(swordIdx) * 1.7) * 0.0625;
+      float perturbY = cos(float(swordIdx) * 2.3) * 0.0625;
+      float3 flyTargetPos = float3(perturbX, perturbY, -12.0);
       
       float3 startPos = sword.launchStartPos;
-      float3 direction = normalize(targetPos - startPos);
+      float3 direction = normalize(flyTargetPos - startPos);
       
       float distance = effectiveTime * sword.launchSpeed;
       float3 newPos = startPos + direction * distance;
       
       // Rotate sword to point toward target
-      float3 up = float3(0, 1, 0);
-      float3 right = normalize(cross(up, direction));
-      float3 adjustedUp = cross(direction, right);
+      float3 flyRight = normalize(cross(up, direction));
+      float3 flyUp = cross(direction, flyRight);
       
-      float3 rotatedPos = localPos.x * direction + localPos.y * adjustedUp + localPos.z * right;
+      float3 rotatedPos = localPos.x * direction + localPos.y * flyUp + localPos.z * flyRight;
       finalPos = newPos + rotatedPos;
     } else {
-      finalPos = circlePos + rotatedToForward;
+      // Still waiting for delay - aim toward target
+      finalPos = circlePos + rotatedToTarget;
     }
   } else {
-    finalPos = circlePos + rotatedToForward;
+    // Normal circling mode - aim toward target
+    finalPos = circlePos + rotatedToTarget;
   }
   
   return finalPos;

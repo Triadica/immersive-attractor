@@ -81,19 +81,31 @@ class ControllerHelper {
     // Use GameManager to calculate rig transform with head tracking
     _ = gameManager.updateRigState(deltaTime: delta, headTransform: headTransform)
 
-    // Apply inverse transform to scene (camera moves forward = scene moves backward)
-    // GameManager provides playerOffset and yawAngle
-
-    // Inverse yaw for scene rotation
+    // Coordinate transformation logic:
+    // - Camera is always at origin (0,0,0) in real world
+    // - Scene starts at initialPosition relative to camera
+    // - When user "moves" by playerOffset, scene should move by -playerOffset
+    // - When user "rotates" by yawAngle, scene should rotate around camera (origin)
+    //
+    // The scene position relative to camera (before rotation) is:
+    //   scenePos = initialPosition - playerOffset
+    //
+    // After rotating around origin by -yawAngle:
+    //   finalPos = R * scenePos = R * (initialPosition - playerOffset)
+    //
+    // This ensures rotation is around camera position, not causing translation
+    
     let inverseYaw = -gameManager.yawAngle
     let inverseRotation = simd_quatf(angle: inverseYaw, axis: SIMD3<Float>(0, 1, 0))
-
-    // playerOffset is in world space, but since we rotate the scene by inverseRotation,
-    // we need to transform the offset into the rotated scene's coordinate system
     let rotationMatrix = float3x3(inverseRotation)
-    let inverseOffset = rotationMatrix * (-gameManager.playerOffset)
-
-    entity.position = initialPosition + inverseOffset
+    
+    // Scene position relative to camera (before rotation)
+    let scenePosBeforeRotation = initialPosition - gameManager.playerOffset
+    
+    // Rotate around origin (camera position)
+    let finalPosition = rotationMatrix * scenePosBeforeRotation
+    
+    entity.position = finalPosition
     entity.orientation = inverseRotation
   }
 }

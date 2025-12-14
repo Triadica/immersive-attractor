@@ -135,6 +135,8 @@ struct FlyingSwordsView: View {
     self.bladeMesh = try! createBladeMesh()
     self.hiltMesh = try! createHiltMesh()
     controllerHelper.reset()
+    // Set initial position to match rootEntity position
+    controllerHelper.initialPosition = SIMD3<Float>(0, 1.0, -8.0)
     self.swordBuffer = createSwordBuffer()
     self.time = 0
 
@@ -146,12 +148,13 @@ struct FlyingSwordsView: View {
     timer = Timer.scheduledTimer(withTimeInterval: 1 / fps, repeats: true) { _ in
 
       DispatchQueue.main.async {
+        self.time += Float(1 / self.fps)
+        
+        // Check controller buttons for launch/reset - always check regardless of mesh state
+        self.checkControllerButtons()
+        
         if let bladeVertexBuffer = self.bladeVertexBuffer,
            let hiltVertexBuffer = self.hiltVertexBuffer {
-          self.time += Float(1 / self.fps)
-          
-          // Check controller buttons for launch/reset
-          self.checkControllerButtons()
           
           self.updateBladeMesh(vertexBuffer: bladeVertexBuffer)
           self.updateHiltMesh(vertexBuffer: hiltVertexBuffer)
@@ -200,18 +203,20 @@ struct FlyingSwordsView: View {
       // Random delay between 0 and 0.4 seconds
       swords[i].launchDelay = Float.random(in: 0.0...0.4)
       
-      // Random speed between 6 and 12 m/s (3x original speed)
-      swords[i].launchSpeed = Float.random(in: 6.0...12.0)
+      // Random speed between 12 and 24 m/s (2x previous speed)
+      swords[i].launchSpeed = Float.random(in: 12.0...24.0)
       
       // Record launch time
       swords[i].launchTime = time
       
       // Calculate current position as launch start position
+      // Circle is elevated 4 meters above target height
+      let circleYOffset: Float = 4.0
       let currentAngle = swords[i].angle + time * swords[i].speed
       let radius = swords[i].radius
       swords[i].launchStartPos = SIMD3<Float>(
         cos(currentAngle) * radius,
-        sin(currentAngle) * radius,
+        sin(currentAngle) * radius + circleYOffset,
         0.0
       )
     }
@@ -248,8 +253,8 @@ struct FlyingSwordsView: View {
   func getBladeModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
     let resource = try MeshResource(from: mesh)
 
-    // Emerald green with slight gold tint for blade (to suggest golden mesh pattern)
-    var unlitMaterial = UnlitMaterial(color: UIColor(red: 0.25, green: 0.9, blue: 0.45, alpha: 1.0))
+    // Bright emerald green for blade
+    var unlitMaterial = UnlitMaterial(color: UIColor(red: 0.2, green: 0.95, blue: 0.4, alpha: 1.0))
     unlitMaterial.faceCulling = .none
 
     return ModelComponent(mesh: resource, materials: [unlitMaterial])
@@ -258,8 +263,9 @@ struct FlyingSwordsView: View {
   func getHiltModelComponent(mesh: LowLevelMesh) throws -> ModelComponent {
     let resource = try MeshResource(from: mesh)
 
-    // Deep teal/jade green for hilt - darker green with blue undertones
-    var unlitMaterial = UnlitMaterial(color: UIColor(red: 0.08, green: 0.35, blue: 0.28, alpha: 1.0))
+    // Darker green for hilt - lower saturation, slightly lighter than before
+    // More muted/desaturated deep green with slight brown undertone
+    var unlitMaterial = UnlitMaterial(color: UIColor(red: 0.18, green: 0.38, blue: 0.25, alpha: 1.0))
     unlitMaterial.faceCulling = .none
 
     return ModelComponent(mesh: resource, materials: [unlitMaterial])
