@@ -14,7 +14,7 @@ class ControllerHelper {
 
   /// Initial position offset for the entity
   var initialPosition: SIMD3<Float> = SIMD3<Float>(0, 1, 0)
-  
+
   // ARKit session for head tracking
   private var arkitSession: ARKitSession?
   private var worldTracking: WorldTrackingProvider?
@@ -23,12 +23,12 @@ class ControllerHelper {
     self.gameManager = GameManager()
     setupARKitSession()
   }
-  
+
   private func setupARKitSession() {
     Task {
       let session = ARKitSession()
       let worldTracking = WorldTrackingProvider()
-      
+
       do {
         try await session.run([worldTracking])
         self.arkitSession = session
@@ -39,11 +39,12 @@ class ControllerHelper {
       }
     }
   }
-  
+
   /// Get the current head (device) transform from ARKit
   private func getHeadTransform() -> simd_float4x4 {
     guard let worldTracking = worldTracking,
-          let deviceAnchor = worldTracking.queryDeviceAnchor(atTimestamp: CACurrentMediaTime()) else {
+      let deviceAnchor = worldTracking.queryDeviceAnchor(atTimestamp: CACurrentMediaTime())
+    else {
       // Return identity matrix if ARKit not available
       return matrix_identity_float4x4
     }
@@ -59,7 +60,7 @@ class ControllerHelper {
 
   /// Update the entity's transform based on controller input
   /// Uses GameManager with ARKit head tracking for movement direction
-  /// 
+  ///
   /// Controls (from GameManager):
   /// - Left stick Y: Move forward/backward (in head facing direction)
   /// - Left stick X: Yaw rotation (turn left/right)
@@ -76,20 +77,22 @@ class ControllerHelper {
 
     // Get head transform from ARKit for movement direction
     let headTransform = getHeadTransform()
-    
+
     // Use GameManager to calculate rig transform with head tracking
     _ = gameManager.updateRigState(deltaTime: delta, headTransform: headTransform)
 
     // Apply inverse transform to scene (camera moves forward = scene moves backward)
     // GameManager provides playerOffset and yawAngle
-    
+
     // Inverse yaw for scene rotation
     let inverseYaw = -gameManager.yawAngle
     let inverseRotation = simd_quatf(angle: inverseYaw, axis: SIMD3<Float>(0, 1, 0))
-    
-    // Inverse position offset
-    let inverseOffset = -gameManager.playerOffset
-    
+
+    // playerOffset is in world space, but since we rotate the scene by inverseRotation,
+    // we need to transform the offset into the rotated scene's coordinate system
+    let rotationMatrix = float3x3(inverseRotation)
+    let inverseOffset = rotationMatrix * (-gameManager.playerOffset)
+
     entity.position = initialPosition + inverseOffset
     entity.orientation = inverseRotation
   }

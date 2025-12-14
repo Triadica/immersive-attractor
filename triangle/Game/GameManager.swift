@@ -37,7 +37,7 @@ class GameManager {
   init() {
     setupControllerObserver()
   }
-  
+
   /// Reset the player state (position and rotation)
   func resetState() {
     playerOffset = .zero
@@ -205,9 +205,11 @@ class GameManager {
       let worldUp = rigRotation * headUp
 
       var displacement = SIMD3<Float>.zero
-      displacement -= worldForward * forwardInput
-      displacement -= worldRight * strafeInput
-      displacement -= worldUp * verticalInput
+      // Calculate camera movement in the direction it's facing
+      // Positive forwardInput = camera moves forward (in head's forward direction)
+      displacement += worldForward * forwardInput
+      displacement += worldRight * strafeInput
+      displacement += worldUp * verticalInput
 
       playerOffset += displacement * movementSpeed * movementMultiplier * deltaTime
 
