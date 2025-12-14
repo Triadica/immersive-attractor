@@ -242,7 +242,7 @@ struct CubesMovingView: View {
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
         indexCount: indexCount,
-        topology: .lineStrip,
+        topology: .line,
         bounds: getBounds()
       )
     ])
