@@ -24,6 +24,8 @@
 		9A3CD4232C8A1E9300E8710C /* MovingLorenz.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A3CD4212C8A1DE300E8710C /* MovingLorenz.swift */; };
 		9A40B5DE2EEE87B700B11592 /* GameManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A40B5DC2EEE87B700B11592 /* GameManager.swift */; };
 		9A40B5E22EEE8C0A00B11592 /* ControllerHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A40B5E12EEE8C0A00B11592 /* ControllerHelper.swift */; };
+		9A40B5E52EEEAD3400B11592 /* FlyingSwords.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A40B5E32EEEAD3400B11592 /* FlyingSwords.metal */; };
+		9A40B5E62EEEAD3400B11592 /* FlyingSwords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A40B5E42EEEAD3400B11592 /* FlyingSwords.swift */; };
 		9A45F3A32D7C5B130042486A /* Nebula.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A45F3A22D7C5B090042486A /* Nebula.swift */; };
 		9A45F3A52D7C5B210042486A /* Nebula.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A45F3A42D7C5B170042486A /* Nebula.metal */; };
 		9A4774B02E509EB50078AA8D /* Nest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A4774AF2E509EB20078AA8D /* Nest.swift */; };
@@ -101,6 +103,8 @@
 		9A3CD4212C8A1DE300E8710C /* MovingLorenz.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovingLorenz.swift; sourceTree = "<group>"; };
 		9A40B5DC2EEE87B700B11592 /* GameManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameManager.swift; sourceTree = "<group>"; };
 		9A40B5E12EEE8C0A00B11592 /* ControllerHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerHelper.swift; sourceTree = "<group>"; };
+		9A40B5E32EEEAD3400B11592 /* FlyingSwords.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = FlyingSwords.metal; sourceTree = "<group>"; };
+		9A40B5E42EEEAD3400B11592 /* FlyingSwords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlyingSwords.swift; sourceTree = "<group>"; };
 		9A45F3A22D7C5B090042486A /* Nebula.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Nebula.swift; sourceTree = "<group>"; };
 		9A45F3A42D7C5B170042486A /* Nebula.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Nebula.metal; sourceTree = "<group>"; };
 		9A4774AF2E509EB20078AA8D /* Nest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Nest.swift; sourceTree = "<group>"; };
@@ -224,6 +228,8 @@
 				9A9A3E082E159D3500330D1B /* Bifurcation.metal */,
 				9A9A3E092E159D3500330D1B /* Bifurcation.swift */,
 				9A13D9002DDE50EB00EEA863 /* MobiusSpheres.metal */,
+				9A40B5E32EEEAD3400B11592 /* FlyingSwords.metal */,
+				9A40B5E42EEEAD3400B11592 /* FlyingSwords.swift */,
 				9A13D8FE2DDE50DB00EEA863 /* MobiusSpheres.swift */,
 				9A40B5DD2EEE87B700B11592 /* Game */,
 				9A13D89C2DC3F13B00EEA863 /* Snowflake.metal */,
@@ -458,6 +464,8 @@
 				9A1A94EA2D54C1A400315602 /* Iterate.swift in Sources */,
 				9A40B5E22EEE8C0A00B11592 /* ControllerHelper.swift in Sources */,
 				9A75D3E52C71D16900D27E97 /* attractorApp.swift in Sources */,
+				9A40B5E52EEEAD3400B11592 /* FlyingSwords.metal in Sources */,
+				9A40B5E62EEEAD3400B11592 /* FlyingSwords.swift in Sources */,
 				9A53855B2D663D970040CF72 /* FireworksBlow.swift in Sources */,
 				9A9BADF92D7490E5009C0510 /* MobiusBubbles.swift in Sources */,
 				9A45F3A32D7C5B130042486A /* Nebula.swift in Sources */,

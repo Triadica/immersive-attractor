@@ -7,7 +7,11 @@ extension MeshRecorder {
   /// Call this in your timer callback after updating the mesh
   @MainActor
   func recordIfActive(mesh: LowLevelMesh?, topology: MeshTopology = .lines) {
-    guard isRecording, let mesh = mesh else { return }
+    guard isRecording else { return }
+    guard let mesh = mesh else {
+      print("[MeshRecorder] recordIfActive: mesh is nil")
+      return
+    }
     recordFrame(mesh: mesh, topology: topology)
   }
 }

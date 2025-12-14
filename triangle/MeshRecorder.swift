@@ -583,6 +583,7 @@ class MeshRecorder: ObservableObject {
 
   /// Clear recorded frames
   func clearRecording() {
+    print("[MeshRecorder] clearRecording() called - clearing \(frames.count) frames")
     frames.removeAll()
     recordedFrameCount = 0
     recordingProgress = 0

@@ -9,6 +9,7 @@ import SwiftUI
 
 private enum VisibilityDemo: String {
   case cubesMoving = "Cubes Moving"
+  case flyingSwords = "Flying Swords"
   case attractorLine = "Attractor Line"
   case sphereLine = "Sphere Line"
   case movingLorenz = "Moving Lorenz"
@@ -42,16 +43,18 @@ struct AttractorApp: App {
   @Environment(\.openImmersiveSpace) private var openImmersiveSpace
   @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
 
-  @State private var selectedDemo: VisibilityDemo = .cubesMoving
+  @State private var selectedDemo: VisibilityDemo = .flyingSwords
 
   @State private var isImmersionActive = false
 
   var body: some Scene {
     WindowGroup {
 
-      HStack {
+      HStack(spacing: 20) {
+        // Left side: Demo picker
         Picker("Demo", selection: $selectedDemo) {
           Text("Cubes Moving").tag(VisibilityDemo.cubesMoving)
+          Text("Flying Swords").tag(VisibilityDemo.flyingSwords)
           Text("Attractor Line").tag(VisibilityDemo.attractorLine)
           Text("Moving Lorenz").tag(VisibilityDemo.movingLorenz)
           Text("Radical Line").tag(VisibilityDemo.radicalLine)
@@ -83,6 +86,8 @@ struct AttractorApp: App {
           height: 600,
           alignment: .center
         )
+
+        // Middle: Toggle and status
         VStack {
           Button("Toggle Space") {
             Task {
@@ -101,12 +106,18 @@ struct AttractorApp: App {
 
           Text("Selected demo: \(selectedDemo.rawValue)").padding(.top, 32)
 
-          // Recording control panel
           if isImmersionActive {
-            Divider().padding(.vertical, 16)
-            RecordingControlPanel()
+            Text("🟢 Immersive Space Active")
+              .foregroundColor(.green)
+              .padding(.top, 8)
           }
-        }.frame(width: 400)
+        }.frame(width: 300)
+
+        // Right side: Recording panel (always visible)
+        VStack {
+          Text("Recording").font(.headline).padding(.bottom, 8)
+          RecordingControlPanel()
+        }.frame(width: 350)
       }
 
     }.windowStyle(.volumetric).defaultSize(width: 10, height: 10, depth: 10, in: .meters)
@@ -116,6 +127,8 @@ struct AttractorApp: App {
         switch demo {
         case .cubesMoving:
           CubesMovingView()
+        case .flyingSwords:
+          FlyingSwordsView()
         case .attractorLine:
           AttractorLineView()
         case .sphereLine:

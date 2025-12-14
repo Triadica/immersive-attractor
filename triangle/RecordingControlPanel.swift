@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 /// Global recorder state manager
@@ -12,38 +13,100 @@ class RecorderState: ObservableObject {
   @Published var exportError: String?
   @Published var recordingDuration: Double = 5.0
   @Published var exportFPS: Double = 30.0
+  @Published var isExporting = false
+  @Published var exportStatus: String = ""
 
-  private init() {}
+  private var cancellables = Set<AnyCancellable>()
+
+  private init() {
+    print("[RecorderState] Initialized singleton instance")
+    // Forward recorder's objectWillChange to our own
+    recorder.objectWillChange.sink { [weak self] _ in
+      self?.objectWillChange.send()
+    }.store(in: &cancellables)
+  }
 
   func startRecording() {
+    print(
+      "[RecorderState] startRecording() called - duration: \(recordingDuration)s, fps: \(exportFPS)"
+    )
+    print("[RecorderState] Current isRecording state before: \(recorder.isRecording)")
     recorder.startRecording(duration: recordingDuration, fps: exportFPS)
+    print("[RecorderState] Current isRecording state after: \(recorder.isRecording)")
+    objectWillChange.send()  // Force UI update
   }
 
   func stopRecording() {
+    print("[RecorderState] stopRecording() called")
     recorder.stopRecording()
+    objectWillChange.send()  // Force UI update
+  }
+
+  /// Stop recording and automatically export to USDA (more compatible)
+  func stopAndExport(filename: String) async {
+    print("[RecorderState] stopAndExport() called")
+    recorder.stopRecording()
+    objectWillChange.send()
+
+    // Check if we have frames to export
+    guard recorder.recordedFrameCount > 0 else {
+      print("[RecorderState] No frames recorded, skipping export")
+      exportError = "No frames were recorded"
+      showExportAlert = true
+      return
+    }
+
+    // Start export
+    isExporting = true
+    exportStatus = "Exporting \(recorder.recordedFrameCount) frames..."
+    objectWillChange.send()
+
+    do {
+      // Export as USDA (text format, more compatible)
+      let url = try await recorder.exportToUSDA(filename: filename)
+      exportedFileURL = url
+      exportError = nil
+      isExporting = false
+      exportStatus = "Export complete!"
+      showShareSheet = true
+      print("[RecorderState] Auto-export successful: \(url.path)")
+    } catch {
+      exportError = error.localizedDescription
+      isExporting = false
+      exportStatus = "Export failed"
+      showExportAlert = true
+      print("[RecorderState] Auto-export failed: \(error.localizedDescription)")
+    }
+    objectWillChange.send()
   }
 
   func exportToUSDA(filename: String) async {
+    print("[RecorderState] exportToUSDA() called with filename: \(filename)")
     do {
       let url = try await recorder.exportToUSDZ(filename: filename)
       exportedFileURL = url
       exportError = nil
       showShareSheet = true
+      print("[RecorderState] Export successful: \(url.path)")
     } catch {
       exportError = error.localizedDescription
       showExportAlert = true
+      print("[RecorderState] Export failed: \(error.localizedDescription)")
     }
   }
 
   func exportAsPointCloud(filename: String) async {
+    print("[RecorderState] exportAsPointCloud() called with filename: \(filename)")
     do {
       let url = try await recorder.exportPointCloudUSDZ(filename: filename)
       exportedFileURL = url
       exportError = nil
       showShareSheet = true
+      print("[RecorderState] Point cloud export successful: \(url.path)")
     } catch {
       exportError = error.localizedDescription
       showExportAlert = true
+      print("[RecorderState] Point cloud export failed: \(error.localizedDescription)")
     }
   }
 }
@@ -66,16 +129,18 @@ struct RecordingControlPanel: View {
   @State private var filename = "animation"
   @State private var showRecordingComplete = false
   @State private var blinkOpacity: Double = 1.0
+  @State private var lastAction: String = "None"
+  @State private var lastActionTime: Date = Date()
 
   var body: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: 12) {
       // Recording status with blinking indicator
       HStack {
         Circle()
           .fill(state.recorder.isRecording ? Color.red : Color.gray)
           .frame(width: 12, height: 12)
           .opacity(state.recorder.isRecording ? blinkOpacity : 1.0)
-        Text(state.recorder.isRecording ? "🔴 Recording..." : "Ready")
+        Text(state.recorder.isRecording ? "🔴 Recording..." : "⚪ Ready")
           .font(.headline)
           .foregroundColor(state.recorder.isRecording ? .red : .primary)
       }
@@ -114,8 +179,38 @@ struct RecordingControlPanel: View {
             )
             .font(.caption)
           }
+          if state.recorder.recordedFrameCount == 0 {
+            Text("⚠️ Waiting for mesh data...")
+              .font(.caption)
+              .foregroundColor(.orange)
+          }
         }
       }
+
+      // Debug info
+      VStack(alignment: .leading, spacing: 4) {
+        Text("Last action: \(lastAction)")
+          .font(.caption2)
+          .foregroundColor(.secondary)
+        Text("isRecording: \(state.recorder.isRecording ? "YES" : "NO")")
+          .font(.caption2)
+          .foregroundColor(state.recorder.isRecording ? .green : .secondary)
+        Text("Frames: \(state.recorder.recordedFrameCount)")
+          .font(.caption2)
+          .foregroundColor(.secondary)
+        if state.isExporting {
+          Text("⏳ \(state.exportStatus)")
+            .font(.caption2)
+            .foregroundColor(.blue)
+        } else if !state.exportStatus.isEmpty {
+          Text(state.exportStatus)
+            .font(.caption2)
+            .foregroundColor(.green)
+        }
+      }
+      .padding(8)
+      .background(Color.gray.opacity(0.1))
+      .cornerRadius(8)
 
       // Duration slider
       VStack(alignment: .leading) {
@@ -142,14 +237,28 @@ struct RecordingControlPanel: View {
       HStack(spacing: 12) {
         if state.recorder.isRecording {
           Button(action: {
-            state.stopRecording()
+            print("[RecordingControlPanel] Stop button tapped - will auto-export")
+            lastAction = "Stop & Export @ \(Date().formatted(date: .omitted, time: .standard))"
+            lastActionTime = Date()
+            Task {
+              await state.stopAndExport(filename: filename)
+            }
           }) {
-            Label("Stop", systemImage: "stop.fill")
+            Label("Stop & Export", systemImage: "stop.fill")
           }
           .buttonStyle(.borderedProminent)
           .tint(.red)
+          .disabled(state.isExporting)
+        } else if state.isExporting {
+          ProgressView()
+            .progressViewStyle(.circular)
+          Text("Exporting...")
+            .font(.caption)
         } else {
           Button(action: {
+            print("[RecordingControlPanel] Record button tapped")
+            lastAction = "Record @ \(Date().formatted(date: .omitted, time: .standard))"
+            lastActionTime = Date()
             state.startRecording()
           }) {
             Label("Record", systemImage: "record.circle")
@@ -170,6 +279,7 @@ struct RecordingControlPanel: View {
 
         HStack(spacing: 12) {
           Button(action: {
+            print("[RecordingControlPanel] Export USDZ button tapped")
             Task {
               await state.exportToUSDA(filename: filename)
             }
@@ -179,6 +289,7 @@ struct RecordingControlPanel: View {
           .buttonStyle(.bordered)
 
           Button(action: {
+            print("[RecordingControlPanel] Point Cloud button tapped")
             Task {
               await state.exportAsPointCloud(filename: "\(filename)_points")
             }
@@ -189,6 +300,7 @@ struct RecordingControlPanel: View {
         }
 
         Button(action: {
+          print("[RecordingControlPanel] Clear button tapped")
           state.recorder.clearRecording()
         }) {
           Label("Clear", systemImage: "trash")
