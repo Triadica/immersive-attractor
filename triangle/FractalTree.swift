@@ -51,81 +51,26 @@ struct FractalTreeView: View {
 
         // Add components for gesture support
         rootEntity.components.set(modelComponent)
-        // Controller: rootEntity.components.set(GestureComponent())
-        // Controller: rootEntity.components.set(InputTargetComponent())
 
         // Enable world sensing
         // content.enableWorldSensing([.hands])
 
         // Adjust collision box size to match actual content
-        // Controller: let bounds = getBounds()
 
-        // Controller: rootEntity.components.set(
 
-        // Controller: CollisionComponent(
 
-        // Controller: shapes: [
 
-        // Controller: .generateBox(
 
-        // Controller: width: bounds.extents.x * 4,
 
-        // Controller: height: bounds.extents.y * 4,
 
-        // Controller: depth: bounds.extents.z * 4)
 
-        // Controller: ]
 
-        // Controller: ))
 
         // Move entity closer to user
         rootEntity.position = SIMD3<Float>(0, 0, -1)  // Adjust these values
         content.add(rootEntity)
         self.mesh = mesh
       }
-      // Controller: .gesture(
-      // Controller:   DragGesture()
-      // Controller:     .targetedToEntity(rootEntity)
-      // Controller:     .onChanged { value in
-      // Controller:       var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-      // Controller:       component.onDragChange(value: value)
-      // Controller:       rootEntity.components[GestureComponent.self] = component
-      // Controller:     }
-      // Controller:     .onEnded { _ in
-      // Controller:       var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-      // Controller:       component.onGestureEnded()
-      // Controller:       rootEntity.components[GestureComponent.self] = component
-      // Controller:     }
-      // Controller: )
-      // Controller: .gesture(
-      // Controller:   RotateGesture3D()
-      // Controller:     .targetedToEntity(rootEntity)
-      // Controller:     .onChanged { value in
-      // Controller:       var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-      // Controller:       component.onRotateChange(value: value)
-      // Controller:       rootEntity.components[GestureComponent.self] = component
-      // Controller:     }
-      // Controller:     .onEnded { _ in
-      // Controller:       var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-      // Controller:       component.onGestureEnded()
-      // Controller:       rootEntity.components[GestureComponent.self] = component
-      // Controller:     }
-      // Controller: )
-      // Controller: .simultaneousGesture(
-      // Controller:   MagnifyGesture()
-      // Controller:     .targetedToEntity(rootEntity)
-      // Controller:     .onChanged { value in
-      // Controller:       var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-      // Controller:       component.onScaleChange(value: value)
-      // Controller:       rootEntity.components[GestureComponent.self] = component
-      // Controller:     }
-      // Controller:     .onEnded { _ in
-      // Controller:       var component: GestureComponent =
-      // Controller:         rootEntity.components[GestureComponent.self] ?? GestureComponent()
-      // Controller:       component.onGestureEnded()
-      // Controller:       rootEntity.components[GestureComponent.self] = component
-      // Controller:     }
-      // Controller: )
     }
   }
 

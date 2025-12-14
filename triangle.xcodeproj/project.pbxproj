@@ -56,7 +56,6 @@
 		9A92D3792D9473820021FFCE /* FractalBranches.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A92D3782D9473750021FFCE /* FractalBranches.swift */; };
 		9A92D37D2D95B8890021FFCE /* FractalUmbrella.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A92D37C2D95B8720021FFCE /* FractalUmbrella.swift */; };
 		9A92D37F2D95D0380021FFCE /* FractalTree.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A92D37E2D95D0330021FFCE /* FractalTree.swift */; };
-		9A92D3812D986ACA0021FFCE /* GestureComponent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A92D3802D986ACA0021FFCE /* GestureComponent.swift */; };
 		9A9A3E072E159D0400330D1B /* RealityKitContent in Frameworks */ = {isa = PBXBuildFile; productRef = 9A9A3E062E159D0400330D1B /* RealityKitContent */; };
 		9A9A3E0A2E159D3500330D1B /* Bifurcation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A9A3E092E159D3500330D1B /* Bifurcation.swift */; };
 		9A9A3E0B2E159D3500330D1B /* Bifurcation.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A9A3E082E159D3500330D1B /* Bifurcation.metal */; };
@@ -138,7 +137,6 @@
 		9A92D3782D9473750021FFCE /* FractalBranches.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FractalBranches.swift; sourceTree = "<group>"; };
 		9A92D37C2D95B8720021FFCE /* FractalUmbrella.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FractalUmbrella.swift; sourceTree = "<group>"; };
 		9A92D37E2D95D0330021FFCE /* FractalTree.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FractalTree.swift; sourceTree = "<group>"; };
-		9A92D3802D986ACA0021FFCE /* GestureComponent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureComponent.swift; sourceTree = "<group>"; };
 		9A9A3E042E159CE100330D1B /* RealityFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = RealityFoundation.framework; path = System/Library/Frameworks/RealityFoundation.framework; sourceTree = SDKROOT; };
 		9A9A3E082E159D3500330D1B /* Bifurcation.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Bifurcation.metal; sourceTree = "<group>"; };
 		9A9A3E092E159D3500330D1B /* Bifurcation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bifurcation.swift; sourceTree = "<group>"; };
@@ -231,7 +229,6 @@
 				9A13D89C2DC3F13B00EEA863 /* Snowflake.metal */,
 				9A13D89A2DC3F13200EEA863 /* Snowflake.swift */,
 				9A92D37E2D95D0330021FFCE /* FractalTree.swift */,
-				9A92D3802D986ACA0021FFCE /* GestureComponent.swift */,
 				9A92D37C2D95B8720021FFCE /* FractalUmbrella.swift */,
 				9A92D3782D9473750021FFCE /* FractalBranches.swift */,
 				9A75D3EC2C71D16B00D27E97 /* Assets.xcassets */,
@@ -420,7 +417,6 @@
 				9AD002EE2E51EC750074380A /* CubesNested.metal in Sources */,
 				9A9BADF52D74599E009C0510 /* MobiusTrail.metal in Sources */,
 				9A53854F2D5FBAAE0040CF72 /* HyperbolicHelicoid.swift in Sources */,
-				9A92D3812D986ACA0021FFCE /* GestureComponent.swift in Sources */,
 				9A6F2A2D2D6B8B4A007F336F /* HopfFibration.swift in Sources */,
 				9A4774B02E509EB50078AA8D /* Nest.swift in Sources */,
 				9AD4CB792D588FE600E55977 /* AttractorLine.metal in Sources */,

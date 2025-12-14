@@ -80,28 +80,16 @@ struct MobiusGirdView: View {
         }
         rootEntity.components.set(modelComponent)
         // Add components for gesture support
-        // Controller: rootEntity.components.set(GestureComponent())
-        // Controller: rootEntity.components.set(InputTargetComponent())
         // Adjust collision box size to match actual content
-        // Controller: let bounds = getBounds()
 
-        // Controller: rootEntity.components.set(
 
-        // Controller: CollisionComponent(
 
-        // Controller: shapes: [
 
-        // Controller: .generateBox(
 
-        // Controller: width: bounds.extents.x * 4,
 
-        // Controller: height: bounds.extents.y * 4,
 
-        // Controller: depth: bounds.extents.z * 4)
 
-        // Controller: ]
 
-        // Controller: ))
 
         // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = 1
@@ -117,50 +105,7 @@ struct MobiusGirdView: View {
       .onDisappear {
         stopTimer()
       }
-      // Controller: .gesture(
-      // Controller: DragGesture()
-      // Controller: .targetedToEntity(rootEntity)
-      // Controller: .onChanged { value in
-      // Controller: var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-      // Controller: component.onDragChange(value: value)
-      // Controller: rootEntity.components[GestureComponent.self] = component
-      // Controller: }
-      // Controller: .onEnded { _ in
-      // Controller: var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-      // Controller: component.onGestureEnded()
-      // Controller: rootEntity.components[GestureComponent.self] = component
-      // Controller: }
-      // Controller: )
-      // Controller: .gesture(
-      // Controller: RotateGesture3D()
-      // Controller: .targetedToEntity(rootEntity)
-      // Controller: .onChanged { value in
 
-      // Controller: var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-      // Controller: component.onRotateChange(value: value)
-      // Controller: rootEntity.components[GestureComponent.self] = component
-      // Controller: }
-      // Controller: .onEnded { _ in
-      // Controller: var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-      // Controller: component.onGestureEnded()
-      // Controller: rootEntity.components[GestureComponent.self] = component
-      // Controller: }
-      // Controller: )
-      // Controller: .simultaneousGesture(
-      // Controller: MagnifyGesture()
-      // Controller: .targetedToEntity(rootEntity)
-      // Controller: .onChanged { value in
-      // Controller: var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-      // Controller: component.onScaleChange(value: value)
-      // Controller: rootEntity.components[GestureComponent.self] = component
-      // Controller: }
-      // Controller: .onEnded { _ in
-      // Controller: var component: GestureComponent =
-      // Controller: rootEntity.components[GestureComponent.self] ?? GestureComponent()
-      // Controller: component.onGestureEnded()
-      // Controller: rootEntity.components[GestureComponent.self] = component
-      // Controller: }
-      // Controller: )
     }
   }
 

@@ -93,31 +93,6 @@ struct SphereLineView: View {
         }
         rootEntity.components.set(modelComponent)
 
-        // Add components for gesture support
-        // Controller: rootEntity.components.set(GestureComponent())
-        // Controller: rootEntity.components.set(InputTargetComponent())
-
-        // Adjust collision box size to match actual content
-        // Controller: let bounds = getBounds()
-
-        // Controller: rootEntity.components.set(
-
-        // Controller: CollisionComponent(
-
-        // Controller: shapes: [
-
-        // Controller: .generateBox(
-
-        // Controller: width: bounds.extents.x * 1,
-
-        // Controller: height: bounds.extents.y * 1,
-
-        // Controller: depth: bounds.extents.z * 1)
-
-        // Controller: ]
-
-        // Controller: ))
-
         rootEntity.position.y = 1
         rootEntity.position.z = -1
         content.add(rootEntity)
@@ -130,49 +105,6 @@ struct SphereLineView: View {
       .onDisappear {
         stopTimer()
       }
-      // Controller: .gesture(
-        // DragGesture()
-        //   .targetedToEntity(rootEntity)
-        //   .onChanged { value in
-        //     var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-        //     component.onDragChange(value: value)
-        //     rootEntity.components[GestureComponent.self] = component
-        //   }
-        //   .onEnded { _ in
-        //     var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-        //     component.onGestureEnded()
-        //     rootEntity.components[GestureComponent.self] = component
-        //   }
-
-      // Controller: .gesture(
-      //   RotateGesture3D()
-      //     .targetedToEntity(rootEntity)
-      //     .onChanged { value in
-      //       var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-      //       component.onRotateChange(value: value)
-      //       rootEntity.components[GestureComponent.self] = component
-      //     }
-      //     .onEnded { _ in
-      //       var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-      //       component.onGestureEnded()
-      //       rootEntity.components[GestureComponent.self] = component
-      //     }
-      // )
-      // Controller: .simultaneousGesture(
-        // MagnifyGesture()
-        //   .targetedToEntity(rootEntity)
-        //   .onChanged { value in
-        //     var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-        //     component.onScaleChange(value: value)
-        //     rootEntity.components[GestureComponent.self] = component
-        //   }
-        //   .onEnded { _ in
-        //     var component: GestureComponent =
-        //       rootEntity.components[GestureComponent.self] ?? GestureComponent()
-        //     component.onGestureEnded()
-        //     rootEntity.components[GestureComponent.self] = component
-        //   }
-      // )
     }
   }
 
