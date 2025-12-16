@@ -1,6 +1,7 @@
 import Metal
 import RealityKit
 import SwiftUI
+import simd
 
 private struct MovingCubesParams {
   var width: Float
@@ -50,6 +51,9 @@ struct CubesNestedView: View {
   @State var timer: Timer?
   @State private var updateTrigger = false
 
+  // MARK: - Controller for gamepad input
+  let controllerHelper = ControllerHelper()
+
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
   let cubePipeline: MTLComputePipelineState
@@ -83,19 +87,16 @@ struct CubesNestedView: View {
         }
         rootEntity.components.set(modelComponent)
         // Add components for gesture support
-        rootEntity.components.set(GestureComponent())
-        rootEntity.components.set(InputTargetComponent())
         // Adjust collision box size to match actual content
-        let bounds = getBounds()
-        rootEntity.components.set(
-          CollisionComponent(
-            shapes: [
-              .generateBox(
-                width: bounds.extents.x * 4,
-                height: bounds.extents.y * 4,
-                depth: bounds.extents.z * 4)
-            ]
-          ))
+
+
+
+
+
+
+
+
+
 
         // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = 1
@@ -111,50 +112,7 @@ struct CubesNestedView: View {
       .onDisappear {
         stopTimer()
       }
-      .gesture(
-        DragGesture()
-          .targetedToEntity(rootEntity)
-          .onChanged { value in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onDragChange(value: value)
-            rootEntity.components[GestureComponent.self] = component
-          }
-          .onEnded { _ in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onGestureEnded()
-            rootEntity.components[GestureComponent.self] = component
-          }
-      )
-      .gesture(
-        RotateGesture3D()
-          .targetedToEntity(rootEntity)
-          .onChanged { value in
 
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onRotateChange(value: value)
-            rootEntity.components[GestureComponent.self] = component
-          }
-          .onEnded { _ in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onGestureEnded()
-            rootEntity.components[GestureComponent.self] = component
-          }
-      )
-      .simultaneousGesture(
-        MagnifyGesture()
-          .targetedToEntity(rootEntity)
-          .onChanged { value in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onScaleChange(value: value)
-            rootEntity.components[GestureComponent.self] = component
-          }
-          .onEnded { _ in
-            var component: GestureComponent =
-              rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onGestureEnded()
-            rootEntity.components[GestureComponent.self] = component
-          }
-      )
     }
   }
 
@@ -178,6 +136,8 @@ struct CubesNestedView: View {
         } else {
           print("[ERR] vertex buffer is not initialized")
         }
+        // Update controller input
+        self.controllerHelper.updateEntityTransform(self.rootEntity)
         self.updateTrigger.toggle()
       }
     }
@@ -317,7 +277,7 @@ struct CubesNestedView: View {
     mesh.parts.replaceAll([
       LowLevelMesh.Part(
         indexCount: indexCount,
-        topology: .lineStrip,
+        topology: .line,
         bounds: getBounds()
       )
     ])

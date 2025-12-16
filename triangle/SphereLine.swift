@@ -1,6 +1,7 @@
 import Metal
 import RealityKit
 import SwiftUI
+import simd
 
 private struct SphereLineParams {
   var vertexPerCell: Int32
@@ -49,6 +50,9 @@ struct SphereLineView: View {
   @State var timer: Timer?
   @State private var updateTrigger = false
 
+  // MARK: - Controller for gamepad input
+  let controllerHelper = ControllerHelper()
+
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
   let sphereLinePipeline: MTLComputePipelineState
@@ -89,22 +93,6 @@ struct SphereLineView: View {
         }
         rootEntity.components.set(modelComponent)
 
-        // Add components for gesture support
-        rootEntity.components.set(GestureComponent())
-        rootEntity.components.set(InputTargetComponent())
-
-        // Adjust collision box size to match actual content
-        let bounds = getBounds()
-        rootEntity.components.set(
-          CollisionComponent(
-            shapes: [
-              .generateBox(
-                width: bounds.extents.x * 1,
-                height: bounds.extents.y * 1,
-                depth: bounds.extents.z * 1)
-            ]
-          ))
-
         rootEntity.position.y = 1
         rootEntity.position.z = -1
         content.add(rootEntity)
@@ -117,54 +105,12 @@ struct SphereLineView: View {
       .onDisappear {
         stopTimer()
       }
-      .gesture(
-        DragGesture()
-          .targetedToEntity(rootEntity)
-          .onChanged { value in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onDragChange(value: value)
-            rootEntity.components[GestureComponent.self] = component
-          }
-          .onEnded { _ in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onGestureEnded()
-            rootEntity.components[GestureComponent.self] = component
-          }
-      )
-      .gesture(
-        RotateGesture3D()
-          .targetedToEntity(rootEntity)
-          .onChanged { value in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onRotateChange(value: value)
-            rootEntity.components[GestureComponent.self] = component
-          }
-          .onEnded { _ in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onGestureEnded()
-            rootEntity.components[GestureComponent.self] = component
-          }
-      )
-      .simultaneousGesture(
-        MagnifyGesture()
-          .targetedToEntity(rootEntity)
-          .onChanged { value in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onScaleChange(value: value)
-            rootEntity.components[GestureComponent.self] = component
-          }
-          .onEnded { _ in
-            var component: GestureComponent =
-              rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onGestureEnded()
-            rootEntity.components[GestureComponent.self] = component
-          }
-      )
     }
   }
 
   func startTimer() {
-    self.mesh = try! createMesh()  // recreate mesh when start timer
+    self.mesh = try! createMesh()
+    controllerHelper.reset()  // Reset controller timing  // recreate mesh when start timer
     self.pingPongBuffer = createPingPongBuffer()
 
     // 随机生成四个控制点，长度控制在 0.3~0.6 单位范围内
@@ -184,11 +130,16 @@ struct SphereLineView: View {
           self.updateSphereLineBase()
           self.updateMesh(vertexBuffer: vertexBuffer, prevBuffer: self.vertexPrevBuffer!)
 
+          // Record frame if recording is active
+          recordMeshIfActive(mesh: self.mesh, topology: .lines)
+
           // swap buffers
           self.pingPongBuffer!.swap()
         } else {
           print("[ERR] vertex buffer is not initialized")
         }
+        // Update controller input
+        self.controllerHelper.updateEntityTransform(self.rootEntity)
         self.updateTrigger.toggle()
       }
     }

@@ -1,6 +1,7 @@
 import Metal
 import RealityKit
 import SwiftUI
+import simd
 
 private struct MovingCellParams {
   var dt: Float
@@ -54,6 +55,9 @@ struct MobiusSpheresView: View {
   /// to track previous state of vertex buffer
   @State var vertexPrevBuffer: MTLBuffer?
 
+  // MARK: - Controller for gamepad input
+  let controllerHelper = ControllerHelper()
+
   init() {
     self.device = MTLCreateSystemDefaultDevice()!
     self.commandQueue = device.makeCommandQueue()!
@@ -74,20 +78,6 @@ struct MobiusSpheresView: View {
           return
         }
         rootEntity.components.set(modelComponent)
-        // Add components for gesture support
-        rootEntity.components.set(GestureComponent())
-        rootEntity.components.set(InputTargetComponent())
-        // Adjust collision box size to match actual content
-        let bounds = getBounds()
-        rootEntity.components.set(
-          CollisionComponent(
-            shapes: [
-              .generateBox(
-                width: bounds.extents.x * 4,
-                height: bounds.extents.y * 4,
-                depth: bounds.extents.z * 4)
-            ]
-          ))
 
         // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = 1
@@ -103,56 +93,13 @@ struct MobiusSpheresView: View {
       .onDisappear {
         stopTimer()
       }
-      .gesture(
-        DragGesture()
-          .targetedToEntity(rootEntity)
-          .onChanged { value in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onDragChange(value: value)
-            rootEntity.components[GestureComponent.self] = component
-          }
-          .onEnded { _ in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onGestureEnded()
-            rootEntity.components[GestureComponent.self] = component
-          }
-      )
-      .gesture(
-        RotateGesture3D()
-          .targetedToEntity(rootEntity)
-          .onChanged { value in
-
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onRotateChange(value: value)
-            rootEntity.components[GestureComponent.self] = component
-          }
-          .onEnded { _ in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onGestureEnded()
-            rootEntity.components[GestureComponent.self] = component
-          }
-      )
-      .simultaneousGesture(
-        MagnifyGesture()
-          .targetedToEntity(rootEntity)
-          .onChanged { value in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onScaleChange(value: value)
-            rootEntity.components[GestureComponent.self] = component
-          }
-          .onEnded { _ in
-            var component: GestureComponent =
-              rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onGestureEnded()
-            rootEntity.components[GestureComponent.self] = component
-          }
-      )
     }
   }
 
   func startTimer() {
     self.mesh = try! createMesh()  // recreate mesh when start timer
     self.pingPongBuffer = createPingPongBuffer()
+    controllerHelper.reset()  // Reset controller timing
 
     self.vertexBuffer = device.makeBuffer(
       length: MemoryLayout<VertexData>.stride * vertexCapacity, options: .storageModeShared)
@@ -166,6 +113,8 @@ struct MobiusSpheresView: View {
         } else {
           print("[ERR] vertex buffer is not initialized")
         }
+        // Update controller input
+        self.controllerHelper.updateEntityTransform(self.rootEntity)
         self.updateTrigger.toggle()
       }
     }

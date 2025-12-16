@@ -1,6 +1,7 @@
 import Metal
 import RealityKit
 import SwiftUI
+import simd
 
 private struct MovingLorenzParams {
   var width: Float
@@ -72,6 +73,9 @@ struct MovingLorenzView: View {
 
   @State private var updateTrigger = false
 
+  // MARK: - Controller for gamepad input
+  let controllerHelper = ControllerHelper()
+
   let radius: Float = 200
 
   let device: MTLDevice
@@ -94,8 +98,6 @@ struct MovingLorenzView: View {
         // let size = content.convert(proxy.frame(in: .local), from: .local, to: .scene).extents
         // let radius = Float(0.5 * size.x)
 
-        self.pingPongBuffer = PingPongBuffer(
-          device: device, length: MemoryLayout<VertexData>.stride * vertexCapacity)
         guard let mesh = try? createMesh(),
           let modelComponent = try? getModelComponent(mesh: mesh)
         else {
@@ -104,19 +106,16 @@ struct MovingLorenzView: View {
         }
         rootEntity.components.set(modelComponent)
         // Add components for gesture support
-        rootEntity.components.set(GestureComponent())
-        rootEntity.components.set(InputTargetComponent())
         // Adjust collision box size to match actual content
-        let bounds = getBounds()
-        rootEntity.components.set(
-          CollisionComponent(
-            shapes: [
-              .generateBox(
-                width: bounds.extents.x * 4,
-                height: bounds.extents.y * 4,
-                depth: bounds.extents.z * 4)
-            ]
-          ))
+
+
+
+
+
+
+
+
+
 
         rootEntity.scale = SIMD3(repeating: stripScale)
         rootEntity.position.y = 1
@@ -133,66 +132,31 @@ struct MovingLorenzView: View {
       .onDisappear {
         stopTimer()
       }
-      .gesture(
-        DragGesture()
-          .targetedToEntity(rootEntity)
-          .onChanged { value in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onDragChange(value: value)
-            rootEntity.components[GestureComponent.self] = component
-          }
-          .onEnded { _ in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onGestureEnded()
-            rootEntity.components[GestureComponent.self] = component
-          }
-      )
-      .gesture(
-        RotateGesture3D()
-          .targetedToEntity(rootEntity)
-          .onChanged { value in
 
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onRotateChange(value: value)
-            rootEntity.components[GestureComponent.self] = component
-          }
-          .onEnded { _ in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onGestureEnded()
-            rootEntity.components[GestureComponent.self] = component
-          }
-      )
-      .simultaneousGesture(
-        MagnifyGesture()
-          .targetedToEntity(rootEntity)
-          .onChanged { value in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onScaleChange(value: value)
-            rootEntity.components[GestureComponent.self] = component
-          }
-          .onEnded { _ in
-            var component: GestureComponent =
-              rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onGestureEnded()
-            rootEntity.components[GestureComponent.self] = component
-          }
-      )
     }
   }
 
-  
-    /// Create a bounding box for the mesh
+  /// Create a bounding box for the mesh
   func getBounds() -> BoundingBox {
     let radius: Float = 4
     return BoundingBox(min: [-radius, -radius, -radius], max: [radius, radius, radius])
   }
-  
+
   func startTimer() {
-    self.mesh = try! createMesh()  // recreate mesh when start timer
+    self.pingPongBuffer = PingPongBuffer(
+      device: device, length: MemoryLayout<VertexData>.stride * vertexCapacity)
+    self.mesh = try! createMesh()
+    controllerHelper.reset()  // Reset controller timing  // recreate mesh when start timer
     timer = Timer.scheduledTimer(withTimeInterval: 1 / fps, repeats: true) { _ in
 
       DispatchQueue.main.async {
         self.updateMesh()
+
+        // Record frame if recording is active
+        recordMeshIfActive(mesh: self.mesh, topology: .lines)
+
+        // Update controller input
+        self.controllerHelper.updateEntityTransform(self.rootEntity)
         self.updateTrigger.toggle()
       }
     }

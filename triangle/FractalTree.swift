@@ -2,6 +2,7 @@ import Metal
 import RealityKit
 import RealityKitContent
 import SwiftUI
+import simd
 
 private struct VertexData {
   var position: SIMD3<Float> = .zero
@@ -50,73 +51,26 @@ struct FractalTreeView: View {
 
         // Add components for gesture support
         rootEntity.components.set(modelComponent)
-        rootEntity.components.set(GestureComponent())
-        rootEntity.components.set(InputTargetComponent())
 
         // Enable world sensing
         // content.enableWorldSensing([.hands])
 
         // Adjust collision box size to match actual content
-        let bounds = getBounds()
-        rootEntity.components.set(
-          CollisionComponent(
-            shapes: [
-              .generateBox(
-                width: bounds.extents.x * 4,
-                height: bounds.extents.y * 4,
-                depth: bounds.extents.z * 4)
-            ]
-          ))
+
+
+
+
+
+
+
+
+
 
         // Move entity closer to user
         rootEntity.position = SIMD3<Float>(0, 0, -1)  // Adjust these values
         content.add(rootEntity)
         self.mesh = mesh
       }
-      .gesture(
-        DragGesture()
-          .targetedToEntity(rootEntity)
-          .onChanged { value in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onDragChange(value: value)
-            rootEntity.components[GestureComponent.self] = component
-          }
-          .onEnded { _ in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onGestureEnded()
-            rootEntity.components[GestureComponent.self] = component
-          }
-      )
-      .gesture(
-        RotateGesture3D()
-          .targetedToEntity(rootEntity)
-          .onChanged { value in
-
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onRotateChange(value: value)
-            rootEntity.components[GestureComponent.self] = component
-          }
-          .onEnded { _ in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onGestureEnded()
-            rootEntity.components[GestureComponent.self] = component
-          }
-      )
-      .simultaneousGesture(
-        MagnifyGesture()
-          .targetedToEntity(rootEntity)
-          .onChanged { value in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onScaleChange(value: value)
-            rootEntity.components[GestureComponent.self] = component
-          }
-          .onEnded { _ in
-            var component: GestureComponent =
-              rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onGestureEnded()
-            rootEntity.components[GestureComponent.self] = component
-          }
-      )
     }
   }
 

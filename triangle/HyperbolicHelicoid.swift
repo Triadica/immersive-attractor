@@ -1,6 +1,7 @@
 import Metal
 import RealityKit
 import SwiftUI
+import simd
 
 private struct MovingCellParams {
   var width: Float
@@ -46,6 +47,9 @@ struct HyperbolicHelicoidView: View {
 
   @State var timer: Timer?
   @State private var updateTrigger = false
+
+  // MARK: - Controller for gamepad input
+  let controllerHelper = ControllerHelper()
 
   let device: MTLDevice
   let commandQueue: MTLCommandQueue
@@ -100,20 +104,17 @@ struct HyperbolicHelicoidView: View {
 
         rootEntity.components.set(modelComponent)
         // Add components for gesture support
-        rootEntity.components.set(GestureComponent())
-        rootEntity.components.set(InputTargetComponent())
         rootEntity.components.set(orangeLightComponent)
         // Adjust collision box size to match actual content
-        let bounds = getBounds()
-        rootEntity.components.set(
-          CollisionComponent(
-            shapes: [
-              .generateBox(
-                width: bounds.extents.x * 4,
-                height: bounds.extents.y * 4,
-                depth: bounds.extents.z * 4)
-            ]
-          ))
+
+
+
+
+
+
+
+
+
 
         // rootEntity.scale = SIMD3(repeating: 1.)
         rootEntity.position.y = 1
@@ -130,55 +131,13 @@ struct HyperbolicHelicoidView: View {
       .onDisappear {
         stopTimer()
       }
-      .gesture(
-        DragGesture()
-          .targetedToEntity(rootEntity)
-          .onChanged { value in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onDragChange(value: value)
-            rootEntity.components[GestureComponent.self] = component
-          }
-          .onEnded { _ in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onGestureEnded()
-            rootEntity.components[GestureComponent.self] = component
-          }
-      )
-      .gesture(
-        RotateGesture3D()
-          .targetedToEntity(rootEntity)
-          .onChanged { value in
 
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onRotateChange(value: value)
-            rootEntity.components[GestureComponent.self] = component
-          }
-          .onEnded { _ in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onGestureEnded()
-            rootEntity.components[GestureComponent.self] = component
-          }
-      )
-      .simultaneousGesture(
-        MagnifyGesture()
-          .targetedToEntity(rootEntity)
-          .onChanged { value in
-            var component = rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onScaleChange(value: value)
-            rootEntity.components[GestureComponent.self] = component
-          }
-          .onEnded { _ in
-            var component: GestureComponent =
-              rootEntity.components[GestureComponent.self] ?? GestureComponent()
-            component.onGestureEnded()
-            rootEntity.components[GestureComponent.self] = component
-          }
-      )
     }
   }
 
   func startTimer() {
-    self.mesh = try! createMesh()  // recreate mesh when start timer
+    self.mesh = try! createMesh()
+    controllerHelper.reset()  // Reset controller timing  // recreate mesh when start timer
     self.pingPongBuffer = createPingPongBuffer()
 
     self.vertexBuffer = device.makeBuffer(
@@ -195,6 +154,8 @@ struct HyperbolicHelicoidView: View {
         } else {
           print("[ERR] vertex buffer is not initialized")
         }
+        // Update controller input
+        self.controllerHelper.updateEntityTransform(self.rootEntity)
         self.updateTrigger.toggle()
       }
     }

@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1154204F98684EE79BB8BFAA /* MeshRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1361A260DC5C4B26976706AA /* MeshRecorder.swift */; };
+		41DCDA0ABEF64A18B479EC12 /* SphereLine.metal in Sources */ = {isa = PBXBuildFile; fileRef = 08046443592446F3B06D6A61 /* SphereLine.metal */; };
+		704EED3E540445449598376D /* SphereLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAC4C4AE18C246919BAC42C5 /* SphereLine.swift */; };
+		8AA8152E57044B39AAFF36AA /* RecordingControlPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEAB3439D7CF4434AB86B3AA /* RecordingControlPanel.swift */; };
 		9A0B7DC52C84698E001245B3 /* RealityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A0B7DC42C84698E001245B3 /* RealityKit.framework */; };
 		9A13D89B2DC3F13800EEA863 /* Snowflake.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A13D89A2DC3F13200EEA863 /* Snowflake.swift */; };
 		9A13D89D2DC3F14100EEA863 /* Snowflake.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A13D89C2DC3F13B00EEA863 /* Snowflake.metal */; };
@@ -18,6 +22,10 @@
 		9A1A94EE2D54C5DC00315602 /* CubesMoving.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A1A94ED2D54C5D000315602 /* CubesMoving.metal */; };
 		9A3CD41E2C8A1D9D00E8710C /* MovingLorenz.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A3CD41D2C8A1D9D00E8710C /* MovingLorenz.metal */; };
 		9A3CD4232C8A1E9300E8710C /* MovingLorenz.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A3CD4212C8A1DE300E8710C /* MovingLorenz.swift */; };
+		9A40B5DE2EEE87B700B11592 /* GameManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A40B5DC2EEE87B700B11592 /* GameManager.swift */; };
+		9A40B5E22EEE8C0A00B11592 /* ControllerHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A40B5E12EEE8C0A00B11592 /* ControllerHelper.swift */; };
+		9A40B5E52EEEAD3400B11592 /* FlyingSwords.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A40B5E32EEEAD3400B11592 /* FlyingSwords.metal */; };
+		9A40B5E62EEEAD3400B11592 /* FlyingSwords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A40B5E42EEEAD3400B11592 /* FlyingSwords.swift */; };
 		9A45F3A32D7C5B130042486A /* Nebula.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A45F3A22D7C5B090042486A /* Nebula.swift */; };
 		9A45F3A52D7C5B210042486A /* Nebula.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A45F3A42D7C5B170042486A /* Nebula.metal */; };
 		9A4774B02E509EB50078AA8D /* Nest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A4774AF2E509EB20078AA8D /* Nest.swift */; };
@@ -50,7 +58,6 @@
 		9A92D3792D9473820021FFCE /* FractalBranches.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A92D3782D9473750021FFCE /* FractalBranches.swift */; };
 		9A92D37D2D95B8890021FFCE /* FractalUmbrella.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A92D37C2D95B8720021FFCE /* FractalUmbrella.swift */; };
 		9A92D37F2D95D0380021FFCE /* FractalTree.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A92D37E2D95D0330021FFCE /* FractalTree.swift */; };
-		9A92D3812D986ACA0021FFCE /* GestureComponent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A92D3802D986ACA0021FFCE /* GestureComponent.swift */; };
 		9A9A3E072E159D0400330D1B /* RealityKitContent in Frameworks */ = {isa = PBXBuildFile; productRef = 9A9A3E062E159D0400330D1B /* RealityKitContent */; };
 		9A9A3E0A2E159D3500330D1B /* Bifurcation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A9A3E092E159D3500330D1B /* Bifurcation.swift */; };
 		9A9A3E0B2E159D3500330D1B /* Bifurcation.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A9A3E082E159D3500330D1B /* Bifurcation.metal */; };
@@ -66,8 +73,7 @@
 		9AD002EE2E51EC750074380A /* CubesNested.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9AD002ED2E51EC6E0074380A /* CubesNested.metal */; };
 		9AD4CB772D588FDA00E55977 /* AttractorLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AD4CB762D588FCF00E55977 /* AttractorLine.swift */; };
 		9AD4CB792D588FE600E55977 /* AttractorLine.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9AD4CB782D588FDE00E55977 /* AttractorLine.metal */; };
-		704EED3E540445449598376D /* SphereLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAC4C4AE18C246919BAC42C5 /* SphereLine.swift */; };
-		41DCDA0ABEF64A18B479EC12 /* SphereLine.metal in Sources */ = {isa = PBXBuildFile; fileRef = 08046443592446F3B06D6A61 /* SphereLine.metal */; };
+		9DFC2C2479524322BF74E8AA /* RecordingHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 717673FAB97A4508981EDCAA /* RecordingHelper.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -81,6 +87,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		08046443592446F3B06D6A61 /* SphereLine.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = SphereLine.metal; sourceTree = "<group>"; };
+		1361A260DC5C4B26976706AA /* MeshRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshRecorder.swift; sourceTree = "<group>"; };
+		717673FAB97A4508981EDCAA /* RecordingHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingHelper.swift; sourceTree = "<group>"; };
 		9A0B7DC42C84698E001245B3 /* RealityKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = RealityKit.framework; path = System/Library/Frameworks/RealityKit.framework; sourceTree = SDKROOT; };
 		9A13D89A2DC3F13200EEA863 /* Snowflake.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snowflake.swift; sourceTree = "<group>"; };
 		9A13D89C2DC3F13B00EEA863 /* Snowflake.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Snowflake.metal; sourceTree = "<group>"; };
@@ -92,6 +101,10 @@
 		9A1A94ED2D54C5D000315602 /* CubesMoving.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = CubesMoving.metal; sourceTree = "<group>"; };
 		9A3CD41D2C8A1D9D00E8710C /* MovingLorenz.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = MovingLorenz.metal; sourceTree = "<group>"; };
 		9A3CD4212C8A1DE300E8710C /* MovingLorenz.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovingLorenz.swift; sourceTree = "<group>"; };
+		9A40B5DC2EEE87B700B11592 /* GameManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameManager.swift; sourceTree = "<group>"; };
+		9A40B5E12EEE8C0A00B11592 /* ControllerHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerHelper.swift; sourceTree = "<group>"; };
+		9A40B5E32EEEAD3400B11592 /* FlyingSwords.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = FlyingSwords.metal; sourceTree = "<group>"; };
+		9A40B5E42EEEAD3400B11592 /* FlyingSwords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlyingSwords.swift; sourceTree = "<group>"; };
 		9A45F3A22D7C5B090042486A /* Nebula.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Nebula.swift; sourceTree = "<group>"; };
 		9A45F3A42D7C5B170042486A /* Nebula.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Nebula.metal; sourceTree = "<group>"; };
 		9A4774AF2E509EB20078AA8D /* Nest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Nest.swift; sourceTree = "<group>"; };
@@ -128,7 +141,6 @@
 		9A92D3782D9473750021FFCE /* FractalBranches.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FractalBranches.swift; sourceTree = "<group>"; };
 		9A92D37C2D95B8720021FFCE /* FractalUmbrella.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FractalUmbrella.swift; sourceTree = "<group>"; };
 		9A92D37E2D95D0330021FFCE /* FractalTree.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FractalTree.swift; sourceTree = "<group>"; };
-		9A92D3802D986ACA0021FFCE /* GestureComponent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureComponent.swift; sourceTree = "<group>"; };
 		9A9A3E042E159CE100330D1B /* RealityFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = RealityFoundation.framework; path = System/Library/Frameworks/RealityFoundation.framework; sourceTree = SDKROOT; };
 		9A9A3E082E159D3500330D1B /* Bifurcation.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Bifurcation.metal; sourceTree = "<group>"; };
 		9A9A3E092E159D3500330D1B /* Bifurcation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bifurcation.swift; sourceTree = "<group>"; };
@@ -144,8 +156,8 @@
 		9AD002ED2E51EC6E0074380A /* CubesNested.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = CubesNested.metal; sourceTree = "<group>"; };
 		9AD4CB762D588FCF00E55977 /* AttractorLine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttractorLine.swift; sourceTree = "<group>"; };
 		9AD4CB782D588FDE00E55977 /* AttractorLine.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = AttractorLine.metal; sourceTree = "<group>"; };
+		BEAB3439D7CF4434AB86B3AA /* RecordingControlPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingControlPanel.swift; sourceTree = "<group>"; };
 		CAC4C4AE18C246919BAC42C5 /* SphereLine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SphereLine.swift; sourceTree = "<group>"; };
-		08046443592446F3B06D6A61 /* SphereLine.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = SphereLine.metal; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -175,6 +187,15 @@
 				9A0B7DC42C84698E001245B3 /* RealityKit.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		9A40B5DD2EEE87B700B11592 /* Game */ = {
+			isa = PBXGroup;
+			children = (
+				9A40B5DC2EEE87B700B11592 /* GameManager.swift */,
+				9A40B5E12EEE8C0A00B11592 /* ControllerHelper.swift */,
+			);
+			path = Game;
 			sourceTree = "<group>";
 		};
 		9A75D3D42C71D16900D27E97 = {
@@ -207,11 +228,13 @@
 				9A9A3E082E159D3500330D1B /* Bifurcation.metal */,
 				9A9A3E092E159D3500330D1B /* Bifurcation.swift */,
 				9A13D9002DDE50EB00EEA863 /* MobiusSpheres.metal */,
+				9A40B5E32EEEAD3400B11592 /* FlyingSwords.metal */,
+				9A40B5E42EEEAD3400B11592 /* FlyingSwords.swift */,
 				9A13D8FE2DDE50DB00EEA863 /* MobiusSpheres.swift */,
+				9A40B5DD2EEE87B700B11592 /* Game */,
 				9A13D89C2DC3F13B00EEA863 /* Snowflake.metal */,
 				9A13D89A2DC3F13200EEA863 /* Snowflake.swift */,
 				9A92D37E2D95D0330021FFCE /* FractalTree.swift */,
-				9A92D3802D986ACA0021FFCE /* GestureComponent.swift */,
 				9A92D37C2D95B8720021FFCE /* FractalUmbrella.swift */,
 				9A92D3782D9473750021FFCE /* FractalBranches.swift */,
 				9A75D3EC2C71D16B00D27E97 /* Assets.xcassets */,
@@ -259,6 +282,9 @@
 				9A5385422D5A6B840040CF72 /* SphereBouncing.swift */,
 				08046443592446F3B06D6A61 /* SphereLine.metal */,
 				CAC4C4AE18C246919BAC42C5 /* SphereLine.swift */,
+				1361A260DC5C4B26976706AA /* MeshRecorder.swift */,
+				BEAB3439D7CF4434AB86B3AA /* RecordingControlPanel.swift */,
+				717673FAB97A4508981EDCAA /* RecordingHelper.swift */,
 			);
 			path = triangle;
 			sourceTree = "<group>";
@@ -397,7 +423,6 @@
 				9AD002EE2E51EC750074380A /* CubesNested.metal in Sources */,
 				9A9BADF52D74599E009C0510 /* MobiusTrail.metal in Sources */,
 				9A53854F2D5FBAAE0040CF72 /* HyperbolicHelicoid.swift in Sources */,
-				9A92D3812D986ACA0021FFCE /* GestureComponent.swift in Sources */,
 				9A6F2A2D2D6B8B4A007F336F /* HopfFibration.swift in Sources */,
 				9A4774B02E509EB50078AA8D /* Nest.swift in Sources */,
 				9AD4CB792D588FE600E55977 /* AttractorLine.metal in Sources */,
@@ -410,6 +435,7 @@
 				9A6F2A322D6CE6C1007F336F /* HopfFibrationLayer.swift in Sources */,
 				9A6F2A332D6CE6C1007F336F /* HopfFibrationLayer.metal in Sources */,
 				9A13D89D2DC3F14100EEA863 /* Snowflake.metal in Sources */,
+				9A40B5DE2EEE87B700B11592 /* GameManager.swift in Sources */,
 				9A53854D2D5D0C250040CF72 /* PolygonWall.metal in Sources */,
 				9A9BADFD2D78C702009C0510 /* Lotus.metal in Sources */,
 				9A3CD4232C8A1E9300E8710C /* MovingLorenz.swift in Sources */,
@@ -436,7 +462,10 @@
 				9AC67CF62D6F8F9700071E59 /* MobiusGrid.swift in Sources */,
 				9A53853F2D5A47140040CF72 /* RadicalLine.swift in Sources */,
 				9A1A94EA2D54C1A400315602 /* Iterate.swift in Sources */,
+				9A40B5E22EEE8C0A00B11592 /* ControllerHelper.swift in Sources */,
 				9A75D3E52C71D16900D27E97 /* attractorApp.swift in Sources */,
+				9A40B5E52EEEAD3400B11592 /* FlyingSwords.metal in Sources */,
+				9A40B5E62EEEAD3400B11592 /* FlyingSwords.swift in Sources */,
 				9A53855B2D663D970040CF72 /* FireworksBlow.swift in Sources */,
 				9A9BADF92D7490E5009C0510 /* MobiusBubbles.swift in Sources */,
 				9A45F3A32D7C5B130042486A /* Nebula.swift in Sources */,
@@ -447,6 +476,9 @@
 				9A5385592D63ACA00040CF72 /* Fireworks.metal in Sources */,
 				704EED3E540445449598376D /* SphereLine.swift in Sources */,
 				41DCDA0ABEF64A18B479EC12 /* SphereLine.metal in Sources */,
+				1154204F98684EE79BB8BFAA /* MeshRecorder.swift in Sources */,
+				8AA8152E57044B39AAFF36AA /* RecordingControlPanel.swift in Sources */,
+				9DFC2C2479524322BF74E8AA /* RecordingHelper.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

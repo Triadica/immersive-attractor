@@ -1,0 +1,111 @@
+import ARKit
+import Foundation
+import GameController
+import RealityKit
+import simd
+
+/// A shared helper for applying controller input to entities
+/// Uses GameManager for full controller functionality with ARKit head tracking
+@MainActor
+class ControllerHelper {
+  let gameManager: GameManager
+  private var lastUpdateTime: Float = 0
+  private var startTime: Date = Date()
+
+  /// Initial position offset for the entity
+  var initialPosition: SIMD3<Float> = SIMD3<Float>(0, 1, 0)
+
+  // ARKit session for head tracking
+  private var arkitSession: ARKitSession?
+  private var worldTracking: WorldTrackingProvider?
+
+  init() {
+    self.gameManager = GameManager()
+    setupARKitSession()
+  }
+
+  private func setupARKitSession() {
+    Task {
+      let session = ARKitSession()
+      let worldTracking = WorldTrackingProvider()
+
+      do {
+        try await session.run([worldTracking])
+        self.arkitSession = session
+        self.worldTracking = worldTracking
+        print("[ControllerHelper] ARKit world tracking started")
+      } catch {
+        print("[ControllerHelper] Failed to start ARKit session: \(error)")
+      }
+    }
+  }
+
+  /// Get the current head (device) transform from ARKit
+  private func getHeadTransform() -> simd_float4x4 {
+    guard let worldTracking = worldTracking,
+      let deviceAnchor = worldTracking.queryDeviceAnchor(atTimestamp: CACurrentMediaTime())
+    else {
+      // Return identity matrix if ARKit not available
+      return matrix_identity_float4x4
+    }
+    return deviceAnchor.originFromAnchorTransform
+  }
+
+  /// Reset the controller state (call this when the view appears)
+  func reset() {
+    startTime = Date()
+    lastUpdateTime = 0
+    gameManager.resetState()
+  }
+
+  /// Update the entity's transform based on controller input
+  /// Uses GameManager with ARKit head tracking for movement direction
+  ///
+  /// Controls (from GameManager):
+  /// - Left stick Y: Move forward/backward (in head facing direction)
+  /// - Left stick X: Yaw rotation (turn left/right)
+  /// - Right stick X: Strafe left/right
+  /// - Right stick Y: Move up/down
+  /// - L1/R1: Boost (5x speed)
+  ///
+  /// - Parameter entity: The root entity to transform
+  func updateEntityTransform(_ entity: Entity) {
+    let currentTime = Float(Date().timeIntervalSince(startTime))
+    let delta = max(0, currentTime - lastUpdateTime)
+    guard delta > 0 else { return }
+    lastUpdateTime = currentTime
+
+    // Get head transform from ARKit for movement direction
+    let headTransform = getHeadTransform()
+
+    // Use GameManager to calculate rig transform with head tracking
+    _ = gameManager.updateRigState(deltaTime: delta, headTransform: headTransform)
+
+    // Coordinate transformation logic:
+    // - Camera is always at origin (0,0,0) in real world
+    // - Scene starts at initialPosition relative to camera
+    // - When user "moves" by playerOffset, scene should move by -playerOffset
+    // - When user "rotates" by yawAngle, scene should rotate around camera (origin)
+    //
+    // The scene position relative to camera (before rotation) is:
+    //   scenePos = initialPosition - playerOffset
+    //
+    // After rotating around origin by -yawAngle:
+    //   finalPos = R * scenePos = R * (initialPosition - playerOffset)
+    //
+    // This ensures rotation is around camera position, not causing translation
+    
+    let inverseYaw = -gameManager.yawAngle
+    let inverseRotation = simd_quatf(angle: inverseYaw, axis: SIMD3<Float>(0, 1, 0))
+    let rotationMatrix = float3x3(inverseRotation)
+    
+    // Scene position relative to camera (before rotation)
+    let scenePosBeforeRotation = initialPosition - gameManager.playerOffset
+    
+    // Rotate around origin (camera position)
+    let finalPosition = rotationMatrix * scenePosBeforeRotation
+    
+    entity.position = finalPosition
+    entity.orientation = inverseRotation
+  }
+}
